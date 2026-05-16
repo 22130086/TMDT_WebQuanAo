@@ -76,3 +76,16 @@ export function saveAuthToken(token: string) {
 export function getAuthToken() {
   return localStorage.getItem("auth_token") || "";
 }
+
+export function saveUserRole(role: string) {
+  localStorage.setItem("user_role", role);
+}
+
+export function getUserRole() {
+  return localStorage.getItem("user_role") || "";
+}
+
+export function clearAuth() {
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_role");
+}
