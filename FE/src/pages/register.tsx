@@ -60,13 +60,8 @@ export default function Register() {
   }
 
   return (
-    <div className="register-page">
-      <header className="top-header">
-        <h2>Blueprint Orchestrator</h2>
-      </header>
-
-      <main className="register-main">
-        <section className="register-left">
+    <main className="register-page">
+      <section className="register-left">
           <img
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuBN718DLua2IgkhJQ9ZGq0Hx5uxNXHYBZkBithYgpYDhl5oduGJz4mQCvND19omq0XnelN4G6cudJcsaPebNM1gquAKnmQtWxTvOnFRyHVYJk920GQZc6xuaYuphXZZscMJKQtfPpzROTx9Bsa8vBzp0MyULqC2uNO-WTr8Q253jfoxo357ZXS8yFGApKg3TxCkmjSl3sdJdYRUXVJ_nUEnWR52IKqgOBtt-s1SKN8sEdbT1u7bSl0REIb70VAxQMGIyHJ3cIGhTUmS"
             alt="Factory"
@@ -75,6 +70,13 @@ export default function Register() {
           <div className="overlay"></div>
 
           <div className="left-content">
+            <div className="brand">
+              <span className="material-symbols-outlined filled">
+                precision_manufacturing
+              </span>
+              <span className="brand-name">Azure</span>
+            </div>
+
             <h1>Kết nối xưởng may với khách hàng</h1>
             <p>
               Thiết kế – sản xuất – giao hàng toàn quốc.
@@ -236,18 +238,11 @@ export default function Register() {
                 </p>
               </div>
             </form>
+            
           </div>
+          
+          
         </section>
-      </main>
-
-      <footer className="footer">
-        <div className="footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Help Center</a>
-        </div>
-        <p>© 2024 Blueprint Orchestrator. All rights reserved.</p>
-      </footer>
-    </div>
+    </main>
   );
 }

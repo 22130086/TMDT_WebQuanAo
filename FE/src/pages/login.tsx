@@ -66,7 +66,7 @@ export default function Login() {
             <span className="material-symbols-outlined filled">
               precision_manufacturing
             </span>
-            <span className="brand-name">Blueprint Orchestrator</span>
+            <span className="brand-name">Azure</span>
           </div>
 
           <h1>Kết nối xưởng may với khách hàng</h1>
@@ -168,7 +168,7 @@ export default function Login() {
         </div>
 
         <footer className="footer">
-          <p>© 2024 Blueprint Orchestrator. All rights reserved.</p>
+          <p>© 2024 Azure. All rights reserved.</p>
           <div className="footer-links">
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>

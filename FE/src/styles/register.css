@@ -13,30 +13,24 @@ body {
 }
 
 .register-page {
+  display: flex;
   min-height: 100vh;
-}
-
-/* HEADER */
-.top-header {
-  position: fixed;
-  top: 0;
-  left: 0;
   width: 100%;
-  padding: 24px 40px;
-  z-index: 100;
-}
-
-.top-header h2 {
-  font-family: "Manrope", sans-serif;
-  font-size: 24px;
-  font-weight: 800;
-  color: #111827;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 18px;
+  box-sizing: border-box;
 }
 
 /* MAIN */
 .register-main {
   display: flex;
-  min-height: 100vh;
+  flex: 1;
+  width: 100%;
+  gap: 28px;
+  padding: 0;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 /* LEFT */
@@ -120,10 +114,10 @@ body {
 
 .register-card {
   width: 100%;
-  max-width: 750px;
+  max-width: 680px;
   background: white;
   border-radius: 24px;
-  padding: 50px;
+  padding: 40px;
   box-shadow: 0 20px 40px rgba(0, 55, 176, 0.06);
 }
 
@@ -307,6 +301,7 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
+  margin-top: 24px;
 }
 
 .footer-links {
