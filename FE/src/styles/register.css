@@ -1,0 +1,370 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: #f8f9fb;
+  color: #191c1e;
+}
+
+.register-page {
+  min-height: 100vh;
+}
+
+/* HEADER */
+.top-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 24px 40px;
+  z-index: 100;
+}
+
+.top-header h2 {
+  font-family: "Manrope", sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+}
+
+/* MAIN */
+.register-main {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* LEFT */
+.register-left {
+  width: 40%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 60px;
+  background: linear-gradient(
+    135deg,
+    #0037b0 0%,
+    #1d4ed8 100%
+  );
+}
+
+.register-left img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.4;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 55, 176, 0.4);
+}
+
+.left-content {
+  position: relative;
+  z-index: 2;
+  max-width: 480px;
+  color: white;
+}
+
+.left-content h1 {
+  font-size: 52px;
+  line-height: 1.2;
+  font-family: "Manrope", sans-serif;
+  font-weight: 800;
+  margin-bottom: 24px;
+}
+
+.left-content p {
+  font-size: 18px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.slider-dots {
+  margin-top: 36px;
+  display: flex;
+  gap: 12px;
+}
+
+.slider-dots span {
+  width: 18px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.slider-dots .active {
+  width: 50px;
+  background: white;
+}
+
+/* RIGHT */
+.register-right {
+  width: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #f3f4f6;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 750px;
+  background: white;
+  border-radius: 24px;
+  padding: 50px;
+  box-shadow: 0 20px 40px rgba(0, 55, 176, 0.06);
+}
+
+.card-header {
+  margin-bottom: 40px;
+}
+
+.card-header h2 {
+  font-size: 38px;
+  font-family: "Manrope", sans-serif;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.card-header p {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #6b7280;
+}
+
+/* FORM */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.role-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.role-card {
+  border: 2px solid transparent;
+  background: #f3f4f6;
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.role-card.active {
+  border-color: #0037b0;
+  background: white;
+}
+
+.role-card input {
+  display: none;
+}
+
+.role-card span:first-of-type {
+  color: #0037b0;
+  font-size: 30px;
+}
+
+.role-card span:last-of-type {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #4b5563;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: #f3f4f6;
+  border-radius: 12px 12px 0 0;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-bottom-color: #0058be;
+  background: white;
+}
+
+.factory-section {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.factory-section p {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #0037b0;
+}
+
+.terms {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.terms a {
+  color: #0058be;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.register-btn {
+  width: 100%;
+  border: none;
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(
+    135deg,
+    #0037b0 0%,
+    #1d4ed8 100%
+  );
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.register-btn:hover {
+  transform: translateY(-2px);
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.login-link p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.login-link a {
+  color: #0037b0;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* FOOTER */
+.footer {
+  padding: 30px 40px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-links a {
+  text-decoration: none;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.footer p {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+  .register-left {
+    display: none;
+  }
+
+  .register-right {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-right {
+    padding: 20px;
+  }
+
+  .register-card {
+    padding: 30px 24px;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .role-selection {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header h2 {
+    font-size: 30px;
+  }
+
+  .footer {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
