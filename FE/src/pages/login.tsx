@@ -1,7 +1,7 @@
 ﻿import type { FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login, saveAuthToken } from "../services/authService";
+import { login, saveAuthToken, saveUserRole } from "../services/authService";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -28,8 +28,19 @@ export default function Login() {
     try {
       const data = await login({ email, password });
       saveAuthToken(data.token);
+      saveUserRole(data.role);
       setSuccess("Đăng nhập thành công!");
-      setTimeout(() => navigate("/home"), 800);
+      
+      // Chuyển hướng theo role
+      setTimeout(() => {
+        if (data.role === "ADMIN") {
+          navigate("/admin");
+        } else if (data.role === "FACTORY") {
+          navigate("/factory");
+        } else {
+          navigate("/home");
+        }
+      }, 800);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Đã xảy ra lỗi khi đăng nhập"
