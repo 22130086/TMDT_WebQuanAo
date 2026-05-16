@@ -314,7 +314,3 @@ Nếu gặp vấn đề, hãy:
 3. Kiểm tra các file log của ứng dụng
 
 ---
-
-**Tác giả**: Fashion Marketplace Team  
-**Phiên bản**: 1.0.0  
-**Ngày cập nhật**: 2026-05-16
