@@ -1,0 +1,186 @@
+.product-hide-container {
+    max-width: 900px;
+}
+
+.back-navigation-link {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.back-navigation-link:hover {
+    color: #64748b;
+}
+
+.hide-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 8px 0 4px 0;
+    color: #0f172a;
+}
+
+.hide-subtitle {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.flexible-product-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.img-thumbnail-holder {
+    width: 120px;
+    height: 120px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.current-status-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #dbeafe;
+    color: #1e40af;
+    font-size: 8px;
+    font-weight: bold;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.img-thumbnail-holder img {
+    height: 80%;
+    object-fit: contain;
+}
+
+.product-text-details {
+    flex: 1;
+}
+
+.collection-tag {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0037b0;
+    text-transform: uppercase;
+}
+
+.product-title-heading {
+    margin: 4px 0 12px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.meta-info-flex {
+    display: flex;
+    gap: 32px;
+    font-size: 12px;
+}
+
+.meta-label {
+    margin: 0 0 2px 0;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.meta-value {
+    margin: 0;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.target-status-sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.target-title-uppercase {
+    margin: 0 0 12px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.target-badge-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.eye-off-container {
+    padding: 6px;
+    background: #e2e8f0;
+    border-radius: 8px;
+    color: #64748b;
+    display: flex;
+}
+
+.target-mini-label {
+    margin: 0;
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.inline-badge {
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.action-buttons-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.flex-center-gap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.cancel-hide-btn {
+    width: 100% !important;
+    border-radius: 12px !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569;
+    font-weight: 600;
+}
+/* Sửa hoặc bổ sung class này để định dạng badge trạng thái khi đã ẩn */
+.current-status-badge.status-hidden {
+    background: #fce8e6 !important;
+    color: #c5221f !important;
+}
+
+/* Hiệu ứng vòng tròn bọc icon con mắt chuyển sang đỏ mịn */
+.eye-off-container.eye-hidden {
+    background: #fce8e6 !important;
+    color: #c5221f !important;
+    border-color: #fad2cf !important;
+}
+
+/* Định dạng chữ của badge "ĐÃ ẨN" mục tiêu */
+.inline-badge.danger {
+    background: #fce8e6;
+    color: #c5221f;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}

@@ -5,66 +5,87 @@ import Register from "./pages/register";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Factory from "./pages/Factory";
+import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import FactoryRoute from "./components/FactoryRoute";
 
+import "./styles/product-detail.css";
+import "./styles/products.css";
 import "./styles/login.css";
 import "./styles/register.css";
 import "./styles/home.css";
 import "./styles/factory.css";
-import "./styles/product-detail.css";
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
+  return (
+    <BrowserRouter>
 
-                <Route path="/" element={<Login />} />
+      <Routes>
 
-                <Route path="/register" element={<Register />} />
+        <Route path="/" element={<Login />} />
 
-                <Route
-                    path="/home"
-                    element={
-                        <ProtectedRoute>
-                            <Home />
-                        </ProtectedRoute>
-                    }
-                />
+        <Route
+          path="/register"
+          element={<Register />}
+        />
 
-                <Route
-                    path="/product/:id"
-                    element={
-                        <ProtectedRoute>
-                            <ProductDetail />
-                        </ProtectedRoute>
-                    }
-                />
+        {/* HOME */}
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
 
-                <Route
-                    path="/admin"
-                    element={
-                        <AdminRoute>
-                            <Admin />
-                        </AdminRoute>
-                    }
-                />
+        {/* PRODUCTS */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <Products />
+            </ProtectedRoute>
+          }
+        />
 
-                <Route
-                    path="/factory"
-                    element={
-                        <FactoryRoute>
-                            <Factory />
-                        </FactoryRoute>
-                    }
-                />
+        {/* PRODUCT DETAIL */}
+        <Route
+          path="/products/:id"
+          element={
+            <ProtectedRoute>
+              <ProductDetail />
+            </ProtectedRoute>
+          }
+        />
 
-            </Routes>
-        </BrowserRouter>
-    );
+        {/* ADMIN */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          }
+        />
+
+        {/* FACTORY */}
+        <Route
+          path="/factory/*"
+          element={
+            <FactoryRoute>
+              <Factory />
+            </FactoryRoute>
+          }
+        />
+
+      </Routes>
+
+    </BrowserRouter>
+  );
 }
 
 export default App;

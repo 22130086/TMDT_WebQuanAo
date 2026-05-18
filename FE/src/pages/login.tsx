@@ -13,42 +13,51 @@ export default function Login() {
 
   const navigate = useNavigate();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setSuccess("");
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setError("");
+        setSuccess("");
 
-    if (!email || !password) {
-      setError("Vui lòng nhập email và mật khẩu");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const data = await login({ email, password });
-      saveAuthToken(data.token);
-      saveUserRole(data.role);
-      setSuccess("Đăng nhập thành công!");
-      
-      // Chuyển hướng theo role
-      setTimeout(() => {
-        if (data.role === "ADMIN") {
-          navigate("/admin");
-        } else if (data.role === "FACTORY") {
-          navigate("/factory");
-        } else {
-          navigate("/home");
+        if (!email || !password) {
+            setError("Vui lòng nhập email và mật khẩu");
+            return;
         }
-      }, 800);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi đăng nhập"
-      );
-    } finally {
-      setLoading(false);
+
+        setLoading(true);
+
+        try {
+            // Gọi hàm login từ authService, nhận về đúng cấu trúc AuthResponse { token, role, ... }
+            const data = await login({ email, password });
+            console.log("Dữ liệu đăng nhập nhận được:", data);
+
+            if (data && data.token) {
+                saveAuthToken(data.token); // Kích hoạt lưu vào key "token" chuẩn đồng bộ
+                saveUserRole(data.role);   // Lưu quyền phân hệ
+
+                setSuccess("Đăng nhập thành công!");
+
+                // Điều phối chuyển hướng trang dựa vào Role thật từ DB
+                setTimeout(() => {
+                    if (data.role === "ADMIN") {
+                        navigate("/admin");
+                    } else if (data.role === "FACTORY") {
+                        navigate("/factory");
+                    } else {
+                        navigate("/home");
+                    }
+                }, 800);
+            } else {
+                setError("Không nhận được mã xác thực Token từ máy chủ.");
+            }
+        } catch (err) {
+            console.error("Lỗi khi thực hiện đăng nhập:", err);
+            setError(
+                err instanceof Error ? err.message : "Đã xảy ra lỗi khi đăng nhập"
+            );
+        } finally {
+            setLoading(false);
+        }
     }
-  }
 
   return (
     <main className="login-page">
