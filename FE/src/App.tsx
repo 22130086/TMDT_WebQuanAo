@@ -37,7 +37,7 @@ function App() {
           }
         />
         <Route
-          path="/factory"
+          path="/factory/*"
           element={
             <FactoryRoute>
               <Factory />

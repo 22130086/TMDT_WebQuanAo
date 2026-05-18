@@ -1,0 +1,145 @@
+import { Plus, Eye, Edit2, EyeOff, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import '../styles/product-list.css';
+import { productService } from '../services/productService';
+import { useEffect, useState } from 'react';
+
+interface ProductListProps {
+    onNavigate: (target: string) => void;
+}
+
+// 🛠️ Định nghĩa Interface rõ ràng thay vì dùng any để vượt qua bộ lọc ESLint
+interface ProductItem {
+    id: number;
+    name: string;
+    categoryName?: string;
+    description?: string;
+    price: number;
+    status: string;
+    imageUrls?: string[];
+}
+
+export default function ProductList({ onNavigate }: ProductListProps) {
+    // 🛠️ Thay thế any[] thành ProductItem[]
+    const [products, setProducts] = useState<ProductItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    const fetchProducts = () => {
+        productService.getMyProducts(0, 10)
+            .then((res) => {
+                if (res.success && res.data && res.data.content) {
+                    setProducts(res.data.content);
+                }
+            })
+            .catch((err) => console.error("Lỗi kết nối API:", err))
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    // Nhận tín hiệu từ DeleteModal để cập nhật dữ liệu tự động
+    useEffect(() => {
+        const handleRefresh = () => fetchProducts();
+        window.addEventListener("refresh_product_list", handleRefresh);
+        return () => window.removeEventListener("refresh_product_list", handleRefresh);
+    }, []);
+
+    if (loading) return <div className="main-content">Đang tải dữ liệu sản phẩm từ xưởng...</div>;
+
+    return (
+        <div className="product-list-container">
+            {/* Header Title */}
+            <div className="list-header">
+                <div>
+                    <h2 className="section-title">Danh sách sản phẩm mẫu</h2>
+                    <p className="section-subtitle">Quản lý và cập nhật danh mục sản phẩm may mặc của xưởng.</p>
+                </div>
+                <button className="new-request-btn custom-width" onClick={() => onNavigate('add')}>
+                    <Plus size={18} /> Thêm sản phẩm mới
+                </button>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="filter-tabs">
+                <button className="tab-btn active-tab">Tất cả</button>
+                <button className="tab-btn outline-tab">Đang hiển thị</button>
+                <button className="tab-btn outline-tab">Đã ẩn</button>
+            </div>
+
+            {/* Table Data */}
+            <div className="table-card no-padding">
+                <table className="custom-product-table">
+                    <thead>
+                    <tr>
+                        <th>Hình ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th>Mô tả</th>
+                        <th>Giá tham khảo</th>
+                        <th>Trạng thái</th>
+                        <th className="text-center">Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {products.map((p, idx) => (
+                        <tr key={idx}>
+                            <td>
+                                <div className="product-img-box">
+                                    <img
+                                        src={p.imageUrls && p.imageUrls.length > 0 ? p.imageUrls[0] : 'https://placehold.co/100x100?text=No+Image'}
+                                        alt={p.name}
+                                    />
+                                </div>
+                            </td>
+                            <td>
+                                <p className="product-item-name">{p.name}</p>
+                                <span className="product-sku">ID: {p.id}</span>
+                            </td>
+                            <td className="text-muted">{p.categoryName || "Chưa phân loại"}</td>
+                            <td className="text-muted" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {p.description || "Không có mô tả"}
+                            </td>
+                            <td className="product-price-highlight">
+                                {p.price ? `${Number(p.price).toLocaleString('vi-VN')}đ` : '0đ'}
+                            </td>
+                            <td>
+                                <span className={p.status === 'ACTIVE' ? 'success' : 'danger'}>
+                                    {p.status === 'ACTIVE' ? 'ĐANG HIỂN THỊ' : p.status === 'HIDDEN' ? 'ĐÃ ẨN' : p.status}
+                                </span>
+                            </td>
+                            <td>
+                                <div className="action-buttons-group">
+                                    {/* 🛠️ Sửa TS2322: Gỡ bỏ thuộc tính 'title' trực tiếp trên tag SVG của Lucide-react */}
+                                    <Eye size={18} />
+                                    <Edit2 size={18} onClick={() => onNavigate(`edit?id=${p.id}`)} />
+                                    <EyeOff size={18} onClick={() => onNavigate(`hide?id=${p.id}`)} />
+                                    <Trash2
+                                        size={18}
+                                        className="delete-icon"
+                                        onClick={() => onNavigate(`delete?id=${p.id}`)}
+                                    />
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+
+                {/* Pagination */}
+                <div className="pagination-wrapper">
+                    <span>HIỂN THỊ 1 - {products.length} SẢN PHẨM</span>
+                    <div className="pagination-pages">
+                        <button className="nav-page-btn"><ChevronLeft size={16} /></button>
+                        <button className="page-num active-page">1</button>
+                        <button className="page-num">2</button>
+                        <button className="page-num">3</button>
+                        <span>...</span>
+                        <button className="page-num">12</button>
+                        <button className="nav-page-btn"><ChevronRight size={16} /></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
