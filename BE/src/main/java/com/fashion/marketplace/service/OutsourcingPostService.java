@@ -1,6 +1,7 @@
 package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.request.OutsourcingPostRequest;
+import com.fashion.marketplace.dto.response.OutsourcingPostResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.*;
@@ -19,7 +20,7 @@ public class OutsourcingPostService {
     private final CategoryRepository categoryRepository;
 
     @Transactional
-    public OutsourcingPost create(Long customerId, OutsourcingPostRequest req) {
+    public OutsourcingPostResponse create(Long customerId, OutsourcingPostRequest req) {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
 
@@ -37,11 +38,11 @@ public class OutsourcingPostService {
         if (req.getCategoryId() != null) {
             post.setCategory(categoryRepository.findById(req.getCategoryId()).orElse(null));
         }
-        return postRepository.save(post);
+        return toResponse(postRepository.save(post));
     }
 
     @Transactional
-    public OutsourcingPost update(Long customerId, Long postId, OutsourcingPostRequest req) {
+    public OutsourcingPostResponse update(Long customerId, Long postId, OutsourcingPostRequest req) {
         OutsourcingPost post = getOwned(customerId, postId);
         if (post.getStatus() != OutsourcingPost.PostStatus.OPEN) {
             throw new IllegalStateException("Chỉ có thể sửa bài đăng đang mở");
@@ -52,7 +53,7 @@ public class OutsourcingPostService {
         post.setBudgetMin(req.getBudgetMin());
         post.setBudgetMax(req.getBudgetMax());
         post.setDeadline(req.getDeadline());
-        return postRepository.save(post);
+        return toResponse(postRepository.save(post));
     }
 
     @Transactional
@@ -61,17 +62,22 @@ public class OutsourcingPostService {
         postRepository.delete(post);
     }
 
-    public Page<OutsourcingPost> getByCustomer(Long customerId, Pageable pageable) {
-        return postRepository.findByCustomerId(customerId, pageable);
+    @Transactional(readOnly = true)
+    public Page<OutsourcingPostResponse> getByCustomer(Long customerId, Pageable pageable) {
+        return postRepository.findByCustomerId(customerId, pageable)
+                .map(this::toResponse);
     }
 
-    public Page<OutsourcingPost> searchOpen(String keyword, Long categoryId, Pageable pageable) {
-        return postRepository.searchOpen(keyword, categoryId, pageable);
+    @Transactional(readOnly = true)
+    public Page<OutsourcingPostResponse> searchOpen(String keyword, Long categoryId, Pageable pageable) {
+        return postRepository.searchOpen(keyword, categoryId, pageable)
+                .map(this::toResponse);
     }
 
-    public OutsourcingPost getById(Long id) {
-        return postRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+    @Transactional(readOnly = true)
+    public OutsourcingPostResponse getById(Long id) {
+        return toResponse(postRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại")));
     }
 
     private OutsourcingPost getOwned(Long customerId, Long postId) {
@@ -80,5 +86,36 @@ public class OutsourcingPostService {
         if (!post.getCustomer().getId().equals(customerId))
             throw new AccessDeniedException("Không có quyền thao tác bài đăng này");
         return post;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OutsourcingPostResponse> search(String keyword, Long categoryId, String status, Pageable pageable) {
+        OutsourcingPost.PostStatus postStatus = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                postStatus = OutsourcingPost.PostStatus.valueOf(status);
+            } catch (IllegalArgumentException ignored) {}
+        }
+        return postRepository.search(keyword, categoryId, postStatus, pageable)
+                .map(this::toResponse);
+    }
+
+    public OutsourcingPostResponse toResponse(OutsourcingPost p) {
+        return OutsourcingPostResponse.builder()
+                .id(p.getId())
+                .title(p.getTitle())
+                .description(p.getDescription())
+                .quantity(p.getQuantity())
+                .budgetMin(p.getBudgetMin())
+                .budgetMax(p.getBudgetMax())
+                .deadline(p.getDeadline())
+                .status(p.getStatus() != null ? p.getStatus().name() : null)
+                .categoryId(p.getCategory() != null ? p.getCategory().getId() : null)
+                .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
+                .customerId(p.getCustomer().getId())
+                .customerName(p.getCustomer().getFullName())
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getUpdatedAt())
+                .build();
     }
 }

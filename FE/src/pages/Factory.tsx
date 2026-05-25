@@ -2,43 +2,82 @@ import { useState } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import "../styles/factory.css";
 
-// Import trang tổng quan và cụm chức năng sản phẩm mẫu (tsx) đã tách
 import FactoryDashboard from "./FactoryDashboard";
 import ProductList from "../components/ProductList";
 import ProductAdd from "../components/ProductAdd";
 import ProductEdit from "../components/ProductEdit";
 import ProductHide from "../components/ProductHide";
 import DeleteModal from "../components/DeleteModal";
+import ProductionPostList from "../components/ProductionPostList";
+import ProductionPostDetail from "../components/ProductionPostDetail";
+import SendQuote from "../components/SendQuote";
+import EditQuote from "../components/EditQuote";
+import DeleteQuoteModal from "../components/DeleteQuoteModal";
 
 const Factory = () => {
+    const [refreshSignal, setRefreshSignal] = useState(0);
     const location = useLocation();
     const navigate = useNavigate();
 
-    // State quản lý việc hiển thị modal xóa (2.3)
-    const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
+    // ── State chức năng 2: xóa sản phẩm ────────────────────────────────────
+    const [isDeleteOpen, setIsDeleteOpen]       = useState(false);
     const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
-    // Điều phối URL động thay vì dùng màn hình ảo bằng state
+
+    // ── State chức năng 3: rút báo giá ─────────────────────────────────────
+    const [isDeleteQuoteOpen, setIsDeleteQuoteOpen] = useState(false);
+    const [deleteQuoteId, setDeleteQuoteId]         = useState<string | null>(null);
+
+    // ── Navigation handler ──────────────────────────────────────────────────
     const handleNavigation = (target: string) => {
+
         if (target === "list") {
-            navigate("/factory/products");
-        } else if (target.startsWith("delete")) {
-            // Bóc tách lấy ID từ chuỗi "delete?id=X"
-            const queryParams = new URLSearchParams(target.split('?')[1]);
-            const id = queryParams.get('id');
-            if (id) {
-                setDeleteProductId(id); // Lưu ID vào state để truyền xuống Modal
-                setIsDeleteOpen(true);  // Mở mở popup Modal xóa
+            if (location.pathname.includes("/factory/outsourcing")) {
+                navigate("/factory/outsourcing");
+            } else {
+                navigate("/factory/products");
             }
-        } else if (target.startsWith("edit")) {
-            const queryParams = new URLSearchParams(target.split('?')[1]);
-            const id = queryParams.get('id');
-            if (id) localStorage.setItem('edit_product_id', id);
-            navigate(`/factory/products/edit?id=${id}`);
-        } else if (target.startsWith("hide")) {
-            const queryParams = new URLSearchParams(target.split('?')[1]);
-            const id = queryParams.get('id');
-            if (id) localStorage.setItem('hide_product_id', id);
-            navigate(`/factory/products/hide?id=${id}`);
+
+        } else if (target.startsWith("delete?")) {
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            if (id) {
+                setDeleteProductId(id);
+                setIsDeleteOpen(true);
+            }
+
+        } else if (target.startsWith("edit?")) {
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            if (id) {
+                localStorage.setItem('edit_product_id', id);
+                navigate(`/factory/products/edit?id=${id}`);
+            }
+
+        } else if (target.startsWith("hide?")) {
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            if (id) {
+                localStorage.setItem('hide_product_id', id);
+                navigate(`/factory/products/hide?id=${id}`);
+            }
+
+        } else if (target.startsWith("post-detail")) {
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            navigate(`/factory/outsourcing/detail?id=${id}`);
+
+        } else if (target.startsWith("send-quote")) {
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            navigate(`/factory/outsourcing/send-quote?id=${id}`);
+
+        } else if (target.startsWith("edit-quote")) {
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            navigate(`/factory/outsourcing/edit-quote?id=${id}`);
+
+        } else if (target.startsWith("delete-quote")) {
+            // Chỉ cần lấy quotation ID, modal tự fetch data
+            const id = new URLSearchParams(target.split('?')[1]).get('id');
+            if (id) {
+                setDeleteQuoteId(id);
+                setIsDeleteQuoteOpen(true);
+            }
+
         } else {
             navigate(`/factory/products/${target}`);
         }
@@ -46,7 +85,7 @@ const Factory = () => {
 
     return (
         <div className="factory-page">
-            {/* Sidebar - Khung cố định bên trái */}
+            {/* Sidebar */}
             <aside className="factory-sidebar">
                 <div className="sidebar-header">
                     <h2>Xưởng May Azure</h2>
@@ -70,10 +109,13 @@ const Factory = () => {
                         Sản phẩm mẫu
                     </Link>
 
-                    <a href="#">
+                    <Link
+                        to="/factory/outsourcing"
+                        className={location.pathname.includes("/factory/outsourcing") ? "active" : ""}
+                    >
                         <span className="material-symbols-outlined">precision_manufacturing</span>
                         Yêu cầu gia công
-                    </a>
+                    </Link>
 
                     <a href="#">
                         <span className="material-symbols-outlined">request_quote</span>
@@ -98,13 +140,11 @@ const Factory = () => {
 
                 <div className="sidebar-footer">
                     <button className="new-request-btn">Tạo yêu cầu mới</button>
-
                     <div className="sidebar-links">
                         <a href="#">
                             <span className="material-symbols-outlined">support_agent</span>
                             Hỗ trợ
                         </a>
-
                         <a href="#" className="logout">
                             <span className="material-symbols-outlined">logout</span>
                             Đăng xuất
@@ -113,28 +153,23 @@ const Factory = () => {
                 </div>
             </aside>
 
-            {/* Main Layout Content bên phải */}
+            {/* Main */}
             <main className="factory-main">
-                {/* Header dùng chung */}
                 <header className="factory-header">
                     <div className="header-left">
                         <h1>Azure Industrial</h1>
                     </div>
-
                     <div className="header-right">
                         <div className="search-box">
                             <span className="material-symbols-outlined">search</span>
                             <input type="text" placeholder="Tìm kiếm đơn hàng..." />
                         </div>
-
                         <button className="icon-btn">
                             <span className="material-symbols-outlined">notifications</span>
                         </button>
-
                         <button className="icon-btn">
                             <span className="material-symbols-outlined">settings</span>
                         </button>
-
                         <div className="profile">
                             <div>
                                 <h4>Admin Azure</h4>
@@ -145,24 +180,29 @@ const Factory = () => {
                     </div>
                 </header>
 
-                {/* Nội dung vùng làm việc thay đổi linh hoạt theo route con */}
                 <section className="factory-content">
                     <Routes>
-                        {/* Khi URL là /factory -> Vào thẳng Dashboard */}
                         <Route path="/" element={<FactoryDashboard />} />
 
-                        {/* Khi URL là /factory/products -> Chức năng 2.5 Danh sách */}
-                        <Route path="products" element={<ProductList onNavigate={handleNavigation} />} />
-
-                        {/* Các chức năng 2.1, 2.2, 2.4 lồng nhau */}
-                        <Route path="products/add" element={<ProductAdd onNavigate={handleNavigation} />} />
+                        <Route path="products"      element={<ProductList onNavigate={handleNavigation} />} />
+                        <Route path="products/add"  element={<ProductAdd  onNavigate={handleNavigation} />} />
                         <Route path="products/edit" element={<ProductEdit onNavigate={handleNavigation} />} />
                         <Route path="products/hide" element={<ProductHide onNavigate={handleNavigation} />} />
+
+                        <Route path="outsourcing" element={
+                            <ProductionPostList
+                                onNavigate={handleNavigation}
+                                refreshSignal={refreshSignal}
+                            />
+                        } />
+                        <Route path="outsourcing/detail"      element={<ProductionPostDetail onNavigate={handleNavigation} />} />
+                        <Route path="outsourcing/send-quote"  element={<SendQuote            onNavigate={handleNavigation} />} />
+                        <Route path="outsourcing/edit-quote"  element={<EditQuote            onNavigate={handleNavigation} />} />
                     </Routes>
                 </section>
             </main>
 
-            {/* Triển khai modal xóa chặn ở tầng cha cao nhất */}
+            {/* Modal xóa sản phẩm — chức năng 2 */}
             <DeleteModal
                 isOpen={isDeleteOpen}
                 onClose={() => {
@@ -170,6 +210,21 @@ const Factory = () => {
                     setDeleteProductId(null);
                 }}
                 productId={deleteProductId}
+            />
+
+            {/* Modal rút báo giá — chức năng 3 */}
+            <DeleteQuoteModal
+                isOpen={isDeleteQuoteOpen}
+                quotationId={deleteQuoteId}
+                onClose={() => {
+                    setIsDeleteQuoteOpen(false);
+                    setDeleteQuoteId(null);
+                }}
+                onSuccess={() => {
+                    setIsDeleteQuoteOpen(false);
+                    setDeleteQuoteId(null);
+                    setRefreshSignal((v) => v + 1);
+                }}
             />
         </div>
     );
