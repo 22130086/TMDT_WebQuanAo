@@ -122,7 +122,11 @@ export default function Home() {
             <div className="product-grid">
               {products.length > 0 ? (
                 products.map((product) => (
-                  <div className="product-card" key={product.id}>
+                  <div
+                      className="product-card"
+                      key={product.id}
+                      onClick={() => navigate(`/products/${product.id}`)}
+                    >
                     <div className="sale-badge">-15%</div>
                     <img
                       src={
