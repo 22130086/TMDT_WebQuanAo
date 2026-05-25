@@ -1,0 +1,181 @@
+/* ── Overlay ────────────────────────────────────────────────────────────── */
+.dqm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+    animation: dqm-fade 0.2s ease;
+}
+
+@keyframes dqm-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Modal ──────────────────────────────────────────────────────────────── */
+.dqm-modal {
+    background: #fff;
+    border-radius: 18px;
+    padding: 32px 28px 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    animation: dqm-slide 0.22s ease;
+}
+
+@keyframes dqm-slide {
+    from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Icon ───────────────────────────────────────────────────────────────── */
+.dqm-icon-wrap {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: #fef2f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.dqm-icon-wrap .material-symbols-outlined {
+    font-size: 30px;
+    color: #dc2626;
+}
+
+/* ── Text ───────────────────────────────────────────────────────────────── */
+.dqm-modal h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1d23;
+    margin: 0;
+    text-align: center;
+}
+
+.dqm-modal p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.dqm-modal p strong { color: #dc2626; }
+
+/* ── Info box ───────────────────────────────────────────────────────────── */
+.dqm-info-box {
+    width: 100%;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dqm-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.dqm-info-row label {
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.dqm-info-row span {
+    font-weight: 600;
+    color: #374151;
+}
+
+.dqm-price { color: #dc2626 !important; }
+
+/* ── Error ──────────────────────────────────────────────────────────────── */
+.dqm-error {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 0.85rem;
+}
+
+.dqm-error .material-symbols-outlined { font-size: 18px; flex-shrink: 0; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.dqm-btn-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.btn-dqm-cancel {
+    flex: 1;
+    padding: 11px;
+    background: #fff;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-dqm-cancel:hover:not(:disabled) { background: #f9fafb; }
+.btn-dqm-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-dqm-confirm {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-dqm-confirm:hover:not(:disabled) { background: #b91c1c; }
+.btn-dqm-confirm:disabled { opacity: 0.7; cursor: not-allowed; }
+.btn-dqm-confirm .material-symbols-outlined { font-size: 18px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.dqm-spin { display: inline-block; animation: spin 1s linear infinite; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.dqm-footer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.72rem;
+    color: #d1d5db;
+    font-weight: 500;
+    letter-spacing: .04em;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+}
