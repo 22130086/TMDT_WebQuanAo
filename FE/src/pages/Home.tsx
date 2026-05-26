@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import {
@@ -8,6 +8,7 @@ import {
 } from "../services/catalogService";
 import type { FactoryCard, ProductCard } from "../services/catalogService";
 import "../styles/home.css";
+
 
 export default function Home() {
   const navigate = useNavigate();
@@ -84,7 +85,11 @@ export default function Home() {
             <div className="factory-grid">
               {factories.length > 0 ? (
                 factories.map((factory) => (
-                  <div className="factory-card" key={factory.id}>
+                 <Link
+                  to={`/factory-profile/${factory.id}`}
+                  className="factory-card"
+                  key={factory.id}
+                >
                     <div className="card-badge">TOP</div>
                     <img
                       src={
@@ -102,7 +107,7 @@ export default function Home() {
                       </div>
                       <div className="price">Từ 50.000đ</div>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
@@ -122,7 +127,11 @@ export default function Home() {
             <div className="product-grid">
               {products.length > 0 ? (
                 products.map((product) => (
-                  <div className="product-card" key={product.id}>
+                  <div
+                      className="product-card"
+                      key={product.id}
+                      onClick={() => navigate(`/products/${product.id}`)}
+                    >
                     <div className="sale-badge">-15%</div>
                     <img
                       src={
