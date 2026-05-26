@@ -701,4 +701,9 @@ a {
   .logout-btn {
     flex: 1;
   }
+  .factory-card {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
 }

@@ -11,6 +11,8 @@ import ProductDetail from "./pages/ProductDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import FactoryRoute from "./components/FactoryRoute";
+import CustomOrder from "./pages/CustomOrder";
+import FactoryProfile from "./pages/FactoryProfile";
 
 import "./styles/product-detail.css";
 import "./styles/products.css";
@@ -81,6 +83,22 @@ function App() {
             </FactoryRoute>
           }
         />
+            <Route
+      path="/custom-order"
+      element={
+        <ProtectedRoute>
+          <CustomOrder />
+        </ProtectedRoute>
+      }
+/>
+<Route
+  path="/factory-profile/:id"
+  element={
+    <ProtectedRoute>
+      <FactoryProfile />
+    </ProtectedRoute>
+  }
+/>
 
       </Routes>
 
