@@ -1,13 +1,15 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+
+import { useNavigate, Link  } from "react-router-dom";
+import Header from "../../components/Header";
+import Footer from "../../components/Footer";
+
 import {
   fetchFactories,
   fetchProducts,
-} from "../services/catalogService";
-import type { FactoryCard, ProductCard } from "../services/catalogService";
-import "../styles/home.css";
+} from "../../services/catalogService";
+import type { FactoryCard, ProductCard } from "../../services/catalogService";
+import "../../styles/home.css";
 
 
 export default function Home() {
@@ -16,6 +18,7 @@ export default function Home() {
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [featuredIndex, setFeaturedIndex] = useState(0);
 
   useEffect(() => {
     async function loadCatalog() {
@@ -58,6 +61,21 @@ export default function Home() {
     loadCatalog();
   }, []);
 
+  function showNextFeatured() {
+    if (!factories || factories.length === 0) return;
+    setFeaturedIndex((i) => (i + 1) % factories.length);
+  }
+
+  function showPrevFeatured() {
+    if (!factories || factories.length === 0) return;
+    setFeaturedIndex((i) => (i - 1 + factories.length) % factories.length);
+  }
+
+  function showDetails() {
+    if (!factories || factories.length === 0) return;
+    navigate("/factory", { state: { factoryId: factories[featuredIndex].id } });
+  }
+
   function handleLogout() {
     localStorage.removeItem("auth_token");
     navigate("/");
@@ -69,7 +87,6 @@ export default function Home() {
 
       <div className="page-container">
         {error && <div className="list-error">{error}</div>}
-
         <section className="content-section" id="factories">
           <div className="section-header">
             <div>
@@ -81,6 +98,8 @@ export default function Home() {
 
           {loading ? (
             <div className="loading-state">Đang tải xưởng may...</div>
+          ) : factories.length === 0 ? (
+            <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
           ) : (
             <div className="factory-grid">
               {factories.length > 0 ? (
@@ -92,20 +111,16 @@ export default function Home() {
                 >
                     <div className="card-badge">TOP</div>
                     <img
-                      src={
-                        factory.imageUrls?.[0] ||
-                        "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1200&auto=format&fit=crop"
-                      }
+                      src={factory.imageUrls?.[0]}
                       alt={factory.factoryName}
                     />
                     <div className="factory-info">
                       <h3>{factory.factoryName}</h3>
-                      <p>{factory.description || "Xưởng may chất lượng cao"}</p>
-                      <div className="rating">
+                      <div className="factory-card-rating">
                         <span className="material-symbols-outlined">star</span>
                         <span>{factory.ratingAvg ?? 4.8}</span>
                       </div>
-                      <div className="price">Từ 50.000đ</div>
+                      <p>{factory.description || "Xưởng may chất lượng cao"}</p>
                     </div>
                   </Link>
                 ))

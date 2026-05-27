@@ -2,9 +2,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/login";
 import Register from "./pages/register";
-import Home from "./pages/Home";
-import Admin from "./pages/Admin";
-import Factory from "./pages/Factory";
+
+import Home from "./pages/UserPages/Home";
+import Admin from "./pages/AdminPages/Admin";
+import Factory from "./pages/FactoryPages/Factory";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 
@@ -20,6 +21,9 @@ import "./styles/login.css";
 import "./styles/register.css";
 import "./styles/home.css";
 import "./styles/factory.css";
+import "./styles/order_checkout.css";
+import Cart from "./pages/UserPages/cart";
+import OrderCheckout from "./pages/UserPages/order_checkout";
 
 function App() {
   return (
@@ -65,6 +69,22 @@ function App() {
         />
 
         {/* ADMIN */}
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/order-checkout"
+          element={
+            <ProtectedRoute>
+              <OrderCheckout />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin"
           element={
