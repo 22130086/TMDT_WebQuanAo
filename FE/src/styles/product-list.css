@@ -1,0 +1,255 @@
+.product-list-container {
+    padding: 8px 0;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.search-wrapper {
+    position: relative;
+    width: 380px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 13px;
+    color: #94a3b8;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 16px 12px 44px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    font-size: 14px;
+    outline: none;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.icon-clickable {
+    color: #64748b;
+    cursor: pointer;
+}
+
+.user-profile-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info-text {
+    text-align: right;
+}
+
+.user-name {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.user-role {
+    margin: 0;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    color: #0f172a;
+}
+
+.section-subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.custom-width {
+    width: auto !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.active-tab {
+    background: #0037b0;
+    color: #ffffff;
+    border: none;
+}
+
+.outline-tab {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+}
+
+.no-padding {
+    padding: 0px !important;
+    overflow: hidden;
+}
+
+.custom-product-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+}
+
+.custom-product-table th {
+    border-bottom: 1px solid #edf2f7;
+    color: #94a3b8;
+    font-size: 11px;
+    text-transform: uppercase;
+    padding: 16px 24px;
+    font-weight: 600;
+}
+
+.custom-product-table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.product-img-box {
+    width: 48px;
+    height: 48px;
+    padding: 4px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.product-img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.product-item-name {
+    margin: 0;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.product-sku {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.text-muted {
+    color: #475569;
+}
+
+.product-price-highlight {
+    font-weight: 600;
+    color: #0037b0;
+}
+
+.action-buttons-group {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    color: #94a3b8;
+}
+
+.action-buttons-group svg {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.action-buttons-group svg:hover {
+    color: #1e293b;
+}
+
+.delete-icon {
+    color: #ef4444;
+}
+
+.delete-icon:hover {
+    color: #b91c1c !important;
+}
+
+.pagination-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-page-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+}
+
+.page-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #475569;
+}
+
+.active-page {
+    background: #0037b0 !important;
+    color: #ffffff !important;
+}

@@ -1,13 +1,16 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useNavigate, Link  } from "react-router-dom";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+
 import {
   fetchFactories,
   fetchProducts,
 } from "../../services/catalogService";
 import type { FactoryCard, ProductCard } from "../../services/catalogService";
 import "../../styles/home.css";
+
 
 export default function Home() {
   const navigate = useNavigate();
@@ -98,57 +101,14 @@ export default function Home() {
           ) : factories.length === 0 ? (
             <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
           ) : (
-            <>
-              {/* Featured factory */}
-              <div className="featured-factory">
-                <div className="featured-image">
-                  <img
-                    src={
-                      factories[featuredIndex].imageUrls?.[0] ||
-                      "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1200&auto=format&fit=crop"
-                    }
-                    alt={factories[featuredIndex].factoryName}
-                  />
-                </div>
-
-                <div className="featured-content">
-                  <div className="featured-header">
-                    <h3>{factories[featuredIndex].factoryName}</h3>
-                    <div className="nav-buttons">
-                      <button className="prev-btn" onClick={showPrevFeatured} aria-label="previous">&lt;</button>
-                      <button className="next-btn" onClick={showNextFeatured} aria-label="next">&gt;</button>
-                    </div>
-                  </div>
-
-                  <p className="featured-desc">
-                    {factories[featuredIndex].description ||
-                      "Mô tả xưởng không có sẵn."}
-                  </p>
-
-                  <div className="featured-footer">
-                    <div className="featured-meta">
-                      <div className="rating">
-                        <span className="material-symbols-outlined">star</span>
-                        <span>{factories[featuredIndex].ratingAvg ?? 4.8}</span>
-                      </div>
-                      <div className="price">Từ 50.000đ</div>
-                    </div>
-
-                    <button className="details-btn" onClick={showDetails}>
-                      Xem chi tiết
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Smaller grid under featured */}
-              <div className="factory-grid small-grid">
-                {factories.map((factory, idx) => (
-                  <div
-                    className={`factory-card ${idx === featuredIndex ? "active" : ""}`}
-                    key={factory.id}
-                    onClick={() => setFeaturedIndex(idx)}
-                  >
+            <div className="factory-grid">
+              {factories.length > 0 ? (
+                factories.map((factory) => (
+                 <Link
+                  to={`/factory-profile/${factory.id}`}
+                  className="factory-card"
+                  key={factory.id}
+                >
                     <div className="card-badge">TOP</div>
                     <img
                       src={factory.imageUrls?.[0]}
@@ -162,10 +122,12 @@ export default function Home() {
                       </div>
                       <p>{factory.description || "Xưởng may chất lượng cao"}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </>
+                  </Link>
+                ))
+              ) : (
+                <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
+              )}
+            </div>
           )}
         </section>
 
@@ -180,7 +142,11 @@ export default function Home() {
             <div className="product-grid">
               {products.length > 0 ? (
                 products.map((product) => (
-                  <div className="product-card" key={product.id}>
+                  <div
+                      className="product-card"
+                      key={product.id}
+                      onClick={() => navigate(`/products/${product.id}`)}
+                    >
                     <div className="sale-badge">-15%</div>
                     <img
                       src={

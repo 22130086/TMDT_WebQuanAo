@@ -27,9 +27,11 @@ a {
   min-height: 100vh;
   background: #eff3fb;
 }
-
+.product-card {
+  cursor: pointer;
+}
 .page-container {
-  max-width: 1320px;
+  max-width: 1320px;  
   margin: 0 auto 18px;
   padding: 0 16px;
 }
@@ -878,4 +880,9 @@ a {
   .logout-btn {
     flex: 1;
   }
+  .factory-card {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
 }

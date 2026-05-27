@@ -70,22 +70,25 @@ export async function register(
 }
 
 export function saveAuthToken(token: string) {
-  localStorage.setItem("auth_token", token);
+    // Đổi từ "auth_token" thành "token"
+    localStorage.setItem("token", token);
 }
 
 export function getAuthToken() {
-  return localStorage.getItem("auth_token") || "";
+    // Đổi từ "auth_token" thành "token"
+    return localStorage.getItem("token") || "";
 }
 
 export function saveUserRole(role: string) {
-  localStorage.setItem("user_role", role);
+    localStorage.setItem("user_role", role);
 }
 
 export function getUserRole() {
-  return localStorage.getItem("user_role") || "";
+    return localStorage.getItem("user_role") || "";
 }
 
 export function clearAuth() {
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("user_role");
+    // Đồng bộ xóa đúng key "token" khi đăng xuất
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_role");
 }

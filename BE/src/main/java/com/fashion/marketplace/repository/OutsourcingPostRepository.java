@@ -17,4 +17,13 @@ public interface OutsourcingPostRepository extends JpaRepository<OutsourcingPost
     Page<OutsourcingPost> searchOpen(@Param("keyword") String keyword,
                                      @Param("categoryId") Long categoryId,
                                      Pageable pageable);
+
+    @Query("SELECT p FROM OutsourcingPost p WHERE " +
+            "(:status IS NULL OR p.status = :status) AND " +
+            "(:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%',:keyword,'%'))) AND " +
+            "(:categoryId IS NULL OR p.category.id = :categoryId)")
+    Page<OutsourcingPost> search(@Param("keyword") String keyword,
+                                 @Param("categoryId") Long categoryId,
+                                 @Param("status") OutsourcingPost.PostStatus status,
+                                 Pageable pageable);
 }

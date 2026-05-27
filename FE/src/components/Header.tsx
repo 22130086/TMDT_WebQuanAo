@@ -9,7 +9,7 @@ export default function Header({ onLogout }: HeaderProps) {
   const navigate = useNavigate();
 
   function handleLogout() {
-    localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
 
     if (onLogout) {
       onLogout();
@@ -50,8 +50,11 @@ export default function Header({ onLogout }: HeaderProps) {
           {/* NAVIGATION */}
           <nav className="nav-links">
             <a href="#factories">Xưởng may</a>
-            <a href="#products">Sản phẩm</a>
+
+            <Link to="/products">Sản phẩm</Link>
+            <Link to="/custom-order"> Yêu cầu in áo</Link>  
             <Link to="/cart"> Giỏ hàng</Link>
+
             <a href="#about">Giới thiệu</a>
           </nav>
 
