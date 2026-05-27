@@ -51,7 +51,7 @@ export default function Header({ onLogout }: HeaderProps) {
           <nav className="nav-links">
             <a href="#factories">Xưởng may</a>
             <a href="#products">Sản phẩm</a>
-            <a href="#orders">Đơn hàng</a>
+            <Link to="/cart"> Giỏ hàng</Link>
             <a href="#about">Giới thiệu</a>
           </nav>
 

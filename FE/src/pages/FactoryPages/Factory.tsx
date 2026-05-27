@@ -1,4 +1,4 @@
-import "../styles/factory.css";
+import "../../styles/factory.css";
 
 const Factory = () => {
   return (
