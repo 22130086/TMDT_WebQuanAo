@@ -8,6 +8,9 @@ import Admin from "./pages/AdminPages/Admin";
 import Factory from "./pages/FactoryPages/Factory";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import PaymentResult from './pages/cart/PaymentResult';
+import OrderHistory from "./pages/order/order-history";
+import OrderDetail from "./pages/order/order-detail";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
@@ -22,8 +25,9 @@ import "./styles/register.css";
 import "./styles/home.css";
 import "./styles/factory.css";
 import "./styles/order_checkout.css";
-import Cart from "./pages/UserPages/cart";
-import OrderCheckout from "./pages/UserPages/order_checkout";
+
+import Cart from "./pages/cart/cart";
+import OrderCheckout from "./pages/cart/order_checkout";
 import AdminLayout from "./components/AdminLayout";
 import ComplaintsManagement from "./pages/AdminPages/ComplaintsManagement";
 import DisputesManagement from "./pages/AdminPages/DisputesManagement";
@@ -31,6 +35,7 @@ import WithdrawalsManagement from "./pages/AdminPages/WithdrawalsManagement";
 import UserManagement from "./pages/AdminPages/UserManagement";
 import FactoryApproval from "./pages/AdminPages/FactoryApproval";
 import ProductManagement from "./pages/AdminPages/ProductManagement";
+
 
 function App() {
   return (
@@ -75,7 +80,7 @@ function App() {
           }
         />
 
-        {/* ADMIN */}
+        {/* Cart */}
         <Route
           path="/cart"
           element={
@@ -92,6 +97,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/payment-result" element={<PaymentResult />} />
+
+        {/* ADMIN */}
         <Route
           path="/admin"
           element={
@@ -179,16 +187,31 @@ function App() {
           <CustomOrder />
         </ProtectedRoute>
       }
-/>
-<Route
-  path="/factory-profile/:id"
-  element={
-    <ProtectedRoute>
-      <FactoryProfile />
-    </ProtectedRoute>
-  }
-/>
-
+      />
+      <Route
+        path="/factory-profile/:id"
+        element={
+          <ProtectedRoute>
+            <FactoryProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/order-history"
+        element={
+          <ProtectedRoute>
+            <OrderHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/order-detail/:id"
+        element={
+          <ProtectedRoute>
+            <OrderDetail />
+          </ProtectedRoute>
+        }
+      />
       </Routes>
 
     </BrowserRouter>

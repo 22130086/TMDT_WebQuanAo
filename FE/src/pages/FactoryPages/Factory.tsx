@@ -3,16 +3,13 @@ import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom"
 import "../../styles/factory.css";
 
 import FactoryDashboard from "../FactoryDashboard";
-
 import ProductList from "../../components/ProductList";
 import ProductAdd from "../../components/ProductAdd";
 import ProductEdit from "../../components/ProductEdit";
 import ProductHide from "../../components/ProductHide";
 import DeleteModal from "../../components/DeleteModal";
-
 import ProductionPostList from "../../components/ProductionPostList";
 import ProductionPostDetail from "../../components/ProductionPostDetail";
-
 import SendQuote from "../../components/SendQuote";
 import EditQuote from "../../components/EditQuote";
 import DeleteQuoteModal from "../../components/DeleteQuoteModal";
