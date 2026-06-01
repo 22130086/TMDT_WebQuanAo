@@ -1,6 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-
-import { useNavigate, Link  } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 
@@ -11,13 +10,14 @@ import {
 import type { FactoryCard, ProductCard } from "../../services/catalogService";
 import "../../styles/home.css";
 
-
 export default function Home() {
   const navigate = useNavigate();
   const [factories, setFactories] = useState<FactoryCard[]>([]);
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // State quản lý xưởng đang được đưa lên banner chính
   const [featuredIndex, setFeaturedIndex] = useState(0);
 
   useEffect(() => {
@@ -61,25 +61,35 @@ export default function Home() {
     loadCatalog();
   }, []);
 
+  // TỰ ĐỘNG CHUYỂN SLIDE SAU 5 GIÂY
+  useEffect(() => {
+    if (factories.length <= 1) return; // Không cần tự chuyển nếu chỉ có 1 hoặc 0 xưởng
+    const timer = setInterval(() => {
+      setFeaturedIndex((prev) => (prev + 1) % factories.length);
+    }, 4000); 
+
+    return () => clearInterval(timer);
+  }, [factories.length]);
+
+  // HÀM XỬ LÝ NÚT CHUYỂN BANNER BẰNG TAY
   function showNextFeatured() {
     if (!factories || factories.length === 0) return;
-    setFeaturedIndex((i) => (i + 1) % factories.length);
+    setFeaturedIndex((prev) => (prev + 1) % factories.length);
   }
 
   function showPrevFeatured() {
     if (!factories || factories.length === 0) return;
-    setFeaturedIndex((i) => (i - 1 + factories.length) % factories.length);
-  }
-
-  function showDetails() {
-    if (!factories || factories.length === 0) return;
-    navigate("/factory", { state: { factoryId: factories[featuredIndex].id } });
+    setFeaturedIndex((prev) => (prev - 1 + factories.length) % factories.length);
   }
 
   function handleLogout() {
-    localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_role");
     navigate("/");
   }
+
+  // Khai báo biến chứa thông tin Xưởng đang nổi bật
+  const featuredFactory = factories[featuredIndex];
 
   return (
     <main className="home-page">
@@ -87,13 +97,16 @@ export default function Home() {
 
       <div className="page-container">
         {error && <div className="list-error">{error}</div>}
+        
+        {/* ======================================================== */}
+        {/* SECTION: XƯỞNG MAY NỔI BẬT (BANNER DẠNG CAROUSEL)         */}
+        {/* ======================================================== */}
         <section className="content-section" id="factories">
           <div className="section-header">
             <div>
               <p className="section-label">ĐỐI TÁC CAO CẤP</p>
               <h2>XƯỞNG MAY NỔI BẬT</h2>
             </div>
-            <a href="#products">Xem tất cả →</a>
           </div>
 
           {loading ? (
@@ -101,36 +114,71 @@ export default function Home() {
           ) : factories.length === 0 ? (
             <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
           ) : (
-            <div className="factory-grid">
-              {factories.length > 0 ? (
-                factories.map((factory) => (
-                 <Link
-                  to={`/factory-profile/${factory.id}`}
-                  className="factory-card"
-                  key={factory.id}
-                >
-                    <div className="card-badge">TOP</div>
+            <div className="factory-banner-container">
+              
+              {/* 1. CARD TO NỔI BẬT Ở TRÊN */}
+              {featuredFactory && (
+                <div className="factory-hero-banner">
+                  {/* Nút lùi */}
+                  <button className="banner-nav-btn prev" onClick={showPrevFeatured}>
+                    <span className="material-symbols-outlined">chevron_left</span>
+                  </button>
+
+                  <div className="hero-content">
                     <img
-                      src={factory.imageUrls?.[0]}
-                      alt={factory.factoryName}
+                      src={featuredFactory.imageUrls?.[0] || "https://via.placeholder.com/800x400"}
+                      alt={featuredFactory.factoryName}
+                      className="hero-image"
                     />
-                    <div className="factory-info">
-                      <h3>{factory.factoryName}</h3>
+                    <div className="hero-info">
+                      <div className="hero-badge">TOP 1 THÁNG</div>
+                      <h3>{featuredFactory.factoryName}</h3>
                       <div className="factory-card-rating">
                         <span className="material-symbols-outlined">star</span>
-                        <span>{factory.ratingAvg ?? 4.8}</span>
+                        <span>{featuredFactory.ratingAvg ?? 4.8} / 5.0</span>
                       </div>
-                      <p>{factory.description || "Xưởng may chất lượng cao"}</p>
+                      <p className="hero-desc">{featuredFactory.description || "Xưởng may chất lượng cao uy tín hàng đầu."}</p>
+                      
+                      <Link to={`/factory-profile/${featuredFactory.id}`} className="btn-view-details">
+                        Xem chi tiết xưởng
+                      </Link>
                     </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
+                  </div>
+
+                  {/* Nút tiến */}
+                  <button className="banner-nav-btn next" onClick={showNextFeatured}>
+                    <span className="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
               )}
+
+              {/* 2. DANH SÁCH CARD NHỎ NGANG Ở DƯỚI (THUMBNAILS) */}
+              <div className="factory-thumbnails-row">
+                {factories.map((factory, index) => (
+                  <div 
+                    key={factory.id} 
+                    className={`thumb-card ${index === featuredIndex ? 'active' : ''}`}
+                    onClick={() => setFeaturedIndex(index)} // Click vào thẻ nhỏ thì hiển thị lên thẻ to
+                  >
+                    <img
+                      src={factory.imageUrls?.[0] || "https://via.placeholder.com/150"}
+                      alt={factory.factoryName}
+                    />
+                    <div className="thumb-info">
+                      <h4>{factory.factoryName}</h4>
+                      <span className="thumb-rating">⭐ {factory.ratingAvg ?? 4.8}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
             </div>
           )}
         </section>
 
+        {/* ======================================================== */}
+        {/* SECTION: GỢI Ý SẢN PHẨM HÔM NAY                           */}
+        {/* ======================================================== */}
         <section className="content-section" id="products">
           <div className="section-header">
             <h2>GỢI Ý HÔM NAY</h2>
@@ -143,10 +191,10 @@ export default function Home() {
               {products.length > 0 ? (
                 products.map((product) => (
                   <div
-                      className="product-card"
-                      key={product.id}
-                      onClick={() => navigate(`/products/${product.id}`)}
-                    >
+                    className="product-card"
+                    key={product.id}
+                    onClick={() => navigate(`/products/${product.id}`)}
+                  >
                     <div className="sale-badge">-15%</div>
                     <img
                       src={

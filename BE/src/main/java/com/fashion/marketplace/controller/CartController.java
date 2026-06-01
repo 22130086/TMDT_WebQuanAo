@@ -40,8 +40,14 @@ public class CartController {
             @Valid @RequestBody CartRequest req,
             Authentication authentication
     ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("Bạn chưa đăng nhập hoặc Token không hợp lệ");
+        }
 
         String email = authentication.getName();
+        if ("anonymousUser".equals(email)) {
+            return ResponseEntity.status(401).body("Token không hợp lệ (Anonymous User)");
+        }
 
         cartService.addToCartByEmail(email, req);
 
@@ -55,8 +61,14 @@ public class CartController {
             @Valid @RequestBody CartRequest req,
             Authentication authentication
     ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("Bạn chưa đăng nhập hoặc Token không hợp lệ");
+        }
 
         String email = authentication.getName();
+        if ("anonymousUser".equals(email)) {
+            return ResponseEntity.status(401).body("Token không hợp lệ (Anonymous User)");
+        }
 
         cartService.updateQuantityByEmail(email,id,req);
 
@@ -69,8 +81,14 @@ public class CartController {
             @PathVariable Long id,
             Authentication authentication
     ) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("Bạn chưa đăng nhập hoặc Token không hợp lệ");
+        }
 
         String email = authentication.getName();
+        if ("anonymousUser".equals(email)) {
+            return ResponseEntity.status(401).body("Token không hợp lệ (Anonymous User)");
+        }
 
         cartService.deleteItemByEmail(email,id);
 
