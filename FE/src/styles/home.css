@@ -304,6 +304,182 @@ a {
 /* =========================
    FACTORY GRID
 ========================= */
+/* CONTAINER CỦA BANNER */
+.factory-banner-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- PHẦN BANNER TO KHỔNG LỒ (HERO) --- */
+.factory-hero-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.hero-image {
+  flex: 1.5;
+  width: 100%;
+  max-height: 350px;
+  object-fit: cover;
+}
+
+.hero-info {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #f8fafc; /* Màu nền nhẹ cho phần chữ */
+}
+
+.hero-badge {
+  display: inline-block;
+  background: #ff4757;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  width: fit-content;
+}
+
+.hero-info h3 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  color: #1e293b;
+}
+
+.hero-desc {
+  font-size: 15px;
+  color: #64748b;
+  margin: 15px 0 25px 0;
+  line-height: 1.6;
+}
+
+.btn-view-details {
+  background-color: #0f172a;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s;
+  width: fit-content;
+}
+
+.btn-view-details:hover {
+  background-color: #334155;
+  transform: translateY(-2px);
+}
+
+/* NÚT ĐIỀU HƯỚNG TRÊN BANNER MŨI TÊN */
+.banner-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10;
+  transition: all 0.3s;
+}
+
+.banner-nav-btn:hover {
+  background: #0f172a;
+  color: white;
+}
+
+.banner-nav-btn.prev {
+  left: 15px;
+}
+
+.banner-nav-btn.next {
+  right: 15px;
+}
+
+/* --- PHẦN DANH SÁCH XƯỞNG NHỎ BÊN DƯỚI (THUMBNAILS) --- */
+.factory-thumbnails-row {
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+  padding: 5px;
+}
+
+.thumb-card {
+  flex: 1;
+  min-width: 150px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+  opacity: 0.6; /* Làm mờ các xưởng không được chọn */
+}
+
+.thumb-card.active {
+  border-color: #0f172a;
+  opacity: 1; /* Làm sáng xưởng đang được chọn */
+  transform: scale(1.02);
+}
+
+.thumb-card img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+}
+
+.thumb-info {
+  padding: 10px;
+  text-align: center;
+}
+
+.thumb-info h4 {
+  font-size: 14px;
+  margin: 0 0 5px 0;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb-rating {
+  font-size: 12px;
+  color: #eab308;
+  font-weight: 600;
+}
+
+/* Responsive để khi trên di động ảnh nằm trên, chữ nằm dưới */
+@media (max-width: 768px) {
+  .hero-content {
+    flex-direction: column;
+  }
+  .hero-image {
+    max-height: 250px;
+  }
+}
 .factory-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
