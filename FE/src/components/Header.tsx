@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { getCart } from "../services/cartService";
 import "../styles/header.css";
 
 interface HeaderProps {
@@ -7,9 +9,36 @@ interface HeaderProps {
 
 export default function Header({ onLogout }: HeaderProps) {
   const navigate = useNavigate();
+  const [cartCount, setCartCount] = useState<number>(0);
+
+  const fetchCartCount = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setCartCount(0);
+        return;
+      }
+      const response = await getCart();
+      const items = Array.isArray(response) ? response : (response?.data || []);
+      const count = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      setCartCount(count);
+    } catch (error) {
+      console.error("Lỗi lấy giỏ hàng ở Header:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartCount();
+
+    window.addEventListener("cart-updated", fetchCartCount);
+    return () => {
+      window.removeEventListener("cart-updated", fetchCartCount);
+    };
+  }, []);
 
   function handleLogout() {
     localStorage.removeItem("token");
+    setCartCount(0);
 
     if (onLogout) {
       onLogout();
@@ -53,7 +82,7 @@ export default function Header({ onLogout }: HeaderProps) {
 
             <Link to="/products">Sản phẩm</Link>
             <Link to="/custom-order"> Yêu cầu in áo</Link>  
-            <Link to="/cart"> Giỏ hàng</Link>
+            <Link to="/cart"> Giỏ hàng {cartCount > 0 && `(${cartCount})`}</Link>
 
             <a href="#about">Giới thiệu</a>
           </nav>
@@ -73,7 +102,7 @@ export default function Header({ onLogout }: HeaderProps) {
             </button>
 
             <button className="profile-btn">
-              Hồ sơ
+              <Link to="/order-history">Hồ sơ</Link>
             </button>
 
             <button

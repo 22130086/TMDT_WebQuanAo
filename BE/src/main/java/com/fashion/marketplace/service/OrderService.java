@@ -1,9 +1,13 @@
 package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.request.OrderRequest;
+import com.fashion.marketplace.dto.request.PaymentRequest;
+import com.fashion.marketplace.dto.response.OrderResponse; // 🌟 Import DTO mới
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,18 +28,58 @@ public class OrderService {
     private final QuotationRepository quotationRepository;
     private final DiscountCodeRepository discountCodeRepository;
     private final NotificationService notificationService;
+    private final ProductRepository productRepository; 
+
+    private final PaymentService paymentService;
+    private final HttpServletRequest httpServletRequest;
+
+    // 🌟 HÀM CHUYỂN ĐỔI CHUNG (MAPPER) TỪ ENTITY SANG DTO AN TOÀN
+    private OrderResponse convertToResponse(Order order) {
+        List<OrderResponse.OrderItemResponse> itemResponses = order.getItems().stream()
+                .map(item -> OrderResponse.OrderItemResponse.builder()
+                        .id(item.getId())
+                        .productId(item.getProduct() != null ? item.getProduct().getId() : null)
+                        .productName(item.getProductName())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .build())
+                .collect(Collectors.toList());
+
+        return OrderResponse.builder()
+                .id(order.getId())
+                .customerId(order.getCustomer().getId())
+                .customerEmail(order.getCustomer().getEmail()) // Giả định User entity có trường email
+                .customerName(order.getCustomer().getFullName()) // Giả định User entity có trường fullName/name
+                .factoryId(order.getFactory().getId())
+                .orderType(order.getOrderType().name())
+                .totalAmount(order.getTotalAmount())
+                .discountAmount(order.getDiscountAmount())
+                .finalAmount(order.getFinalAmount())
+                .status(order.getStatus().name())
+                .receiverName(order.getReceiverName())
+                .receiverPhone(order.getReceiverPhone())
+                .shippingAddress(order.getShippingAddress())
+                .note(order.getNote())
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
+                .createdAt(order.getCreatedAt())
+                .items(itemResponses)
+                .build();
+    }
 
     @Transactional
-    public Order placeOrder(Long customerId, OrderRequest req) {
+    public OrderResponse placeOrder(Long customerId, OrderRequest req) {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
         FactoryProfile factory = factoryProfileRepository.findById(req.getFactoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Xưởng không tồn tại"));
 
+        // 1. Tính tổng tiền sản phẩm dựa trên request truyền lên từ frontend
         BigDecimal total = req.getItems().stream()
                 .map(i -> i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // 2. Xử lý mã giảm giá (giữ nguyên logic cũ của bạn)
         BigDecimal discount = BigDecimal.ZERO;
         DiscountCode discountCode = null;
         if (req.getDiscountCode() != null) {
@@ -45,6 +89,7 @@ public class OrderService {
             discountCode.setUsedCount(discountCode.getUsedCount() + 1);
         }
 
+        // 3. Khởi tạo thực thể Order bao gồm paymentStatus mặc định ban đầu là UNPAID
         Order order = Order.builder()
                 .customer(customer)
                 .factory(factory)
@@ -53,56 +98,95 @@ public class OrderService {
                 .discountAmount(discount)
                 .finalAmount(total.subtract(discount))
                 .discountCode(discountCode)
-                .paymentMethod(req.getPaymentMethod())
+                .paymentMethod(req.getPaymentMethod()) // Nhận vào từ React ("COD" hoặc "VNPAY")
                 .receiverName(req.getReceiverName())
                 .receiverPhone(req.getReceiverPhone())
                 .shippingAddress(req.getShippingAddress())
                 .note(req.getNote())
-                .status(Order.OrderStatus.PENDING)
+                .status(Order.OrderStatus.PENDING)          // Mặc định đơn vừa đặt là PENDING
+                .paymentStatus(Order.PaymentStatus.UNPAID)   // Mặc định chưa thanh toán cho cả COD và VNPAY
                 .build();
 
         if (req.getQuotationId() != null) {
             order.setQuotation(quotationRepository.findById(req.getQuotationId()).orElse(null));
         }
 
+        // 4. Ánh xạ danh sách items
         List<OrderItem> items = req.getItems().stream().map(i -> {
             OrderItem item = new OrderItem();
             item.setOrder(order);
             item.setQuantity(i.getQuantity());
             item.setUnitPrice(i.getUnitPrice());
+            
+            Product product = productRepository.findById(i.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại với ID: " + i.getProductId()));
+            if (product.getStock() < i.getQuantity()) {
+                throw new IllegalArgumentException("Sản phẩm '" + product.getName() + "' đã hết hàng hoặc không đủ số lượng tồn kho!");
+            }
+            product.setStock(product.getStock() - i.getQuantity());
+            productRepository.save(product); // Lưu lại số lượng mới vào DB
+
+            item.setProduct(product);              
+            item.setProductName(product.getName());   
             return item;
         }).collect(Collectors.toList());
         order.setItems(items);
 
+        // 5. Lưu vào database để sinh ra Order ID duy nhất nhằm làm tham chiếu cho VNPAY (vnp_TxnRef)
         Order saved = orderRepository.save(order);
 
+        // 6. Gửi thông báo đến xưởng
         notificationService.push(factory.getUser().getId(),
                 "Đơn hàng mới", "Bạn có đơn hàng mới #" + saved.getId(), "ORDER", saved.getId());
 
-        return saved;
+        // 7. Chuyển đổi dữ liệu Entity thành DTO phản hồi (OrderResponse)
+        OrderResponse response = convertToResponse(saved);
+
+        // 🌟 8. LOGIC RẼ NHÁNH: Nếu phương thức chọn là VNPAY, tự đúc link thanh toán đẩy kèm vào DTO
+        if ("VNPAY".equalsIgnoreCase(saved.getPaymentMethod().toString())) {
+            try {
+                // Khởi tạo đối tượng Request theo cấu trúc mới sửa bên trên
+                com.fashion.marketplace.dto.request.PaymentRequest paymentRequest = 
+                    new com.fashion.marketplace.dto.request.PaymentRequest();
+                
+                paymentRequest.setOrderId(saved.getId()); // Gán Long mượt mà
+                paymentRequest.setAmount(saved.getFinalAmount().longValue()); // Lấy phần nguyên của số tiền
+                paymentRequest.setOrderInfo("Thanh toan don hang #" + saved.getId());
+
+                // Gọi hàm sinh link từ paymentService (Yêu cầu inject PaymentService và HttpServletRequest vào Service này)
+                String vnpayUrl = paymentService.createPaymentUrl(httpServletRequest, paymentRequest);
+                
+                // Đính link VNPAY vào object response trả về cho Client React
+                response.setPaymentUrl(vnpayUrl);
+                
+            } catch (Exception e) {
+                // Log lỗi ra màn hình console, không throw exception để tránh làm lỗi luồng lưu đơn hàng của khách
+                e.printStackTrace();
+            }
+        }
+
+        return response; 
     }
 
-    // Khách hàng xem đơn
-    public Page<Order> getByCustomer(Long customerId, Pageable pageable) {
-        return orderRepository.findByCustomerId(customerId, pageable);
+    // 🌟 Chuyển đổi Page<Order> sang Page<OrderResponse> bằng hàm .map()
+    public Page<OrderResponse> getByCustomer(Long customerId, Pageable pageable) {
+        return orderRepository.findByCustomerId(customerId, pageable).map(this::convertToResponse);
     }
 
-    // Xưởng xem đơn mẫu sẵn
-    public Page<Order> getReadyMadeByFactory(Long userId, Pageable pageable) {
+    public Page<OrderResponse> getReadyMadeByFactory(Long userId, Pageable pageable) {
         FactoryProfile f = factoryProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
-        return orderRepository.findByFactoryIdAndOrderType(f.getId(), Order.OrderType.READY_MADE, pageable);
+        return orderRepository.findByFactoryIdAndOrderType(f.getId(), Order.OrderType.READY_MADE, pageable).map(this::convertToResponse);
     }
 
-    // Xưởng xem đơn gia công
-    public Page<Order> getOutsourcingByFactory(Long userId, Pageable pageable) {
+    public Page<OrderResponse> getOutsourcingByFactory(Long userId, Pageable pageable) {
         FactoryProfile f = factoryProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
-        return orderRepository.findByFactoryIdAndOrderType(f.getId(), Order.OrderType.OUTSOURCING, pageable);
+        return orderRepository.findByFactoryIdAndOrderType(f.getId(), Order.OrderType.OUTSOURCING, pageable).map(this::convertToResponse);
     }
 
     @Transactional
-    public Order updateStatus(Long userId, Long orderId, Order.OrderStatus newStatus, boolean isFactory) {
+    public OrderResponse updateStatus(Long userId, Long orderId, Order.OrderStatus newStatus, boolean isFactory) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
 
@@ -112,7 +196,6 @@ public class OrderService {
             if (!order.getFactory().getId().equals(f.getId()))
                 throw new AccessDeniedException("Không có quyền cập nhật đơn này");
         } else {
-            // customer cancel
             if (!order.getCustomer().getId().equals(userId))
                 throw new AccessDeniedException("Không có quyền hủy đơn này");
             if (order.getStatus() != Order.OrderStatus.PENDING)
@@ -124,12 +207,47 @@ public class OrderService {
         notificationService.push(order.getCustomer().getId(),
                 "Cập nhật đơn hàng", "Đơn hàng #" + orderId + " → " + newStatus,
                 "ORDER", orderId);
-        return saved;
+        return convertToResponse(saved); // 🌟 Thay đổi ở đây
     }
-
-    public Order getById(Long orderId) {
-        return orderRepository.findById(orderId)
+    @Transactional
+    public OrderResponse updateStatusByCustomer(Long customerId, Long orderId) {
+        // 1. Tìm đơn hàng
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+
+        // 2. Kiểm tra quyền sở hữu đơn hàng
+        if (!order.getCustomer().getId().equals(customerId)) {
+            throw new AccessDeniedException("Bạn không có quyền xác nhận đơn hàng này");
+        }
+
+        // 3. Kiểm tra trạng thái hợp lệ (chỉ cho phép xác nhận khi đang giao hàng)
+        if (order.getStatus() != Order.OrderStatus.SHIPPING) {
+            throw new IllegalStateException("Đơn hàng phải ở trạng thái đang giao thì mới có thể xác nhận đã nhận");
+        }
+
+        // 4. Cập nhật trạng thái
+        order.setStatus(Order.OrderStatus.COMPLETED);
+        
+        // Luôn chuyển sang PAID khi hoàn tất (đặc biệt quan trọng cho luồng COD)
+        order.setPaymentStatus(Order.PaymentStatus.FULLY_PAID); 
+
+        Order saved = orderRepository.save(order);
+
+        // 5. Gửi thông báo cho xưởng biết khách đã nhận hàng
+        notificationService.push(order.getFactory().getUser().getId(),
+                "Khách đã nhận hàng", 
+                "Đơn hàng #" + orderId + " đã được khách hàng xác nhận nhận hàng và thanh toán.",
+                "ORDER", orderId);
+
+        return convertToResponse(saved);
+    }
+    // Thay đổi kiểu trả về từ Order -> OrderResponse và gọi hàm convert
+    @Transactional(readOnly = true)
+    public OrderResponse getById(Long orderId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+        
+        return convertToResponse(order); // Tái sử dụng hàm map DTO của bạn!
     }
 
     private BigDecimal applyDiscount(DiscountCode code, BigDecimal total) {

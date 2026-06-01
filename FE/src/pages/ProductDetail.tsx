@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 import { productService } from "../services/productService";
+import { addToCart } from "../services/cartService";
 
 import "../styles/product-detail.css";
 
@@ -62,6 +63,9 @@ export default function ProductDetail() {
 
   const [quantity, setQuantity] =
     useState(1);
+
+  const [addingToCart, setAddingToCart] =
+    useState(false);
 
   useEffect(() => {
 
@@ -131,6 +135,25 @@ export default function ProductDetail() {
     fetchProduct();
 
   }, [id]);
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    try {
+      setAddingToCart(true);
+      await addToCart(product.id, quantity);
+      
+      window.dispatchEvent(new Event("cart-updated"));
+    } catch (error: any) {
+      console.error("Lỗi khi thêm sản phẩm vào giỏ hàng:", error);
+      alert(
+        error.response?.data?.message ||
+        error.message ||
+        "Lỗi khi thêm sản phẩm vào giỏ hàng!"
+      );
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -255,11 +278,19 @@ export default function ProductDetail() {
 
             <div className="action-buttons">
 
-              <button className="add-cart-btn">
-                Thêm vào giỏ hàng
+              <button
+                className="add-cart-btn"
+                onClick={handleAddToCart}
+                disabled={addingToCart}
+              >
+                {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
               </button>
 
-              <button className="buy-btn">
+              <button
+                className="buy-btn"
+                onClick={handleAddToCart}
+                disabled={addingToCart}
+              >
                 Mua ngay
               </button>
 

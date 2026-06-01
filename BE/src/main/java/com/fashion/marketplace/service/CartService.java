@@ -88,6 +88,7 @@ public class CartService {
                 .cart(cart)
                 .product(product)
                 .quantity(req.getQuantity())
+                .unitPrice(product.getPrice()) 
                 .build();
 
         cartItemRepository.save(item);
@@ -152,7 +153,17 @@ public class CartService {
 
     @Transactional
     public void deleteItemByEmail(String email, Long cartItemId) {
-        User user = getUserByEmail(email);
-        deleteItem(user.getId(), cartItemId);
+        // 1. Tìm chính xác dòng CartItem bằng hàm findById mặc định của JPA (Luôn đúng)
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item không tồn tại với ID: " + cartItemId));
+
+        // 2. Kiểm tra bảo mật xem giỏ hàng này có đúng là của User đang đăng nhập không
+        if (cartItem.getCart().getCustomer() == null || 
+                !cartItem.getCart().getCustomer().getEmail().equals(email)) {
+                throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền xóa sản phẩm này");
+        }
+
+        // 3. Thực hiện xóa trực tiếp đối tượng đã tìm thấy
+        cartItemRepository.delete(cartItem);
     }
 }

@@ -1,0 +1,240 @@
+
+.payment-result-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  font-family: "Inter", sans-serif;
+}
+
+.result-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.loading-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #64748b;
+}
+
+/* ==========================================================================
+   Khối thẻ kết quả chính
+   ========================================================================== */
+.result-card {
+  background: #ffffff;
+  max-width: 520px;
+  width: 100%;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 40px 32px;
+  text-align: center;
+  border-top: 8px solid #cbd5e1;
+}
+
+.result-card.card-success {
+  border-top-color: #10b981; /* Xanh lá */
+}
+
+.result-card.card-failure {
+  border-top-color: #ef4444; /* Đỏ */
+}
+
+/* ==========================================================================
+   Hiệu ứng Animation Icon SVG (Dấu tích xanh & Chữ thập đỏ)
+   ========================================================================== */
+.result-icon-wrapper {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.success-icon svg, 
+.failure-icon svg {
+  width: 80px;
+  height: 80px;
+}
+
+/* Vẽ vòng tròn */
+.success-circle, .failure-circle {
+  stroke-width: 3;
+  stroke-miterlimit: 10;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.success-circle { stroke: #10b981; }
+.failure-circle { stroke: #ef4444; }
+
+/* Vẽ dấu tích/chéo */
+.success-check, .failure-cross {
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: strokeIcon 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+}
+
+.success-check { stroke: #10b981; }
+.failure-cross { stroke: #ef4444; }
+
+@keyframes strokeCircle {
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes strokeIcon {
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ==========================================================================
+   Kiểu chữ (Typography)
+   ========================================================================== */
+.result-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.result-message {
+  font-size: 15px;
+  color: #64748b;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+/* ==========================================================================
+   Khối Chi tiết giao dịch
+   ========================================================================== */
+.result-details {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.details-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.details-label {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.details-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.details-value.font-mono {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.5px;
+}
+
+.details-value.price-highlight {
+  font-size: 16px;
+  color: #1e293b;
+}
+
+/* ==========================================================================
+   Nhãn Trạng thái (Badges)
+   ========================================================================== */
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-success {
+  background-color: #ecfdf5;
+  color: #10b981;
+}
+
+.badge-failure {
+  background-color: #fef2f2;
+  color: #ef4444;
+}
+
+/* ==========================================================================
+   Khu vực Nút bấm (Actions)
+   ========================================================================== */
+.result-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 480px) {
+  .result-actions {
+    flex-direction: column;
+  }
+}
+
+.btn {
+  flex: 1;
+  padding: 14px 0;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #1e293b;
+  color: #ffffff;
+  border: 1px solid #1e293b;
+}
+
+.btn-primary:hover {
+  background-color: #0f172a;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-secondary:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* ==========================================================================
+   Đếm ngược
+   ========================================================================== */
+.countdown-text {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.countdown-num {
+  color: #0f172a;
+  font-weight: 700;
+}

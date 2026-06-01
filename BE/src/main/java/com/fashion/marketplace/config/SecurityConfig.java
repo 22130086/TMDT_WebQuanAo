@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/banners/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/policy/**").permitAll()
+                .requestMatchers("/api/payment/vnpay-return").permitAll()
                 // Admin only
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Factory only

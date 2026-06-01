@@ -9,7 +9,6 @@ import {
   deleteCartItem,
   type CartItem,
 } from "../../services/cartService";
-import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 const Cart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -28,8 +27,8 @@ const Cart = () => {
 
   const fetchCart = async () => {
     try {
-      const data = await getCart();
-      const items = data || [];
+      const response = await getCart();
+      const items = Array.isArray(response) ? response : (response?.data || []);
       setCartItems(items);
       // Tự động tích chọn tất cả sản phẩm khi vừa load xong
       setSelectedIds(items.map((item: CartItem) => item.id));
@@ -64,6 +63,7 @@ const Cart = () => {
     try {
       // id ở đây phải là ID của dòng giỏ hàng (CartItem ID)
       await updateQuantity(id, quantity, productId); 
+      window.dispatchEvent(new Event("cart-updated"));
     } catch (error) {
       console.error("Lỗi khi lưu số lượng xuống DB:", error);
       alert("Cập nhật số lượng thất bại! Đang đồng bộ lại giỏ hàng...");
@@ -73,13 +73,20 @@ const Cart = () => {
 
   // DELETE ITEM
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?")) return;
     try {
       await deleteCartItem(id);
       setCartItems((prev) => prev.filter((item) => item.id !== id));
       // Nếu xóa sản phẩm, gỡ luôn ID của nó khỏi danh sách đang chọn
       setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
-    } catch (error) {
-      console.error(error);
+      window.dispatchEvent(new Event("cart-updated"));
+    } catch (error: any) {
+      console.error("Lỗi khi xóa sản phẩm:", error);
+      // Hiển thị chi tiết lỗi từ backend nếu có để dễ debug
+      alert(
+        error.response?.data?.message || 
+        "Xóa sản phẩm thất bại! Vui lòng thử lại sau."
+      );
     }
   };
 
@@ -119,16 +126,19 @@ const handleProceedToCheckout = () => {
     const checkoutItems = cartItems.filter(item => selectedIds.includes(item.id));
 
     // 2. Tính tổng tiền của những sản phẩm được tick đó
-    const totalAmount = checkoutItems.reduce(
+    const itemsTotal = checkoutItems.reduce(
       (total, item) => total + (item.price * item.quantity), 
       0
     );
 
+    const totalAmount = itemsTotal;
     // 3. Chuyển hướng và xách theo dữ liệu sang OrderCheckout
     navigate("/order-checkout", {
       state: {
         checkoutItems: checkoutItems,
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        shippingFee: shippingFee
+        
       }
     });
   };
