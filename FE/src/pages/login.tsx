@@ -49,11 +49,10 @@ export default function Login() {
             } else {
                 setError("Không nhận được mã xác thực Token từ máy chủ.");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Lỗi khi thực hiện đăng nhập:", err);
-            setError(
-                err instanceof Error ? err.message : "Đã xảy ra lỗi khi đăng nhập"
-            );
+            const msg = err?.response?.data?.message || err?.message || "Đã xảy ra lỗi khi đăng nhập";
+            setError(msg);
         } finally {
             setLoading(false);
         }

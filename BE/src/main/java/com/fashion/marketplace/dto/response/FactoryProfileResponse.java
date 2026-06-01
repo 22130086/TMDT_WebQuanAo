@@ -15,7 +15,10 @@ import java.util.List;
 @Builder
 public class FactoryProfileResponse {
     private Long id;
+    private Long userId;
     private String factoryName;
+    private String factoryUserName;
+    private String factoryUserEmail;
     private String description;
     private String address;
     private Integer minQuantity;

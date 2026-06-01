@@ -115,6 +115,19 @@ public class ProductController {
                 productService.getPending(PageRequest.of(page, size))));
     }
 
+    @GetMapping("/api/admin/products")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> allProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (keyword != null && !keyword.isBlank()) {
+            return ResponseEntity.ok(ApiResponse.ok(productService.searchAdmin(keyword, pageable)));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(productService.getAll(pageable)));
+    }
+
     @PatchMapping("/api/admin/products/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductResponse>> approve(@PathVariable Long id) {

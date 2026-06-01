@@ -50,10 +50,9 @@ export default function Register() {
 
       setSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
       setTimeout(() => navigate("/"), 1200);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi đăng ký"
-      );
+    } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "Đã xảy ra lỗi khi đăng ký";
+        setError(msg);
     } finally {
       setLoading(false);
     }

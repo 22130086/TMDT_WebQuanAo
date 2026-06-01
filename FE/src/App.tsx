@@ -24,6 +24,13 @@ import "./styles/factory.css";
 import "./styles/order_checkout.css";
 import Cart from "./pages/UserPages/cart";
 import OrderCheckout from "./pages/UserPages/order_checkout";
+import AdminLayout from "./components/AdminLayout";
+import ComplaintsManagement from "./pages/AdminPages/ComplaintsManagement";
+import DisputesManagement from "./pages/AdminPages/DisputesManagement";
+import WithdrawalsManagement from "./pages/AdminPages/WithdrawalsManagement";
+import UserManagement from "./pages/AdminPages/UserManagement";
+import FactoryApproval from "./pages/AdminPages/FactoryApproval";
+import ProductManagement from "./pages/AdminPages/ProductManagement";
 
 function App() {
   return (
@@ -89,7 +96,69 @@ function App() {
           path="/admin"
           element={
             <AdminRoute>
-              <Admin />
+              <AdminLayout title="Bảng điều khiển">
+                <Admin />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/complaints"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Khiếu nại">
+                <ComplaintsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/disputes"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Tranh chấp">
+                <DisputesManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/withdrawals"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Yêu cầu Rút tiền">
+                <WithdrawalsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Người dùng">
+                <UserManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/factories"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Duyệt Xưởng May">
+                <FactoryApproval />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Sản phẩm">
+                <ProductManagement />
+              </AdminLayout>
             </AdminRoute>
           }
         />
