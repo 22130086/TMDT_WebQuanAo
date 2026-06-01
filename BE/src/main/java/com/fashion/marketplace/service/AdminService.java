@@ -1,5 +1,7 @@
 package com.fashion.marketplace.service;
 
+import com.fashion.marketplace.dto.response.WithdrawalResponse;
+import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.*;
@@ -13,6 +15,7 @@ import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AdminService {
 
     private final UserRepository userRepository;
@@ -53,20 +56,50 @@ public class AdminService {
 
     // ---- 1. Quản lý yêu cầu rút tiền ----
 
-    public Page<WithdrawalRequest> getWithdrawals(WithdrawalRequest.WithdrawalStatus status,
-                                                   Pageable pageable) {
-        if (status != null) return withdrawalRepository.findByStatus(status, pageable);
-        return withdrawalRepository.findAll(pageable);
+    private WithdrawalResponse toResponse(WithdrawalRequest w) {
+        return WithdrawalResponse.builder()
+                .id(w.getId())
+                .factoryUserId(w.getFactoryUser() != null ? w.getFactoryUser().getId() : null)
+                .factoryUserName(w.getFactoryUser() != null ? w.getFactoryUser().getFullName() : null)
+                .factoryName(w.getFactoryUser() != null ? w.getFactoryUser().getFullName() : null)
+                .amount(w.getAmount())
+                .bankName(w.getBankName())
+                .accountNumber(w.getAccountNumber())
+                .accountName(w.getAccountName())
+                .status(w.getStatus().name())
+                .adminNote(w.getAdminNote())
+                .handledById(w.getHandledBy() != null ? w.getHandledBy().getId() : null)
+                .handledAt(w.getHandledAt())
+                .createdAt(w.getCreatedAt())
+                .build();
     }
 
-    public WithdrawalRequest getWithdrawal(Long id) {
-        return withdrawalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu rút tiền không tồn tại"));
+    public Page<WithdrawalResponse> getWithdrawals(WithdrawalRequest.WithdrawalStatus status, Pageable pageable) {
+        Page<WithdrawalRequest> page = (status != null)
+                ? withdrawalRepository.findByStatus(status, pageable)
+                : withdrawalRepository.findAll(pageable);
+        return page.map(this::toResponse);
+    }
+
+    public WithdrawalResponse getWithdrawal(Long id) {
+        return toResponse(withdrawalRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu rút tiền không tồn tại")));
+    }
+
+    public WithdrawalStatsResponse getWithdrawalStats() {
+        return WithdrawalStatsResponse.builder()
+                .total(withdrawalRepository.count())
+                .pending(withdrawalRepository.countByStatus(WithdrawalRequest.WithdrawalStatus.PENDING))
+                .approved(withdrawalRepository.countByStatus(WithdrawalRequest.WithdrawalStatus.APPROVED))
+                .transferred(withdrawalRepository.countByStatus(WithdrawalRequest.WithdrawalStatus.TRANSFERRED))
+                .rejected(withdrawalRepository.countByStatus(WithdrawalRequest.WithdrawalStatus.REJECTED))
+                .build();
     }
 
     @Transactional
-    public WithdrawalRequest approveWithdrawal(Long adminId, Long withdrawalId) {
-        WithdrawalRequest wr = getWithdrawal(withdrawalId);
+    public WithdrawalResponse approveWithdrawal(Long adminId, Long withdrawalId) {
+        WithdrawalRequest wr = withdrawalRepository.findById(withdrawalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu rút tiền không tồn tại"));
         wr.setStatus(WithdrawalRequest.WithdrawalStatus.APPROVED);
         wr.setHandledBy(userRepository.findById(adminId).orElse(null));
         wr.setHandledAt(java.time.LocalDateTime.now());
@@ -75,12 +108,13 @@ public class AdminService {
                 "Yêu cầu rút tiền được duyệt",
                 "Yêu cầu rút " + wr.getAmount() + " VNĐ đã được phê duyệt",
                 "WITHDRAWAL", withdrawalId);
-        return saved;
+        return toResponse(saved);
     }
 
     @Transactional
-    public WithdrawalRequest rejectWithdrawal(Long adminId, Long withdrawalId, String note) {
-        WithdrawalRequest wr = getWithdrawal(withdrawalId);
+    public WithdrawalResponse rejectWithdrawal(Long adminId, Long withdrawalId, String note) {
+        WithdrawalRequest wr = withdrawalRepository.findById(withdrawalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu rút tiền không tồn tại"));
         wr.setStatus(WithdrawalRequest.WithdrawalStatus.REJECTED);
         wr.setAdminNote(note);
         wr.setHandledBy(userRepository.findById(adminId).orElse(null));
@@ -89,15 +123,16 @@ public class AdminService {
         notificationService.push(wr.getFactoryUser().getId(),
                 "Yêu cầu rút tiền bị từ chối", "Lý do: " + note,
                 "WITHDRAWAL", withdrawalId);
-        return saved;
+        return toResponse(saved);
     }
 
     @Transactional
-    public WithdrawalRequest markTransferred(Long adminId, Long withdrawalId) {
-        WithdrawalRequest wr = getWithdrawal(withdrawalId);
+    public WithdrawalResponse markTransferred(Long adminId, Long withdrawalId) {
+        WithdrawalRequest wr = withdrawalRepository.findById(withdrawalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu rút tiền không tồn tại"));
         wr.setStatus(WithdrawalRequest.WithdrawalStatus.TRANSFERRED);
         wr.setHandledAt(java.time.LocalDateTime.now());
-        return withdrawalRepository.save(wr);
+        return toResponse(withdrawalRepository.save(wr));
     }
 
     // ---- 7. Quản lý mã giảm giá ----

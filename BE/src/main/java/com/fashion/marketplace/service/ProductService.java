@@ -146,6 +146,16 @@ public class ProductService {
                 .map(this::toResponse);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getAll(Pageable pageable) {
+        return productRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> searchAdmin(String keyword, Pageable pageable) {
+        return productRepository.searchAdmin(keyword, pageable).map(this::toResponse);
+    }
+
     // helper
     private Product getOwnedProduct(Long userId, Long productId) {
         FactoryProfile factory = factoryProfileRepository.findByUserId(userId)

@@ -1,5 +1,7 @@
 package com.fashion.marketplace.controller;
 
+import com.fashion.marketplace.dto.response.WithdrawalResponse;
+import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ApiResponse;
 import com.fashion.marketplace.service.AdminService;
@@ -81,7 +83,7 @@ public class AdminController {
     // ==================== WITHDRAWALS ====================
 
     @GetMapping("/api/admin/withdrawals")
-    public ResponseEntity<ApiResponse<Page<WithdrawalRequest>>> withdrawals(
+    public ResponseEntity<ApiResponse<Page<WithdrawalResponse>>> withdrawals(
             @RequestParam(required = false) WithdrawalRequest.WithdrawalStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -89,26 +91,31 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawals(status, pageable)));
     }
 
+    @GetMapping("/api/admin/withdrawals/stats")
+    public ResponseEntity<ApiResponse<WithdrawalStatsResponse>> withdrawalStats() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawalStats()));
+    }
+
     @GetMapping("/api/admin/withdrawals/{id}")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> withdrawalDetail(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> withdrawalDetail(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawal(id)));
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/approve")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> approveWithdrawal(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> approveWithdrawal(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Đã duyệt yêu cầu rút tiền",
                 adminService.approveWithdrawal(authUtil.currentUserId(), id)));
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/reject")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> rejectWithdrawal(
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> rejectWithdrawal(
             @PathVariable Long id, @RequestParam String note) {
         return ResponseEntity.ok(ApiResponse.ok("Đã từ chối yêu cầu",
                 adminService.rejectWithdrawal(authUtil.currentUserId(), id, note)));
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/transferred")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> markTransferred(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> markTransferred(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật trạng thái chuyển tiền",
                 adminService.markTransferred(authUtil.currentUserId(), id)));
     }

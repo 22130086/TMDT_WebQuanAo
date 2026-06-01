@@ -11,6 +11,7 @@ import com.fashion.marketplace.repository.WalletRepository;
 import com.fashion.marketplace.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class AuthService {
                 .fullName(req.getFullName())
                 .phone(req.getPhone())
                 .role(req.getRole() != null ? req.getRole() : User.Role.CUSTOMER)
-                .status(User.Status.ACTIVE)
+                .status(req.getRole() == User.Role.FACTORY ? User.Status.PENDING : User.Status.ACTIVE)
                 .build();
         userRepository.save(user);
         // Tạo ví cho user
@@ -51,6 +52,8 @@ public class AuthService {
         try {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
+        } catch (DisabledException e) {
+            throw new IllegalStateException("Tài khoản của bạn đang chờ admin phê duyệt. Vui lòng đợi trong giây lát.");
         } catch (BadCredentialsException e) {
             throw new IllegalArgumentException("Email hoặc mật khẩu không đúng");
         }
@@ -58,6 +61,9 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         if (user.getStatus() == User.Status.LOCKED) {
             throw new IllegalStateException("Tài khoản đã bị khóa");
+        }
+        if (user.getStatus() == User.Status.PENDING) {
+            throw new IllegalStateException("Tài khoản của bạn đang chờ admin phê duyệt. Vui lòng đợi trong giây lát.");
         }
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         return buildAuthResponse(user, token);

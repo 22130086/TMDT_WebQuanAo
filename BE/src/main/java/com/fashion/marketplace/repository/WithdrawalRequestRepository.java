@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalRequest, Long> {
     Page<WithdrawalRequest> findByStatus(WithdrawalRequest.WithdrawalStatus status, Pageable pageable);
     Page<WithdrawalRequest> findByFactoryUserId(Long userId, Pageable pageable);
+    Long countByStatus(WithdrawalRequest.WithdrawalStatus status);
 }
