@@ -24,13 +24,21 @@ export interface WithdrawalStats {
   rejected: number;
 }
 
+export interface TransferRequest {
+  transactionRef: string;
+  bankName?: string;
+  note?: string;
+}
+
 interface PageResponse<T> { content: T[]; totalElements: number; totalPages: number; number: number; }
 interface ApiResponse<T> { data: T; message?: string; }
 
 class WithdrawalService {
-  static async getAll(status?: string, page = 0, size = 10) {
+  static async getAll(status?: string, startDate?: string, endDate?: string, page = 0, size = 10) {
     const params: Record<string, string | number> = { page, size };
     if (status) params.status = status;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
     const res = await http.get<ApiResponse<PageResponse<Withdrawal>>>('/admin/withdrawals', { params });
     return res.data.data;
   }
@@ -46,8 +54,8 @@ class WithdrawalService {
     const res = await http.patch<ApiResponse<Withdrawal>>(`/admin/withdrawals/${id}/reject`, null, { params: { note } });
     return res.data.data;
   }
-  static async markTransferred(id: number) {
-    const res = await http.patch<ApiResponse<Withdrawal>>(`/admin/withdrawals/${id}/transferred`);
+  static async markTransferred(id: number, transferReq?: TransferRequest) {
+    const res = await http.patch<ApiResponse<Withdrawal>>(`/admin/withdrawals/${id}/transferred`, transferReq || {});
     return res.data.data;
   }
 }

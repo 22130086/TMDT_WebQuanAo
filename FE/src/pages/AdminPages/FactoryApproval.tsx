@@ -1,19 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminUserService from '../../services/adminUserService';
 import type { FactoryInfo } from '../../services/adminUserService';
+import '../../styles/admin-table.css';
 
 const statusLabels: Record<string, string> = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối' };
+const statusBadge: Record<string, string> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' };
 
 export default function FactoryApproval() {
   const [factories, setFactories] = useState<FactoryInfo[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fetch = useCallback(async (p: number) => {
     setLoading(true);
-    try { const d = await AdminUserService.getPendingFactories(p, 10); if (d?.content) { setFactories(d.content); setTotalPages(d.totalPages || 1); } }
-    catch (e) { console.error(e); }
+    try {
+      const d = await AdminUserService.getPendingFactories(p, 10);
+      if (d?.content) { setFactories(d.content); setTotalPages(d.totalPages || 1); setTotal(d.totalElements || 0); }
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
 
@@ -21,29 +30,63 @@ export default function FactoryApproval() {
 
   const handleApprove = async (id: number) => { await AdminUserService.approveFactory(id); fetch(page); };
 
+  const filtered = factories.filter(f => {
+    const matchSearch = !search || (f.factoryName || '').toLowerCase().includes(search.toLowerCase()) || (f.address || '').toLowerCase().includes(search.toLowerCase()) || String(f.id).includes(search);
+    const matchStatus = !statusFilter || f.verifiedStatus === statusFilter;
+    const matchDate = (!fromDate || (f.createdAt && f.createdAt >= fromDate)) && (!toDate || (f.createdAt && f.createdAt <= toDate + 'T23:59:59'));
+    return matchSearch && matchStatus && matchDate;
+  });
+
+  const clearDate = () => { setFromDate(''); setToDate(''); };
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      {loading && <div style={{ textAlign: 'center', color: '#3b82f6', padding: '0.5rem', background: '#eff6ff', borderRadius: '0.5rem', marginBottom: '1rem' }}>Đang tải...</div>}
-      <div style={{ background: '#fff', borderRadius: '0.75rem', boxShadow: '0 20px 40px rgba(0,55,176,0.06)', overflow: 'hidden' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-          <h3 style={{ fontWeight: 700, fontSize: '1.125rem' }}>Duyệt xưởng may</h3>
-          <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.25rem' }}>Phê duyệt hồ sơ xưởng may đăng ký</p>
+    <div className="at-container">
+      {loading && <div className="at-loading">Đang tải...</div>}
+
+      <div className="at-section">
+        <div className="at-header">
+          <div>
+            <h3>Duyệt xưởng may</h3>
+            <p className="subtitle">Phê duyệt hồ sơ xưởng may đăng ký · {total} hồ sơ</p>
+          </div>
+          <div className="at-toolbar">
+            <div className="at-search">
+              <span className="material-symbols-outlined">search</span>
+              <input placeholder="Tìm tên, địa chỉ..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <select className="at-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ duyệt</option>
+              <option value="APPROVED">Đã duyệt</option>
+              <option value="REJECTED">Từ chối</option>
+            </select>
+            <div className="at-date-filter">
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} title="Từ ngày" />
+              <span className="sep">→</span>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} title="Đến ngày" />
+              {(fromDate || toDate) && <button className="at-date-clear" onClick={clearDate}><span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>close</span></button>}
+            </div>
+          </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr style={{ background: '#f8fafc' }}><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>ID</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Tên xưởng</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Địa chỉ</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Đánh giá</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Trạng thái</th><th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Duyệt</th></tr></thead>
+
+        <div className="at-table-wrap">
+          <table className="at-table">
+            <thead><tr>
+              <th>ID</th><th>Tên xưởng</th><th>Địa chỉ</th><th>Đánh giá</th><th>Ngày đăng ký</th><th>Trạng thái</th><th className="center">Duyệt</th>
+            </tr></thead>
             <tbody>
-              {factories.length === 0 && !loading && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Không có xưởng nào chờ duyệt</td></tr>}
-              {factories.map(f => (
-                <tr key={f.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem', fontWeight: 700, color: '#0037b0' }}>#{f.id}</td>
-                  <td style={{ padding: '1rem', fontWeight: 700 }}>{f.factoryName || f.factoryUserName || f.factoryUserEmail || `User #${f.userId}`}</td>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#64748b' }}>{f.address || '-'}</td>
-                  <td style={{ padding: '1rem' }}>{f.ratingAvg ? f.ratingAvg + ' ⭐' : '-'}</td>
-                  <td style={{ padding: '1rem' }}><span style={{ padding: '0.2rem 0.75rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: f.verifiedStatus === 'PENDING' ? '#fef9c3' : f.verifiedStatus === 'APPROVED' ? '#dcfce7' : '#fee2e2', color: f.verifiedStatus === 'PENDING' ? '#a16207' : f.verifiedStatus === 'APPROVED' ? '#16a34a' : '#dc2626' }}>{statusLabels[f.verifiedStatus] || f.verifiedStatus}</span></td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+              {filtered.length === 0 && !loading && <tr><td colSpan={7} className="at-empty">Không có xưởng nào</td></tr>}
+              {filtered.map(f => (
+                <tr key={f.id}>
+                  <td><span className="at-id">#{f.id}</span></td>
+                  <td><span className="at-name">{f.factoryName || f.factoryUserName || f.factoryUserEmail || `User #${f.userId}`}</span></td>
+                  <td className="at-sub">{f.address || '-'}</td>
+                  <td>{f.ratingAvg ? f.ratingAvg + ' ⭐' : '-'}</td>
+                  <td className="at-date">{f.createdAt ? new Date(f.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                  <td><span className={`at-badge ${statusBadge[f.verifiedStatus] || 'neutral'}`}>{statusLabels[f.verifiedStatus] || f.verifiedStatus}</span></td>
+                  <td className="center">
                     {f.verifiedStatus === 'PENDING' && (
-                      <button onClick={() => handleApprove(f.id)} style={{ padding: '0.4rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', background: '#0037b0', color: '#fff' }}>Duyệt</button>
+                      <button className="at-btn primary" onClick={() => handleApprove(f.id)}>Duyệt</button>
                     )}
                   </td>
                 </tr>
@@ -51,11 +94,15 @@ export default function FactoryApproval() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.875rem', color: '#64748b' }}>Trang {page + 1} / {totalPages}</span>
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>←</button>
-            <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>→</button>
+
+        <div className="at-pagination">
+          <span className="info">Hiển thị {filtered.length} / {total} hồ sơ</span>
+          <div className="ctrls">
+            <button className="at-page-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}><span className="material-symbols-outlined">chevron_left</span></button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+              <button key={i} className={`at-page-num ${i === page ? 'active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>
+            ))}
+            <button className="at-page-btn" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><span className="material-symbols-outlined">chevron_right</span></button>
           </div>
         </div>
       </div>

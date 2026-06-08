@@ -31,6 +31,9 @@ import AdminLayout from "./components/AdminLayout";
 import ComplaintsManagement from "./pages/AdminPages/ComplaintsManagement";
 import DisputesManagement from "./pages/AdminPages/DisputesManagement";
 import WithdrawalsManagement from "./pages/AdminPages/WithdrawalsManagement";
+import VNPayTransfer from "./pages/AdminPages/VNPayTransfer";
+import OrderManagement from "./pages/AdminPages/OrderManagement";
+import Reports from "./pages/AdminPages/Reports";
 import UserManagement from "./pages/AdminPages/UserManagement";
 import FactoryApproval from "./pages/AdminPages/FactoryApproval";
 import ProductManagement from "./pages/AdminPages/ProductManagement";
@@ -139,6 +142,16 @@ function App() {
           }
         />
         <Route
+          path="/admin/withdrawals/:id/transfer"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Chuyển tiền VNPay">
+                <VNPayTransfer />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/users"
           element={
             <AdminRoute>
@@ -164,6 +177,26 @@ function App() {
             <AdminRoute>
               <AdminLayout title="Quản lý Sản phẩm">
                 <ProductManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Đơn hàng">
+                <OrderManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Báo cáo Doanh thu">
+                <Reports />
               </AdminLayout>
             </AdminRoute>
           }

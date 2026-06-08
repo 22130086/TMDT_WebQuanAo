@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import AdminProductService from '../../services/adminProductService';
 import type { ProductItem } from '../../services/adminProductService';
+import '../../styles/admin-table.css';
 
 const statusLabels: Record<string, string> = { PENDING: 'Chờ duyệt', ACTIVE: 'Hoạt động', HIDDEN: 'Đã ẩn', REJECTED: 'Từ chối', DRAFT: 'Nháp' };
+const statusBadge: Record<string, string> = { PENDING: 'warning', ACTIVE: 'success', HIDDEN: 'neutral', REJECTED: 'danger', DRAFT: 'neutral' };
 
 export default function ProductManagement() {
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -12,6 +13,9 @@ export default function ProductManagement() {
   const [total, setTotal] = useState(0);
   const [keyword, setKeyword] = useState('');
   const [tab, setTab] = useState<'all' | 'pending'>('all');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fetch = useCallback(async (p: number) => {
@@ -35,55 +39,76 @@ export default function ProductManagement() {
     fetch(page);
   };
 
+  const filtered = products.filter(p => {
+    const matchStatus = !statusFilter || p.status === statusFilter;
+    const matchDate = (!fromDate || (p.createdAt && p.createdAt >= fromDate)) && (!toDate || (p.createdAt && p.createdAt <= toDate + 'T23:59:59'));
+    return matchStatus && matchDate;
+  });
+
+  const clearDate = () => { setFromDate(''); setToDate(''); };
+  const formatMoney = (n: number) => n.toLocaleString('vi-VN') + ' ₫';
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      {loading && <div style={{ textAlign: 'center', color: '#3b82f6', padding: '0.5rem', background: '#eff6ff', borderRadius: '0.5rem', marginBottom: '1rem' }}>Đang tải...</div>}
-      <div style={{ background: '#fff', borderRadius: '0.75rem', boxShadow: '0 20px 40px rgba(0,55,176,0.06)', overflow: 'hidden' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => { setTab('all'); setPage(0); }} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', background: tab === 'all' ? '#0037b0' : '#f1f5f9', color: tab === 'all' ? '#fff' : '#475569' }}>Tất cả</button>
-            <button onClick={() => { setTab('pending'); setPage(0); }} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', background: tab === 'pending' ? '#f97316' : '#f1f5f9', color: tab === 'pending' ? '#fff' : '#475569' }}>Chờ duyệt</button>
+    <div className="at-container">
+      {loading && <div className="at-loading">Đang tải...</div>}
+
+      <div className="at-section">
+        <div className="at-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <h3>Quản lý sản phẩm</h3>
+            <div className="at-tabs">
+              <button className={`at-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => { setTab('all'); setPage(0); }}>Tất cả</button>
+              <button className={`at-tab warn ${tab === 'pending' ? 'active' : ''}`} onClick={() => { setTab('pending'); setPage(0); }}>Chờ duyệt</button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input placeholder="Tìm kiếm..." value={keyword} onChange={e => setKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (setPage(0), fetch(0))} style={{ padding: '0.5rem 1rem', border: '1px solid #e2e8f0', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none' }} />
+          <div className="at-toolbar">
+            <div className="at-search">
+              <span className="material-symbols-outlined">search</span>
+              <input placeholder="Tìm kiếm..." value={keyword} onChange={e => setKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && (setPage(0), fetch(0))} />
+            </div>
+            <select className="at-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">Tất cả trạng thái</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="PENDING">Chờ duyệt</option>
+              <option value="HIDDEN">Đã ẩn</option>
+              <option value="REJECTED">Từ chối</option>
+            </select>
+            <div className="at-date-filter">
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} title="Từ ngày" />
+              <span className="sep">→</span>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} title="Đến ngày" />
+              {(fromDate || toDate) && <button className="at-date-clear" onClick={clearDate}><span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>close</span></button>}
+            </div>
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr style={{ background: '#f8fafc' }}>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Tên sản phẩm</th>
-              <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Giá</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Xưởng</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Ngày tạo</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Trạng thái</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hành động</th>
+
+        <div className="at-table-wrap">
+          <table className="at-table">
+            <thead><tr>
+              <th>Tên sản phẩm</th><th className="right">Giá</th><th>Xưởng</th><th>Ngày tạo</th><th>Trạng thái</th><th className="center">Hành động</th>
             </tr></thead>
             <tbody>
-              {products.length === 0 && !loading && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Không có sản phẩm nào</td></tr>}
-              {products.map(p => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem' }}>
+              {filtered.length === 0 && !loading && <tr><td colSpan={6} className="at-empty">Không có sản phẩm nào</td></tr>}
+              {filtered.map(p => (
+                <tr key={p.id}>
+                  <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      {p.imageUrls?.[0] && <img src={p.imageUrls[0]} alt="" style={{ width: 40, height: 40, borderRadius: '0.5rem', objectFit: 'cover' }} />}
+                      {p.imageUrls?.[0] && <img src={p.imageUrls[0]} alt="" style={{ width: 36, height: 36, borderRadius: '0.375rem', objectFit: 'cover' }} />}
                       <div>
-                        <p style={{ fontWeight: 700 }}>{p.name}</p>
-                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>#{p.id}</p>
+                        <div className="at-name">{p.name}</div>
+                        <div className="at-sub">#{p.id}</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700 }}>{p.price?.toLocaleString('vi-VN')} ₫</td>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{p.factoryName || `Xưởng #${p.factoryId}`}</td>
-                  <td style={{ padding: '1rem', fontSize: '0.75rem', color: '#64748b' }}>{p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
-                  <td style={{ padding: '1rem' }}>
-                    <span style={{ padding: '0.2rem 0.75rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: p.status === 'ACTIVE' ? '#dcfce7' : p.status === 'PENDING' ? '#fef9c3' : p.status === 'REJECTED' ? '#fee2e2' : '#f3f4f6', color: p.status === 'ACTIVE' ? '#16a34a' : p.status === 'PENDING' ? '#a16207' : p.status === 'REJECTED' ? '#dc2626' : '#64748b' }}>
-                      {statusLabels[p.status] || p.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+                  <td className="right"><span className="at-money">{formatMoney(p.price)}</span></td>
+                  <td>{p.factoryName || `Xưởng #${p.factoryId}`}</td>
+                  <td className="at-date">{p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                  <td><span className={`at-badge ${statusBadge[p.status] || 'neutral'}`}>{statusLabels[p.status] || p.status}</span></td>
+                  <td className="center">
                     {p.status === 'PENDING' && (
-                      <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
-                        <button onClick={() => handleApprove(p.id)} style={{ padding: '0.3rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: '#0037b0', color: '#fff' }}>Duyệt</button>
-                        <button onClick={() => handleReject(p.id)} style={{ padding: '0.3rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: '#fee2e2', color: '#dc2626' }}>Từ chối</button>
+                      <div className="at-actions" style={{ opacity: 1, justifyContent: 'center' }}>
+                        <button className="at-btn primary" onClick={() => handleApprove(p.id)}>Duyệt</button>
+                        <button className="at-btn danger" onClick={() => handleReject(p.id)}>Từ chối</button>
                       </div>
                     )}
                   </td>
@@ -92,14 +117,15 @@ export default function ProductManagement() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{total} sản phẩm · Trang {page + 1}/{totalPages || 1}</span>
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>←</button>
+
+        <div className="at-pagination">
+          <span className="info">{total} sản phẩm · Hiển thị {filtered.length}</span>
+          <div className="ctrls">
+            <button className="at-page-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}><span className="material-symbols-outlined">chevron_left</span></button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
-              <button key={i} onClick={() => setPage(i)} style={{ width: '2rem', height: '2rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', background: i === page ? '#0037b0' : 'transparent', color: i === page ? '#fff' : '#475569', fontWeight: 700, fontSize: '0.75rem' }}>{i + 1}</button>
+              <button key={i} className={`at-page-num ${i === page ? 'active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>
             ))}
-            <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>→</button>
+            <button className="at-page-btn" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><span className="material-symbols-outlined">chevron_right</span></button>
           </div>
         </div>
       </div>

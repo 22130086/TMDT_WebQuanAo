@@ -36,7 +36,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
             <span className="material-symbols-outlined">inventory_2</span>
             Sản phẩm
           </Link>
-          <Link to="#" onClick={(e) => e.preventDefault()}>
+          <Link to="/admin/orders" className={isActive('/admin/orders')}>
             <span className="material-symbols-outlined">shopping_cart</span>
             Đơn hàng
           </Link>
@@ -48,7 +48,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
             <span className="material-symbols-outlined">group</span>
             Người dùng
           </Link>
-          <Link to="#" onClick={(e) => e.preventDefault()}>
+          <Link to="/admin/reports" className={isActive('/admin/reports')}>
             <span className="material-symbols-outlined">analytics</span>
             Báo cáo
           </Link>

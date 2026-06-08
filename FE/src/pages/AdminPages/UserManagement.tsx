@@ -1,24 +1,43 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminUserService from '../../services/adminUserService';
 import type { UserInfo } from '../../services/adminUserService';
+import '../../styles/admin-table.css';
 
 const roleLabels: Record<string, string> = { CUSTOMER: 'Khách hàng', FACTORY: 'Xưởng may', ADMIN: 'Admin' };
+const roleBadge: Record<string, string> = { CUSTOMER: 'neutral', FACTORY: 'info', ADMIN: 'warning' };
 const statusLabels: Record<string, string> = { ACTIVE: 'Hoạt động', LOCKED: 'Bị khóa', PENDING: 'Chờ duyệt' };
+const statusBadge: Record<string, string> = { ACTIVE: 'success', LOCKED: 'danger', PENDING: 'warning' };
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fetch = useCallback(async (p: number) => {
     setLoading(true);
-    try { const d = await AdminUserService.getUsers(p, 10); if (d?.content) { setUsers(d.content); setTotalPages(d.totalPages || 1); } }
-    catch (e) { console.error(e); }
+    try {
+      const d = await AdminUserService.getUsers(p, 10);
+      if (d?.content) { setUsers(d.content); setTotalPages(d.totalPages || 1); setTotal(d.totalElements || 0); }
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetch(page); }, [page, fetch]);
+
+  const filtered = users.filter(u => {
+    const matchSearch = !search || u.email?.toLowerCase().includes(search.toLowerCase()) || u.fullName?.toLowerCase().includes(search.toLowerCase()) || String(u.id).includes(search);
+    const matchRole = !roleFilter || u.role === roleFilter;
+    const matchStatus = !statusFilter || u.status === statusFilter;
+    const matchDate = (!fromDate || (u.createdAt && u.createdAt >= fromDate)) && (!toDate || (u.createdAt && u.createdAt <= toDate + 'T23:59:59'));
+    return matchSearch && matchRole && matchStatus && matchDate;
+  });
 
   const toggleLock = async (u: UserInfo) => {
     if (u.role === 'ADMIN') return;
@@ -27,26 +46,62 @@ export default function UserManagement() {
     fetch(page);
   };
 
+  const clearDate = () => { setFromDate(''); setToDate(''); };
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      {loading && <div style={{ textAlign: 'center', color: '#3b82f6', padding: '0.5rem', background: '#eff6ff', borderRadius: '0.5rem', marginBottom: '1rem' }}>Đang tải...</div>}
-      <div style={{ background: '#fff', borderRadius: '0.75rem', boxShadow: '0 20px 40px rgba(0,55,176,0.06)', overflow: 'hidden' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}><h3 style={{ fontWeight: 700, fontSize: '1.125rem' }}>Danh sách người dùng</h3></div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr style={{ background: '#f8fafc' }}><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>ID</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Email</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Họ tên</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Vai trò</th><th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Trạng thái</th><th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hành động</th></tr></thead>
+    <div className="at-container">
+      {loading && <div className="at-loading">Đang tải...</div>}
+
+      <div className="at-section">
+        <div className="at-header">
+          <div>
+            <h3>Danh sách người dùng</h3>
+            <p className="subtitle">{total} tài khoản trong hệ thống</p>
+          </div>
+          <div className="at-toolbar">
+            <div className="at-search">
+              <span className="material-symbols-outlined">search</span>
+              <input placeholder="Tìm email, tên..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <select className="at-select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+              <option value="">Tất cả vai trò</option>
+              <option value="CUSTOMER">Khách hàng</option>
+              <option value="FACTORY">Xưởng may</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+            <select className="at-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">Tất cả trạng thái</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="LOCKED">Bị khóa</option>
+              <option value="PENDING">Chờ duyệt</option>
+            </select>
+            <div className="at-date-filter">
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} title="Từ ngày" />
+              <span className="sep">→</span>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} title="Đến ngày" />
+              {(fromDate || toDate) && <button className="at-date-clear" onClick={clearDate}><span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>close</span></button>}
+            </div>
+          </div>
+        </div>
+
+        <div className="at-table-wrap">
+          <table className="at-table">
+            <thead><tr>
+              <th>ID</th><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Ngày tạo</th><th>Trạng thái</th><th className="center">Hành động</th>
+            </tr></thead>
             <tbody>
-              {users.length === 0 && !loading && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Không có người dùng nào</td></tr>}
-              {users.map(u => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem', fontWeight: 700, color: '#0037b0' }}>#{u.id}</td>
-                  <td style={{ padding: '1rem' }}>{u.email}</td>
-                  <td style={{ padding: '1rem' }}>{u.fullName || '-'}</td>
-                  <td style={{ padding: '1rem' }}><span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: u.role === 'ADMIN' ? '#fef3c7' : u.role === 'FACTORY' ? '#dbeafe' : '#f3f4f6', color: u.role === 'ADMIN' ? '#a16207' : u.role === 'FACTORY' ? '#1d4ed8' : '#475569' }}>{roleLabels[u.role] || u.role}</span></td>
-                  <td style={{ padding: '1rem' }}><span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: u.status === 'ACTIVE' ? '#dcfce7' : '#fee2e2', color: u.status === 'ACTIVE' ? '#16a34a' : '#dc2626' }}>{statusLabels[u.status] || u.status}</span></td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+              {filtered.length === 0 && !loading && <tr><td colSpan={7} className="at-empty">Không có người dùng nào</td></tr>}
+              {filtered.map(u => (
+                <tr key={u.id}>
+                  <td><span className="at-id">#{u.id}</span></td>
+                  <td>{u.email}</td>
+                  <td><span className="at-name">{u.fullName || '-'}</span></td>
+                  <td><span className={`at-badge ${roleBadge[u.role] || 'neutral'}`}>{roleLabels[u.role] || u.role}</span></td>
+                  <td className="at-date">{u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                  <td><span className={`at-badge ${statusBadge[u.status] || 'neutral'}`}>{statusLabels[u.status] || u.status}</span></td>
+                  <td className="center">
                     {u.role !== 'ADMIN' && (
-                      <button onClick={() => toggleLock(u)} style={{ padding: '0.4rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', background: u.status === 'LOCKED' ? '#dcfce7' : '#fee2e2', color: u.status === 'LOCKED' ? '#16a34a' : '#dc2626' }}>
+                      <button className={`at-btn ${u.status === 'LOCKED' ? 'success' : 'danger'}`} onClick={() => toggleLock(u)}>
                         {u.status === 'LOCKED' ? 'Mở khóa' : 'Khóa'}
                       </button>
                     )}
@@ -56,11 +111,15 @@ export default function UserManagement() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.875rem', color: '#64748b' }}>Trang {page + 1} / {totalPages}</span>
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>←</button>
-            <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>→</button>
+
+        <div className="at-pagination">
+          <span className="info">Hiển thị {filtered.length} / {total} người dùng</span>
+          <div className="ctrls">
+            <button className="at-page-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}><span className="material-symbols-outlined">chevron_left</span></button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+              <button key={i} className={`at-page-num ${i === page ? 'active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>
+            ))}
+            <button className="at-page-btn" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><span className="material-symbols-outlined">chevron_right</span></button>
           </div>
         </div>
       </div>

@@ -21,6 +21,7 @@ public class FactoryProfileService {
 
     private final FactoryProfileRepository factoryProfileRepository;
     private final UserRepository userRepository;
+    private final WalletRepository walletRepository;
     private final NotificationService notificationService;
 
     // ---- Xưởng: quản lý hồ sơ ----
@@ -111,6 +112,14 @@ public class FactoryProfileService {
         User user = profile.getUser();
         if (user != null && user.getStatus() == User.Status.PENDING) {
             user.setStatus(User.Status.ACTIVE);
+        }
+        // Tạo ví cho xưởng nếu chưa có
+        if (user != null && walletRepository.findByUserId(user.getId()).isEmpty()) {
+            walletRepository.save(Wallet.builder()
+                    .user(user)
+                    .balance(BigDecimal.ZERO)
+                    .frozen(BigDecimal.ZERO)
+                    .build());
         }
         FactoryProfile saved = factoryProfileRepository.save(profile);
         notificationService.push(profile.getUser().getId(),

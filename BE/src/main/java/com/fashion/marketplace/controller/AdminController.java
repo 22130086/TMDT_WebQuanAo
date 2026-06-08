@@ -1,5 +1,6 @@
 package com.fashion.marketplace.controller;
 
+import com.fashion.marketplace.dto.response.OrderResponse;
 import com.fashion.marketplace.dto.response.WithdrawalResponse;
 import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
 import com.fashion.marketplace.entity.*;
@@ -9,11 +10,14 @@ import com.fashion.marketplace.service.AdminService.*;
 import com.fashion.marketplace.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AdminController - Tất cả chức năng quản trị
@@ -39,6 +43,9 @@ import java.util.List;
  *   POST   /api/admin/discount-codes            → Thêm mã giảm giá
  *   PUT    /api/admin/discount-codes/{id}       → Sửa mã giảm giá
  *   DELETE /api/admin/discount-codes/{id}       → Xóa mã giảm giá
+ *
+ * ── QUẢN LÝ ĐƠN HÀNG ─────────────────────────────────────
+ *   GET   /api/admin/orders                   → Tất cả đơn hàng
  *
  * ── QUẢN LÝ BANNER ──────────────────────────────────────────
  *   GET    /api/banners                         → Danh sách banner active (PUBLIC)
@@ -85,10 +92,13 @@ public class AdminController {
     @GetMapping("/api/admin/withdrawals")
     public ResponseEntity<ApiResponse<Page<WithdrawalResponse>>> withdrawals(
             @RequestParam(required = false) WithdrawalRequest.WithdrawalStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawals(status, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminService.getWithdrawals(status, startDate, endDate, pageable)));
     }
 
     @GetMapping("/api/admin/withdrawals/stats")
@@ -115,9 +125,11 @@ public class AdminController {
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/transferred")
-    public ResponseEntity<ApiResponse<WithdrawalResponse>> markTransferred(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật trạng thái chuyển tiền",
-                adminService.markTransferred(authUtil.currentUserId(), id)));
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> markTransferred(
+            @PathVariable Long id,
+            @RequestBody(required = false) TransferRequest transferReq) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã chuyển tiền thành công",
+                adminService.markTransferred(authUtil.currentUserId(), id, transferReq)));
     }
 
     // ==================== DISCOUNT CODES ====================
@@ -148,6 +160,23 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Void>> deleteDiscountCode(@PathVariable Long id) {
         adminService.deleteDiscountCode(id);
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa mã giảm giá", null));
+    }
+
+    // ==================== ORDERS ====================
+
+    @GetMapping("/api/admin/orders")
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> allOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getAllOrders(pageable)));
+    }
+
+    // ==================== REPORTS ====================
+
+    @GetMapping("/api/admin/reports/revenue")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> revenueReport() {
+        return ResponseEntity.ok(ApiResponse.ok("Báo cáo doanh thu", adminService.getRevenueReport()));
     }
 
     // ==================== BANNERS ====================
