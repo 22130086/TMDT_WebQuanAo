@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class FactoryProfileResponse {
     private String factoryName;
     private String factoryUserName;
     private String factoryUserEmail;
+    private String factoryUserAvatar;
     private String description;
     private String address;
     private Integer minQuantity;
@@ -27,7 +29,18 @@ public class FactoryProfileResponse {
     private BigDecimal ratingAvg;
     private Integer totalRatings;
     private String verifiedStatus;
+    private String rejectedReason;
     private LocalDateTime verifiedAt;
     private LocalDateTime createdAt;
     private List<String> imageUrls;
+    private List<CertificateItem> certificates;
+
+    @Data @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class CertificateItem {
+        private Long id;
+        private String name;
+        private String imageUrl;
+        private LocalDate issuedDate;
+        private LocalDate expiredDate;
+    }
 }

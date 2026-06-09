@@ -124,4 +124,11 @@ public class FactoryProfileController {
         return ResponseEntity.ok(ApiResponse.ok("Đã từ chối hồ sơ",
                 factoryProfileService.reject(id, reason)));
     }
+
+    @GetMapping("/api/admin/factories/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<FactoryProfileResponse>> detail(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                factoryProfileService.getByIdResponse(id)));
+    }
 }

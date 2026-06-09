@@ -3,12 +3,11 @@ package com.fashion.marketplace.service;
 import com.fashion.marketplace.dto.request.LoginRequest;
 import com.fashion.marketplace.dto.request.RegisterRequest;
 import com.fashion.marketplace.dto.response.AuthResponse;
-import com.fashion.marketplace.entity.User;
-import com.fashion.marketplace.entity.Wallet;
+import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
-import com.fashion.marketplace.repository.UserRepository;
-import com.fashion.marketplace.repository.WalletRepository;
+import com.fashion.marketplace.repository.*;
 import com.fashion.marketplace.security.JwtUtil;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
 import org.springframework.security.authentication.DisabledException;
@@ -17,12 +16,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final FactoryProfileRepository factoryProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -43,6 +45,23 @@ public class AuthService {
         userRepository.save(user);
         // Tạo ví cho user
         walletRepository.save(Wallet.builder().user(user).build());
+
+        // Nếu là FACTORY, tạo FactoryProfile với thông tin đăng ký
+        if (req.getRole() == User.Role.FACTORY && req.getFactoryName() != null) {
+            FactoryProfile fp = FactoryProfile.builder()
+                    .user(user)
+                    .factoryName(req.getFactoryName())
+                    .address(req.getFactoryAddress())
+                    .verifiedStatus(FactoryProfile.VerifiedStatus.PENDING)
+                    .build();
+            factoryProfileRepository.save(fp);
+
+            // Lưu ảnh giấy phép vào avatarUrl của user (tận dụng field có sẵn)
+            if (req.getCertImageUrl() != null && !req.getCertImageUrl().isBlank()) {
+                user.setAvatarUrl(req.getCertImageUrl());
+                userRepository.save(user);
+            }
+        }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         return buildAuthResponse(user, token);

@@ -19,4 +19,7 @@ public class RegisterRequest {
 
     private String phone;
     private User.Role role;
+    private String factoryName;
+    private String factoryAddress;
+    private String certImageUrl;
 }

@@ -37,6 +37,8 @@ import Reports from "./pages/AdminPages/Reports";
 import UserManagement from "./pages/AdminPages/UserManagement";
 import FactoryApproval from "./pages/AdminPages/FactoryApproval";
 import ProductManagement from "./pages/AdminPages/ProductManagement";
+import QuotationManagement from "./pages/AdminPages/QuotationManagement";
+import PostManagement from "./pages/AdminPages/PostManagement";
 
 function App() {
   return (
@@ -197,6 +199,26 @@ function App() {
             <AdminRoute>
               <AdminLayout title="Báo cáo Doanh thu">
                 <Reports />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/quotations"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Báo giá">
+                <QuotationManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/posts"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Bài đăng tìm xưởng">
+                <PostManagement />
               </AdminLayout>
             </AdminRoute>
           }

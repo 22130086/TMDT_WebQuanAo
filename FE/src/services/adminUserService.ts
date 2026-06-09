@@ -5,8 +5,12 @@ export interface UserInfo {
 }
 export interface FactoryInfo {
   id: number; userId: number; factoryName?: string; factoryUserName?: string; factoryUserEmail?: string;
-  description?: string; address?: string; verifiedStatus: string; ratingAvg?: number; createdAt: string;
+  description?: string; address?: string; verifiedStatus: string; rejectedReason?: string;
+  factoryUserAvatar?: string; ratingAvg?: number; minQuantity?: number; maxQuantity?: number; leadTimeDays?: number;
+  imageUrls?: string[]; certificates?: CertificateItem[];
+  createdAt: string; verifiedAt?: string;
 }
+export interface CertificateItem { id: number; name: string; imageUrl: string; issuedDate?: string; expiredDate?: string; }
 interface PageResponse<T> { content: T[]; totalElements: number; totalPages: number; number: number; }
 interface ApiResponse<T> { data: T; message?: string; }
 
@@ -29,6 +33,14 @@ class AdminUserService {
   }
   static async approveFactory(id: number) {
     const res = await http.patch<ApiResponse<FactoryInfo>>(`/admin/factories/${id}/approve`);
+    return res.data.data;
+  }
+  static async rejectFactory(id: number, reason: string) {
+    const res = await http.patch<ApiResponse<FactoryInfo>>(`/admin/factories/${id}/reject`, null, { params: { reason } });
+    return res.data.data;
+  }
+  static async getFactoryDetail(id: number) {
+    const res = await http.get<ApiResponse<FactoryInfo>>(`/admin/factories/${id}`);
     return res.data.data;
   }
 }

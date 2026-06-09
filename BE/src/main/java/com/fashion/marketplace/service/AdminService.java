@@ -2,6 +2,7 @@ package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.response.WithdrawalResponse;
 import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
+import com.fashion.marketplace.dto.response.QuotationResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.*;
@@ -36,6 +37,8 @@ public class AdminService {
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository walletTransactionRepository;
     private final OrderRepository orderRepository;
+    private final QuotationRepository quotationRepository;
+    private final OutsourcingPostRepository outsourcingPostRepository;
     private final NotificationService notificationService;
 
     // ---- 4. Quản lý người dùng ----
@@ -65,6 +68,27 @@ public class AdminService {
         notificationService.push(userId, "Tài khoản được mở khóa",
                 "Tài khoản của bạn đã được mở khóa", "ACCOUNT", userId);
         return userRepository.save(user);
+    }
+
+    public Map<String, Object> getUserStats(Long userId) {
+        User user = getUserDetail(userId);
+        List<Order> orders = orderRepository.findByCustomerId(userId, Pageable.unpaged()).getContent();
+        long orderCount = orders.size();
+        BigDecimal totalSpent = orders.stream()
+                .map(Order::getFinalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("userId", user.getId());
+        stats.put("fullName", user.getFullName());
+        stats.put("email", user.getEmail());
+        stats.put("phone", user.getPhone());
+        stats.put("role", user.getRole() != null ? user.getRole().name() : null);
+        stats.put("status", user.getStatus() != null ? user.getStatus().name() : null);
+        stats.put("createdAt", user.getCreatedAt());
+        stats.put("orderCount", orderCount);
+        stats.put("totalSpent", totalSpent);
+        return stats;
     }
 
     // ---- 1. Quản lý yêu cầu rút tiền ----
@@ -223,6 +247,12 @@ public class AdminService {
 
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable).map(this::toOrderResponse);
+    }
+
+    public OrderResponse getOrderDetail(Long orderId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+        return toOrderResponse(order);
     }
 
     // ---- 6b. Báo cáo doanh thu ----
@@ -398,6 +428,108 @@ public class AdminService {
     @Transactional
     public void deleteBanner(Long id) {
         bannerRepository.deleteById(id);
+    }
+
+    // ---- 9. Quản lý Báo giá (Admin) ----
+
+    public Page<QuotationResponse> getAllQuotations(Quotation.QuotationStatus status, Pageable pageable) {
+        Page<Quotation> page;
+        if (status != null) {
+            page = quotationRepository.findByStatus(status, pageable);
+        } else {
+            page = quotationRepository.findAll(pageable);
+        }
+        return page.map(this::toQuotationResponse);
+    }
+
+    public QuotationResponse getQuotationDetail(Long id) {
+        return toQuotationResponse(quotationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Báo giá không tồn tại")));
+    }
+
+    @Transactional
+    public void deleteQuotation(Long adminId, Long quotationId, String reason) {
+        Quotation q = quotationRepository.findById(quotationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Báo giá không tồn tại"));
+
+        // Gửi thông báo cho factory bị xóa báo giá
+        if (q.getFactory() != null && q.getFactory().getUser() != null) {
+            notificationService.push(q.getFactory().getUser().getId(),
+                    "Báo giá bị xóa bởi Admin",
+                    "Báo giá #" + quotationId + " của bạn đã bị xóa. Lý do: " + (reason != null ? reason : "Vi phạm quy định"),
+                    "QUOTATION", quotationId);
+        }
+
+        quotationRepository.delete(q);
+    }
+
+    private QuotationResponse toQuotationResponse(Quotation q) {
+        return QuotationResponse.builder()
+                .id(q.getId())
+                .unitPrice(q.getUnitPrice())
+                .quantity(q.getQuantity())
+                .totalPrice(q.getTotalPrice())
+                .note(q.getNote())
+                .deliveryDays(q.getDeliveryDays())
+                .status(q.getStatus() != null ? q.getStatus().name() : null)
+                .postId(q.getPost() != null ? q.getPost().getId() : null)
+                .postTitle(q.getPost() != null ? q.getPost().getTitle() : null)
+                .factoryId(q.getFactory() != null ? q.getFactory().getId() : null)
+                .factoryName(q.getFactory() != null ? q.getFactory().getFactoryName() : null)
+                .customerId(q.getCustomer() != null ? q.getCustomer().getId() : null)
+                .customerName(q.getCustomer() != null ? q.getCustomer().getFullName() : null)
+                .createdAt(q.getCreatedAt())
+                .updatedAt(q.getUpdatedAt())
+                .build();
+    }
+
+    // ---- 10. Quản lý Bài đăng tìm xưởng (Admin) ----
+
+    public Page<OutsourcingPost> getAllOutsourcingPosts(OutsourcingPost.PostStatus status, Pageable pageable) {
+        if (status != null) {
+            return outsourcingPostRepository.findByStatus(status, pageable);
+        }
+        return outsourcingPostRepository.findAll(pageable);
+    }
+
+    public OutsourcingPost getOutsourcingPostDetail(Long id) {
+        return outsourcingPostRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+    }
+
+    @Transactional
+    public OutsourcingPost closeOutsourcingPost(Long adminId, Long postId, String reason) {
+        OutsourcingPost post = outsourcingPostRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+        if (post.getStatus() == OutsourcingPost.PostStatus.CLOSED ||
+            post.getStatus() == OutsourcingPost.PostStatus.CANCELLED) {
+            throw new IllegalStateException("Bài đăng đã đóng hoặc hủy trước đó");
+        }
+        post.setStatus(OutsourcingPost.PostStatus.CLOSED);
+
+        if (post.getCustomer() != null) {
+            notificationService.push(post.getCustomer().getId(),
+                    "Bài đăng bị đóng bởi Admin",
+                    "Bài đăng \"" + post.getTitle() + "\" đã bị Admin đóng. Lý do: "
+                            + (reason != null ? reason : "Vi phạm quy định"),
+                    "POST", postId);
+        }
+        return outsourcingPostRepository.save(post);
+    }
+
+    @Transactional
+    public void deleteOutsourcingPost(Long adminId, Long postId, String reason) {
+        OutsourcingPost post = outsourcingPostRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+
+        if (post.getCustomer() != null) {
+            notificationService.push(post.getCustomer().getId(),
+                    "Bài đăng bị xóa bởi Admin",
+                    "Bài đăng \"" + post.getTitle() + "\" đã bị Admin xóa. Lý do: "
+                            + (reason != null ? reason : "Vi phạm quy định"),
+                    "POST", postId);
+        }
+        outsourcingPostRepository.delete(post);
     }
 
     // ---- Inner DTOs ----

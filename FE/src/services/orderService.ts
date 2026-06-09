@@ -37,6 +37,10 @@ class AdminOrderService {
     const res = await http.get<ApiResponse<PageResponse<AdminOrder>>>('/admin/orders', { params: { page, size } });
     return res.data.data;
   }
+  static async getById(id: number) {
+    const res = await http.get<ApiResponse<AdminOrder>>(`/admin/orders/${id}`);
+    return res.data.data;
+  }
 }
 
 export default AdminOrderService;

@@ -64,12 +64,15 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
             <span className="material-symbols-outlined">payments</span>
             Rút tiền
           </Link>
+          <Link to="/admin/quotations" className={isActive('/admin/quotations')}>
+            <span className="material-symbols-outlined">request_quote</span>
+            Báo giá
+          </Link>
+          <Link to="/admin/posts" className={isActive('/admin/posts')}>
+            <span className="material-symbols-outlined">post_add</span>
+            Bài đăng
+          </Link>
         </nav>
-
-        <button className="new-order-btn">
-          <span className="material-symbols-outlined">add</span>
-          Lệnh sản xuất mới
-        </button>
       </aside>
 
       {/* MAIN */}
