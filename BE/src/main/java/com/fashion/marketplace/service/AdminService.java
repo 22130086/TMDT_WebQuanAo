@@ -257,32 +257,39 @@ public class AdminService {
 
     // ---- 6b. Báo cáo doanh thu ----
 
-    public Map<String, Object> getRevenueReport() {
-        // Tổng doanh thu tính động: amount × rate%
-        BigDecimal totalRevenue = withdrawalRepository.findAll().stream()
+    public Map<String, Object> getRevenueReport(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : null;
+        LocalDateTime end = (endDate != null) ? endDate.atTime(LocalTime.MAX) : null;
+
+        // Lấy tất cả giao dịch TRANSFERRED, lọc theo ngày nếu có
+        List<WithdrawalRequest> allTransferred = withdrawalRepository.findAll().stream()
                 .filter(w -> w.getStatus() == WithdrawalRequest.WithdrawalStatus.TRANSFERRED)
+                .filter(w -> start == null || (w.getHandledAt() != null && !w.getHandledAt().isBefore(start)))
+                .filter(w -> end == null || (w.getHandledAt() != null && !w.getHandledAt().isAfter(end)))
+                .collect(Collectors.toList());
+
+        // Tổng doanh thu tính động: amount × rate%
+        BigDecimal totalRevenue = allTransferred.stream()
                 .map(w -> w.getAmount().multiply(commissionRate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        long totalWithdrawals = withdrawalRepository.findAll().stream()
-                .filter(w -> w.getStatus() == WithdrawalRequest.WithdrawalStatus.TRANSFERRED)
-                .count();
+        long totalWithdrawals = allTransferred.size();
 
-        BigDecimal totalWithdrawn = withdrawalRepository.findAll().stream()
-                .filter(w -> w.getStatus() == WithdrawalRequest.WithdrawalStatus.TRANSFERRED)
+        BigDecimal totalWithdrawn = allTransferred.stream()
                 .map(WithdrawalRequest::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Doanh thu theo tháng (6 tháng gần nhất)
+        // Doanh thu theo tháng (6 tháng gần nhất, hoặc theo khoảng ngày)
         Map<String, BigDecimal> monthlyRevenue = new LinkedHashMap<>();
         LocalDate now = LocalDate.now();
-        for (int i = 5; i >= 0; i--) {
-            LocalDate monthStart = now.minusMonths(i).withDayOfMonth(1);
-            LocalDate monthEnd = monthStart.plusMonths(1);
+        LocalDate rangeStart = startDate != null ? startDate : now.minusMonths(5).withDayOfMonth(1);
+        LocalDate rangeEnd = endDate != null ? endDate : now;
+        for (LocalDate m = rangeStart.withDayOfMonth(1); !m.isAfter(rangeEnd); m = m.plusMonths(1)) {
+            LocalDate monthStart = m;
+            LocalDate monthEnd = m.plusMonths(1);
             String key = monthStart.getYear() + "-" + String.format("%02d", monthStart.getMonthValue());
-            BigDecimal monthTotal = withdrawalRepository.findAll().stream()
-                    .filter(w -> w.getStatus() == WithdrawalRequest.WithdrawalStatus.TRANSFERRED
-                            && w.getHandledAt() != null
+            BigDecimal monthTotal = allTransferred.stream()
+                    .filter(w -> w.getHandledAt() != null
                             && !w.getHandledAt().toLocalDate().isBefore(monthStart)
                             && w.getHandledAt().toLocalDate().isBefore(monthEnd))
                     .map(w -> w.getAmount().multiply(commissionRate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
@@ -290,12 +297,11 @@ public class AdminService {
             monthlyRevenue.put(key, monthTotal);
         }
 
-        // Lịch sử rút tiền gần đây (5 giao dịch mới nhất)
-        List<Map<String, Object>> recentWithdrawals = withdrawalRepository.findAll().stream()
-                .filter(w -> w.getStatus() == WithdrawalRequest.WithdrawalStatus.TRANSFERRED)
+        // Lịch sử rút tiền gần đây (10 giao dịch mới nhất trong khoảng)
+        List<Map<String, Object>> recentWithdrawals = allTransferred.stream()
                 .sorted((a, b) -> b.getHandledAt() != null && a.getHandledAt() != null
                         ? b.getHandledAt().compareTo(a.getHandledAt()) : 0)
-                .limit(5)
+                .limit(10)
                 .map(w -> {
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", w.getId());

@@ -186,8 +186,10 @@ public class AdminController {
     // ==================== REPORTS ====================
 
     @GetMapping("/api/admin/reports/revenue")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> revenueReport() {
-        return ResponseEntity.ok(ApiResponse.ok("Báo cáo doanh thu", adminService.getRevenueReport()));
+    public ResponseEntity<ApiResponse<Map<String, Object>>> revenueReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.ok("Báo cáo doanh thu", adminService.getRevenueReport(startDate, endDate)));
     }
 
     // ==================== BANNERS ====================
