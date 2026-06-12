@@ -29,6 +29,7 @@ public class OrderService {
     private final DiscountCodeRepository discountCodeRepository;
     private final NotificationService notificationService;
     private final ProductRepository productRepository; 
+    private final WalletService walletService;
 
     private final PaymentService paymentService;
     private final HttpServletRequest httpServletRequest;
@@ -233,7 +234,21 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
 
-        // 5. Gửi thông báo cho xưởng biết khách đã nhận hàng
+        // 5. CỘNG TIỀN VÀO VÍ XƯỞNG khi đơn hàng hoàn tất
+        try {
+            walletService.credit(
+                saved.getFactory().getUser().getId(),
+                saved.getFinalAmount(),
+                "Thanh toán đơn hàng #" + saved.getId(),
+                WalletTransaction.TransactionType.COMMISSION,
+                saved.getId()
+            );
+        } catch (Exception e) {
+            // Không để lỗi ví làm hỏng luồng hoàn tất đơn
+            System.err.println("Lỗi cộng tiền ví xưởng: " + e.getMessage());
+        }
+
+        // 6. Gửi thông báo cho xưởng biết khách đã nhận hàng
         notificationService.push(order.getFactory().getUser().getId(),
                 "Khách đã nhận hàng", 
                 "Đơn hàng #" + orderId + " đã được khách hàng xác nhận nhận hàng và thanh toán.",

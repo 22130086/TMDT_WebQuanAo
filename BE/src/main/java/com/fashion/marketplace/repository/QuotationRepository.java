@@ -10,4 +10,6 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     Page<Quotation> findByFactoryId(Long factoryId, Pageable pageable);
     Page<Quotation> findByCustomerId(Long customerId, Pageable pageable);
     Page<Quotation> findByPostId(Long postId, Pageable pageable);
+    Page<Quotation> findByStatus(Quotation.QuotationStatus status, Pageable pageable);
+    long countByStatus(Quotation.QuotationStatus status);
 }

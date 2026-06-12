@@ -27,6 +27,18 @@ import "./styles/factory.css";
 import "./styles/order_checkout.css";
 import Cart from "./pages/cart/cart";
 import OrderCheckout from "./pages/cart/order_checkout";
+import AdminLayout from "./components/AdminLayout";
+import ComplaintsManagement from "./pages/AdminPages/ComplaintsManagement";
+import DisputesManagement from "./pages/AdminPages/DisputesManagement";
+import WithdrawalsManagement from "./pages/AdminPages/WithdrawalsManagement";
+import VNPayTransfer from "./pages/AdminPages/VNPayTransfer";
+import OrderManagement from "./pages/AdminPages/OrderManagement";
+import Reports from "./pages/AdminPages/Reports";
+import UserManagement from "./pages/AdminPages/UserManagement";
+import FactoryApproval from "./pages/AdminPages/FactoryApproval";
+import ProductManagement from "./pages/AdminPages/ProductManagement";
+import QuotationManagement from "./pages/AdminPages/QuotationManagement";
+import PostManagement from "./pages/AdminPages/PostManagement";
 
 function App() {
   return (
@@ -95,7 +107,119 @@ function App() {
           path="/admin"
           element={
             <AdminRoute>
-              <Admin />
+              <AdminLayout title="Bảng điều khiển">
+                <Admin />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/complaints"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Khiếu nại">
+                <ComplaintsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/disputes"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Tranh chấp">
+                <DisputesManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/withdrawals"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Yêu cầu Rút tiền">
+                <WithdrawalsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/withdrawals/:id/transfer"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Chuyển tiền VNPay">
+                <VNPayTransfer />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Người dùng">
+                <UserManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/factories"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Duyệt Xưởng May">
+                <FactoryApproval />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Sản phẩm">
+                <ProductManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Đơn hàng">
+                <OrderManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Báo cáo Doanh thu">
+                <Reports />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/quotations"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Báo giá">
+                <QuotationManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/posts"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Bài đăng tìm xưởng">
+                <PostManagement />
+              </AdminLayout>
             </AdminRoute>
           }
         />

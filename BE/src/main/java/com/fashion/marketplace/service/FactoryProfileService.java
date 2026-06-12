@@ -6,11 +6,13 @@ import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.*;
 import lombok.*;
 import org.springframework.data.domain.*;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +21,7 @@ public class FactoryProfileService {
 
     private final FactoryProfileRepository factoryProfileRepository;
     private final UserRepository userRepository;
+    private final WalletRepository walletRepository;
     private final NotificationService notificationService;
 
     // ---- Xưởng: quản lý hồ sơ ----
@@ -69,6 +72,20 @@ public class FactoryProfileService {
                 FactoryProfile.VerifiedStatus.PENDING, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Page<FactoryProfileResponse> getPendingResponse(Pageable pageable) {
+        Page<FactoryProfile> page = getPending(pageable);
+        List<FactoryProfileResponse> list = page.getContent().stream().map(this::toResponse).collect(Collectors.toList());
+        return new PageImpl<>(list, pageable, page.getTotalElements());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FactoryProfileResponse> getAllResponse(Pageable pageable) {
+        Page<FactoryProfile> page = factoryProfileRepository.findAll(pageable);
+        List<FactoryProfileResponse> list = page.getContent().stream().map(this::toResponse).collect(Collectors.toList());
+        return new PageImpl<>(list, pageable, page.getTotalElements());
+    }
+
     public Page<FactoryProfile> getApproved(Pageable pageable) {
         return factoryProfileRepository.findByVerifiedStatus(
                 FactoryProfile.VerifiedStatus.APPROVED, pageable);
@@ -91,11 +108,29 @@ public class FactoryProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
         profile.setVerifiedStatus(FactoryProfile.VerifiedStatus.APPROVED);
         profile.setVerifiedAt(java.time.LocalDateTime.now());
+        // Kích hoạt tài khoản user
+        User user = profile.getUser();
+        if (user != null && user.getStatus() == User.Status.PENDING) {
+            user.setStatus(User.Status.ACTIVE);
+        }
+        // Tạo ví cho xưởng nếu chưa có
+        if (user != null && walletRepository.findByUserId(user.getId()).isEmpty()) {
+            walletRepository.save(Wallet.builder()
+                    .user(user)
+                    .balance(BigDecimal.ZERO)
+                    .frozen(BigDecimal.ZERO)
+                    .build());
+        }
         FactoryProfile saved = factoryProfileRepository.save(profile);
         notificationService.push(profile.getUser().getId(),
                 "Hồ sơ được duyệt", "Hồ sơ năng lực của bạn đã được phê duyệt",
                 "FACTORY_VERIFIED", factoryId);
         return saved;
+    }
+
+    @Transactional
+    public FactoryProfileResponse approveResponse(Long factoryId) {
+        return toResponse(approve(factoryId));
     }
 
     @Transactional
@@ -159,7 +194,11 @@ public class FactoryProfileService {
     public FactoryProfileResponse toResponse(FactoryProfile profile) {
         return FactoryProfileResponse.builder()
                 .id(profile.getId())
+                .userId(profile.getUser() != null ? profile.getUser().getId() : null)
                 .factoryName(profile.getFactoryName())
+                .factoryUserName(profile.getUser() != null ? profile.getUser().getFullName() : null)
+                .factoryUserEmail(profile.getUser() != null ? profile.getUser().getEmail() : null)
+                .factoryUserAvatar(profile.getUser() != null ? profile.getUser().getAvatarUrl() : null)
                 .description(profile.getDescription())
                 .address(profile.getAddress())
                 .minQuantity(profile.getMinQuantity())
@@ -170,9 +209,19 @@ public class FactoryProfileService {
                 .verifiedStatus(profile.getVerifiedStatus() != null ? profile.getVerifiedStatus().name() : null)
                 .verifiedAt(profile.getVerifiedAt())
                 .createdAt(profile.getCreatedAt())
-                .imageUrls(profile.getImages().stream()
+                .rejectedReason(profile.getRejectedReason())
+                .imageUrls(profile.getImages() != null ? profile.getImages().stream()
                         .map(FactoryImage::getImageUrl)
-                        .collect(Collectors.toList()))
+                        .collect(Collectors.toList()) : List.of())
+                .certificates(profile.getCertificates() != null ? profile.getCertificates().stream()
+                        .map(c -> FactoryProfileResponse.CertificateItem.builder()
+                                .id(c.getId())
+                                .name(c.getName())
+                                .imageUrl(c.getImageUrl())
+                                .issuedDate(c.getIssuedDate())
+                                .expiredDate(c.getExpiredDate())
+                                .build())
+                        .collect(Collectors.toList()) : List.of())
                 .build();
     }
 }

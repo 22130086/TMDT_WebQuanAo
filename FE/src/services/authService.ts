@@ -12,6 +12,9 @@ export interface RegisterPayload {
   fullName: string;
   phone?: string;
   role: "CUSTOMER" | "FACTORY";
+  factoryName?: string;
+  factoryAddress?: string;
+  certImageUrl?: string;
 }
 
 export interface AuthResponse {

@@ -1,5 +1,9 @@
 package com.fashion.marketplace.controller;
 
+import com.fashion.marketplace.dto.response.OrderResponse;
+import com.fashion.marketplace.dto.response.QuotationResponse;
+import com.fashion.marketplace.dto.response.WithdrawalResponse;
+import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ApiResponse;
 import com.fashion.marketplace.service.AdminService;
@@ -7,11 +11,14 @@ import com.fashion.marketplace.service.AdminService.*;
 import com.fashion.marketplace.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AdminController - Tất cả chức năng quản trị
@@ -37,6 +44,9 @@ import java.util.List;
  *   POST   /api/admin/discount-codes            → Thêm mã giảm giá
  *   PUT    /api/admin/discount-codes/{id}       → Sửa mã giảm giá
  *   DELETE /api/admin/discount-codes/{id}       → Xóa mã giảm giá
+ *
+ * ── QUẢN LÝ ĐƠN HÀNG ─────────────────────────────────────
+ *   GET   /api/admin/orders                   → Tất cả đơn hàng
  *
  * ── QUẢN LÝ BANNER ──────────────────────────────────────────
  *   GET    /api/banners                         → Danh sách banner active (PUBLIC)
@@ -78,39 +88,54 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok("Đã mở khóa tài khoản", adminService.unlockUser(id)));
     }
 
+    @GetMapping("/api/admin/users/{id}/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> userStats(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getUserStats(id)));
+    }
+
     // ==================== WITHDRAWALS ====================
 
     @GetMapping("/api/admin/withdrawals")
-    public ResponseEntity<ApiResponse<Page<WithdrawalRequest>>> withdrawals(
+    public ResponseEntity<ApiResponse<Page<WithdrawalResponse>>> withdrawals(
             @RequestParam(required = false) WithdrawalRequest.WithdrawalStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawals(status, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminService.getWithdrawals(status, startDate, endDate, pageable)));
+    }
+
+    @GetMapping("/api/admin/withdrawals/stats")
+    public ResponseEntity<ApiResponse<WithdrawalStatsResponse>> withdrawalStats() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawalStats()));
     }
 
     @GetMapping("/api/admin/withdrawals/{id}")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> withdrawalDetail(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> withdrawalDetail(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getWithdrawal(id)));
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/approve")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> approveWithdrawal(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> approveWithdrawal(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Đã duyệt yêu cầu rút tiền",
                 adminService.approveWithdrawal(authUtil.currentUserId(), id)));
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/reject")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> rejectWithdrawal(
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> rejectWithdrawal(
             @PathVariable Long id, @RequestParam String note) {
         return ResponseEntity.ok(ApiResponse.ok("Đã từ chối yêu cầu",
                 adminService.rejectWithdrawal(authUtil.currentUserId(), id, note)));
     }
 
     @PatchMapping("/api/admin/withdrawals/{id}/transferred")
-    public ResponseEntity<ApiResponse<WithdrawalRequest>> markTransferred(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật trạng thái chuyển tiền",
-                adminService.markTransferred(authUtil.currentUserId(), id)));
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> markTransferred(
+            @PathVariable Long id,
+            @RequestBody(required = false) TransferRequest transferReq) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã chuyển tiền thành công",
+                adminService.markTransferred(authUtil.currentUserId(), id, transferReq)));
     }
 
     // ==================== DISCOUNT CODES ====================
@@ -143,6 +168,30 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa mã giảm giá", null));
     }
 
+    // ==================== ORDERS ====================
+
+    @GetMapping("/api/admin/orders")
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> allOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getAllOrders(pageable)));
+    }
+
+    @GetMapping("/api/admin/orders/{id}")
+    public ResponseEntity<ApiResponse<OrderResponse>> orderDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getOrderDetail(id)));
+    }
+
+    // ==================== REPORTS ====================
+
+    @GetMapping("/api/admin/reports/revenue")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> revenueReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.ok("Báo cáo doanh thu", adminService.getRevenueReport(startDate, endDate)));
+    }
+
     // ==================== BANNERS ====================
 
     @GetMapping("/api/banners")
@@ -173,5 +222,61 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Void>> deleteBanner(@PathVariable Long id) {
         adminService.deleteBanner(id);
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa banner", null));
+    }
+
+    // ==================== QUOTATIONS ====================
+
+    @GetMapping("/api/admin/quotations")
+    public ResponseEntity<ApiResponse<Page<QuotationResponse>>> allQuotations(
+            @RequestParam(required = false) Quotation.QuotationStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getAllQuotations(status, pageable)));
+    }
+
+    @GetMapping("/api/admin/quotations/{id}")
+    public ResponseEntity<ApiResponse<QuotationResponse>> quotationDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getQuotationDetail(id)));
+    }
+
+    @DeleteMapping("/api/admin/quotations/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteQuotation(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "Vi phạm quy định") String reason) {
+        adminService.deleteQuotation(authUtil.currentUserId(), id, reason);
+        return ResponseEntity.ok(ApiResponse.ok("Đã xóa báo giá", null));
+    }
+
+    // ==================== OUTSOURCING POSTS ====================
+
+    @GetMapping("/api/admin/outsourcing-posts")
+    public ResponseEntity<ApiResponse<Page<OutsourcingPost>>> allOutsourcingPosts(
+            @RequestParam(required = false) OutsourcingPost.PostStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getAllOutsourcingPosts(status, pageable)));
+    }
+
+    @GetMapping("/api/admin/outsourcing-posts/{id}")
+    public ResponseEntity<ApiResponse<OutsourcingPost>> outsourcingPostDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getOutsourcingPostDetail(id)));
+    }
+
+    @PatchMapping("/api/admin/outsourcing-posts/{id}/close")
+    public ResponseEntity<ApiResponse<OutsourcingPost>> closeOutsourcingPost(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "Vi phạm quy định") String reason) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã đóng bài đăng",
+                adminService.closeOutsourcingPost(authUtil.currentUserId(), id, reason)));
+    }
+
+    @DeleteMapping("/api/admin/outsourcing-posts/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteOutsourcingPost(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "Vi phạm quy định") String reason) {
+        adminService.deleteOutsourcingPost(authUtil.currentUserId(), id, reason);
+        return ResponseEntity.ok(ApiResponse.ok("Đã xóa bài đăng", null));
     }
 }

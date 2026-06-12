@@ -1,7 +1,10 @@
 ﻿import type { FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { register } from "../services/authService";
+
+const API_BASE = "http://localhost:8080/api";
 
 export default function Register() {
   const [role, setRole] = useState("customer");
@@ -15,6 +18,12 @@ export default function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Factory fields
+  const [factoryName, setFactoryName] = useState("");
+  const [factoryAddress, setFactoryAddress] = useState("");
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   const navigate = useNavigate();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -26,36 +35,54 @@ export default function Register() {
       setError("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Mật khẩu và xác nhận mật khẩu không khớp");
       return;
     }
-
     if (!termsAccepted) {
       setError("Vui lòng chấp nhận điều khoản dịch vụ");
       return;
     }
 
     setLoading(true);
+    let certImageUrl = "";
 
     try {
+      // Nếu là xưởng và có file giấy phép → upload trước
+      if (role === "factory" && certFile) {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", certFile);
+        const uploadRes = await axios.post(API_BASE + "/upload", formData);
+        certImageUrl = uploadRes.data?.data?.url || "";
+        setUploading(false);
+      }
+
       await register({
         email,
         password,
         fullName,
         phone: phone || undefined,
         role: role === "factory" ? "FACTORY" : "CUSTOMER",
+        factoryName: role === "factory" ? factoryName : undefined,
+        factoryAddress: role === "factory" ? factoryAddress : undefined,
+        certImageUrl: certImageUrl || undefined,
       });
 
       setSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
-      setTimeout(() => navigate("/"), 1200);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi đăng ký"
-      );
+      setTimeout(() => navigate("/"), 1500);
+    } catch (err: any) {
+      console.error('Register error:', err);
+      const msg = err?.response?.data?.message 
+        || (err?.response?.data?.errors && Array.isArray(err.response.data.errors) 
+            ? err.response.data.errors.join(', ') : null)
+        || err?.response?.data?.error
+        || err?.message 
+        || 'Đã xảy ra lỗi khi đăng ký';
+      setError(msg);
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   }
 
@@ -197,15 +224,16 @@ export default function Register() {
                   <p>Thông tin xưởng</p>
                   <div className="form-group">
                     <label>Tên xưởng</label>
-                    <input type="text" placeholder="Xưởng May Blueprint" />
+                    <input type="text" placeholder="Xưởng May Blueprint" value={factoryName} onChange={e => setFactoryName(e.target.value)} />
                   </div>
-
                   <div className="form-group">
                     <label>Địa chỉ</label>
-                    <input
-                      type="text"
-                      placeholder="123 Đường Công Nghiệp, TP.HCM"
-                    />
+                    <input type="text" placeholder="123 Đường Công Nghiệp, TP.HCM" value={factoryAddress} onChange={e => setFactoryAddress(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Ảnh giấy phép kinh doanh</label>
+                    <input type="file" accept="image/*" onChange={(e) => setCertFile(e.target.files?.[0] || null)} />
+                    {certFile && <p style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.25rem' }}>✅ {certFile.name}</p>}
                   </div>
                 </div>
               )}
@@ -226,8 +254,8 @@ export default function Register() {
                 </span>
               </label>
 
-              <button type="submit" className="register-btn" disabled={loading}>
-                {loading ? "Đang đăng ký..." : "Đăng ký"}
+              <button type="submit" className="register-btn" disabled={loading || uploading}>
+                {uploading ? "Đang tải ảnh..." : loading ? "Đang đăng ký..." : "Đăng ký"}
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
 

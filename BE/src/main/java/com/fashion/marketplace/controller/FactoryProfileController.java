@@ -94,27 +94,27 @@ public class FactoryProfileController {
     // ADMIN
     @GetMapping("/api/admin/factories/pending")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<FactoryProfile>>> pending(
+    public ResponseEntity<ApiResponse<Page<FactoryProfileResponse>>> pending(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.ok(
-                factoryProfileService.getPending(PageRequest.of(page, size))));
+                factoryProfileService.getPendingResponse(PageRequest.of(page, size))));
     }
 
     @GetMapping("/api/admin/factories")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<FactoryProfile>>> all(
+    public ResponseEntity<ApiResponse<Page<FactoryProfileResponse>>> all(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.ok(
-                factoryProfileService.getAll(PageRequest.of(page, size))));
+                factoryProfileService.getAllResponse(PageRequest.of(page, size))));
     }
 
     @PatchMapping("/api/admin/factories/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<FactoryProfile>> approve(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<FactoryProfileResponse>> approve(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Đã duyệt hồ sơ",
-                factoryProfileService.approve(id)));
+                factoryProfileService.approveResponse(id)));
     }
 
     @PatchMapping("/api/admin/factories/{id}/reject")
@@ -123,5 +123,12 @@ public class FactoryProfileController {
             @PathVariable Long id, @RequestParam String reason) {
         return ResponseEntity.ok(ApiResponse.ok("Đã từ chối hồ sơ",
                 factoryProfileService.reject(id, reason)));
+    }
+
+    @GetMapping("/api/admin/factories/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<FactoryProfileResponse>> detail(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                factoryProfileService.getByIdResponse(id)));
     }
 }
