@@ -1089,6 +1089,388 @@
     border-radius: 8px;
 }
 
+/* ===== NEW DESIGN UI STYLES ===== */
+
+/* Override workspace for design mode */
+.workspace {
+    background: #EFF6FF;
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+/* Override shirt-card for aspect-ratio based layout */
+.shirt-card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: #EFF6FF;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    min-height: auto;
+    padding: 12px;
+}
+
+/* Override shirt-base for padded layout */
+.shirt-base {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    pointer-events: none;
+}
+
+/* Override shirt-image for fill */
+.shirt-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    max-width: none;
+}
+
+/* Override shirt-color-overlay */
+.shirt-color-overlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    pointer-events: none;
+    opacity: 1;
+    mix-blend-mode: normal;
+}
+
+/* Override color grids for 8 columns */
+.color-grid,
+.logo-grid,
+.logo-color-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 8px;
+}
+
+/* Override color swatch sizing */
+.color-swatch,
+.logo-item,
+.logo-color-swatch {
+    width: 100% !important;
+    max-width: 28px !important;
+    aspect-ratio: 1 / 1 !important;
+    font-size: 12px !important;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+/* Sticky design sidebar */
+.design-sidebar {
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    padding: 0;
+}
+
+.sidebar-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f3f4f6;
+    background: #ffffff;
+}
+.sidebar-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2px;
+    margin-top: 0;
+}
+.sidebar-header p {
+    font-size: 11px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Sidebar content with scroll */
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-content::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 10px;
+}
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+/* Sidebar section */
+.sidebar-section {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid #f1f5f9;
+}
+.sidebar-section h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sidebar footer */
+.sidebar-footer {
+    padding: 12px 18px;
+    border-top: 1px solid #f3f4f6;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sidebar-footer button {
+    width: 100%;
+    padding: 8px 0 !important;
+    font-size: 12px !important;
+    font-weight: 600;
+    border-radius: 6px !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.save-btn:hover {
+    background: #1d4ed8;
+}
+.clear-btn:hover {
+    background: #fef2f2;
+}
+
+.draft-id {
+    font-size: 10px;
+    color: #94a3b8;
+    text-align: center;
+    margin-top: 2px;
+}
+
+/* Apply to both row */
+.apply-both-row {
+    margin-bottom: 16px;
+}
+.apply-both-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+}
+
+/* Section header with action button */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.add-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 12px;
+}
+.add-btn:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Item list (text/logo chips) */
+.item-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.item-chip {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #111827;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+}
+.item-chip:hover,
+.item-chip.active-chip {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1d4ed8;
+}
+
+.item-chip-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.item-remove-btn {
+    background: transparent;
+    border: 2px solid #ffd5d5;
+    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    color: #ef4444;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex: 0 0 auto;
+}
+.item-remove-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.item-empty {
+    color: #6b7280;
+    font-size: 14px;
+    padding: 10px 0;
+}
+
+/* Field row */
+.field-row {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+.field-row label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+}
+
+/* Active design item */
+.active-item {
+    outline: 2px dashed #2563eb;
+    outline-offset: 2px;
+}
+
+/* Size control */
+.size-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    background: #f8fafc;
+}
+
+.size-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.size-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.size-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: white;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    color: #334155;
+    transition: all 0.2s ease;
+}
+.size-btn:hover {
+    background: #e2e8f0;
+}
+
+/* Inactive preview */
+.inactive-preview {
+    opacity: 0.5;
+}
+
+/* Info box smaller */
+.info-box {
+    font-size: 11px !important;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    margin-top: 6px;
+    line-height: 1.4;
+    border: none;
+}
+
+/* Text input override */
+.text-input {
+    width: 100%;
+    padding: 16px 18px;
+    border: 1px solid #d1d5db;
+    border-radius: 18px;
+    background: #f8fafc;
+    outline: none;
+    font-size: 16px;
+}
+
+select.text-input {
+    cursor: pointer;
+}
+
 .upload-dropzone {
     position: relative;
     width: 100%;

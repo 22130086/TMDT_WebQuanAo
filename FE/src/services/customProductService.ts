@@ -25,6 +25,8 @@ export interface CustomProductCreateRequest {
 export interface CustomProductDesignJsonRequest {
   jsonBase64: string;
   fileName?: string;
+  designFileUrl?: string;
+  designFileUrlBack?: string;
 }
 
 export async function createCustomProduct(

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { toPng } from "html-to-image";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import http from "../services/http";
@@ -9,8 +10,23 @@ import {
   uploadDesignJson,
 } from "../services/customProductService";
 
-import shirtWhite from "../assets/shirt_white.png";
-import shirtBlack from "../assets/shirt_black.png";
+// IMPORT CÁC MẶT TRƯỚC / SAU CỦA TỪNG MÀU ÁO
+import shirtWhiteFront from "../assets/white_front.png";
+import shirtWhiteBack from "../assets/white_back.png";
+import shirtBlackFront from "../assets/black_front.png";
+import shirtBlackBack from "../assets/black_back.png";
+import shirtRedFront from "../assets/red_front.png";
+import shirtRedBack from "../assets/red_back.png";
+import shirtGrayFront from "../assets/gray_front.png";
+import shirtGrayBack from "../assets/gray_back.png";
+import shirtBlueFront from "../assets/blue_front.png";
+import shirtBlueBack from "../assets/blue_back.png";
+import shirtOrangeFront from "../assets/orange_front.png";
+import shirtOrangeBack from "../assets/orange_back.png";
+import shirtYellowFront from "../assets/yellow_front.png";
+import shirtYellowBack from "../assets/yellow_back.png";
+import shirtGreenFront from "../assets/green_front.png";
+import shirtGreenBack from "../assets/green_back.png";
 
 import "../styles/custom-order.css";
 
@@ -47,19 +63,33 @@ const colors = [
   "#fff30c",
 ];
 
-const shirtImages: Record<string, string> = {
-  "#ffffff": shirtWhite,
-  "#111111": shirtBlack,
+type ShirtViews = {
+  front: string;
+  back: string;
 };
 
-const getShirtImage = (color: string) => shirtImages[color] || shirtWhite;
+const shirtImages: Record<string, ShirtViews> = {
+  "#ffffff": { front: shirtWhiteFront, back: shirtWhiteBack },
+  "#191c1e": { front: shirtBlackFront, back: shirtBlackBack },
+  "#ba1a1a": { front: shirtRedFront, back: shirtRedBack },
+  "#888888": { front: shirtGrayFront, back: shirtGrayBack },
+  "#2563eb": { front: shirtBlueFront, back: shirtBlueBack },
+  "#f97316": { front: shirtOrangeFront, back: shirtOrangeBack },
+  "#fff30c": { front: shirtYellowFront, back: shirtYellowBack },
+  "#29ae22": { front: shirtGreenFront, back: shirtGreenBack },
+};
+
+const getShirtImage = (color: string, side: DesignSide): string => {
+  const shirt = shirtImages[color] || shirtImages["#ffffff"];
+  return shirt[side];
+};
 
 const logos = ["★", "♥", "⬢", "△", "⚙", "◉", "QR"];
 const logoColors = [
   "#111827",
   "#ffffff",
   "#d32f2f",
-  "#0f766e",
+  "#19e661",
   "#2563eb",
   "#f97316",
   "#a855f7",
@@ -123,15 +153,17 @@ export default function CustomOrder() {
   const [customProductId, setCustomProductId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(
-    "Bạn có thể tạo thiết kế, chọn màu áo, thêm logo và văn bản, rồi lưu lại để chỉnh sửa sau."
+    "Bạn có thể tạo thiết kế, chọn màu áo, thêm logo và văn bản, rồi đăng bài yêu cầu in."
   );
   const [side, setSide] = useState<DesignSide>("front");
   const [frontDesign, setFrontDesign] = useState<ShirtDesign>(defaultDesign);
   const [backDesign, setBackDesign] = useState<ShirtDesign>(defaultDesign);
   const [applyToBoth, setApplyToBoth] = useState(false);
   const [logoColor, setLogoColor] = useState("#111827");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [colorPickerValue, setColorPickerValue] = useState("#111827");
 
-  // ---- Upload mode states ----
+  // ---- Mode & Upload states ----
   type PageMode = "design" | "upload";
   const [mode, setMode] = useState<PageMode>("design");
   const [uploadFrontFile, setUploadFrontFile] = useState<File | null>(null);
@@ -139,7 +171,7 @@ export default function CustomOrder() {
   const [uploadBackFile, setUploadBackFile] = useState<File | null>(null);
   const [uploadBackPreviewUrl, setUploadBackPreviewUrl] = useState<string | null>(null);
 
-  // ---- Upload form fields ----
+  // ---- Post form states ----
   const [postTitle, setPostTitle] = useState("");
   const [postDescription, setPostDescription] = useState("");
   const [postQuantity, setPostQuantity] = useState(50);
@@ -150,6 +182,10 @@ export default function CustomOrder() {
   const [postMaterial, setPostMaterial] = useState("Cotton 100%");
   const [postNotes, setPostNotes] = useState("");
 
+  // Refs để chụp ảnh thiết kế
+  const frontCardRef = useRef<HTMLDivElement>(null);
+  const backCardRef = useRef<HTMLDivElement>(null);
+
   const activeDesign = side === "front" ? frontDesign : backDesign;
   const dragState = useRef<{
     itemId: string;
@@ -158,12 +194,44 @@ export default function CustomOrder() {
     offsetY: number;
   } | null>(null);
 
-  const buildItems = (design: ShirtDesign, item: DesignItem | null, type: DesignItem["type"]) => {
-    const nextItems = design.items.filter((existing) => existing.type !== type);
-    if (item) {
-      nextItems.push(item);
+  const getItemById = (id: string, design: ShirtDesign) =>
+    design.items.find((item) => item.id === id) ?? null;
+
+  const selectedItem = selectedItemId ? getItemById(selectedItemId, activeDesign) : null;
+  const textItems = activeDesign.items.filter((item) => item.type === "text");
+  const logoItems = activeDesign.items.filter((item) => item.type === "logo");
+
+  useEffect(() => {
+    if (selectedItem?.color) {
+      setColorPickerValue(selectedItem.color);
     }
-    return { ...design, items: nextItems };
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (selectedItemId && !selectedItem) {
+      setSelectedItemId(null);
+    }
+  }, [activeDesign, selectedItemId, selectedItem]);
+
+  const mergeItem = (design: ShirtDesign, item: DesignItem) => {
+    const existingIndex = design.items.findIndex((existing) => existing.id === item.id);
+    if (existingIndex >= 0) {
+      const items = design.items.map((existing) =>
+        existing.id === item.id ? item : existing
+      );
+      return { ...design, items };
+    }
+    return { ...design, items: [...design.items, item] };
+  };
+
+  const removeItem = (design: ShirtDesign, itemId: string) => ({
+    ...design,
+    items: design.items.filter((item) => item.id !== itemId),
+  });
+
+  const buildItems = (design: ShirtDesign, item: DesignItem | null) => {
+    if (!item) return design;
+    return mergeItem(design, item);
   };
 
   const setDesignForSide = (targetSide: DesignSide, design: ShirtDesign) => {
@@ -179,9 +247,9 @@ export default function CustomOrder() {
 
   const updateItemPosition = (type: DesignItem["type"], x: number, y: number) => {
     const updateDesign = (design: ShirtDesign) => {
-      const item = design.items.find((existing) => existing.type === type);
+      const item = design.items.find((existing) => existing.type === type && existing.id === dragState.current?.itemId);
       if (!item) return design;
-      return buildItems(design, { ...item, x, y }, type);
+      return buildItems(design, { ...item, x, y });
     };
 
     if (applyToBoth) {
@@ -229,27 +297,78 @@ export default function CustomOrder() {
     design.items.map((item) => (
       <div
         key={item.id}
-        className={`design-item design-item-${item.type}`}
+        className={`design-item design-item-${item.type} ${selectedItemId === item.id ? "active-item" : ""}`}
         style={{
           left: `${item.x}%`,
           top: `${item.y}%`,
           fontSize: `${item.size}px`,
           color: item.color ?? "#111827",
+          cursor: isActive ? "grab" : "default",
         }}
         onPointerDown={isActive ? (event) => startDrag(event, item) : undefined}
+        onClick={() => setSelectedItemId(item.id)}
       >
         {item.content}
       </div>
     ));
 
-  const setDesignItem = (item: DesignItem | null, type: DesignItem["type"]) => {
+  const applyDesignUpdate = (item: DesignItem) => {
     if (applyToBoth) {
-      setFrontDesign((design) => buildItems(design, item, type));
-      setBackDesign((design) => buildItems(design, item, type));
+      setFrontDesign((design) => mergeItem(design, item));
+      setBackDesign((design) => mergeItem(design, item));
       return;
     }
+    setDesignForSide(side, mergeItem(activeDesign, item));
+  };
 
-    setDesignForSide(side, buildItems(activeDesign, item, type));
+  const removeDesignItemById = (itemId: string) => {
+    if (applyToBoth) {
+      setFrontDesign((design) => removeItem(design, itemId));
+      setBackDesign((design) => removeItem(design, itemId));
+    } else {
+      setDesignForSide(side, removeItem(activeDesign, itemId));
+    }
+    if (selectedItemId === itemId) {
+      setSelectedItemId(null);
+    }
+  };
+
+  const addTextItem = () => {
+    const newItem: DesignItem = {
+      id: `text-${Date.now()}`,
+      type: "text",
+      content: "Nhập ...",
+      x: 50,
+      y: 40,
+      size: 24,
+      color: "#111827",
+    };
+    applyDesignUpdate(newItem);
+    setSelectedItemId(newItem.id);
+  };
+
+  const addLogoItem = () => {
+    const newItem: DesignItem = {
+      id: `logo-${Date.now()}`,
+      type: "logo",
+      content: logos[0],
+      x: 50,
+      y: 62,
+      size: 36,
+      color: logoColor,
+    };
+    applyDesignUpdate(newItem);
+    setSelectedItemId(newItem.id);
+  };
+
+  const setDesignItem = (item: DesignItem | null) => {
+    if (!item) return;
+    if (applyToBoth) {
+      setFrontDesign((design) => buildItems(design, item));
+      setBackDesign((design) => buildItems(design, item));
+      return;
+    }
+    setDesignForSide(side, buildItems(activeDesign, item));
   };
 
   const setColor = (color: string) => {
@@ -262,53 +381,72 @@ export default function CustomOrder() {
   };
 
   const setText = (text: string) => {
-    setDesignItem(
-      text
-        ? {
-            id: getItem("text", activeDesign)?.id ?? "text-1",
-            type: "text",
-            content: text,
-            x: getItem("text", activeDesign)?.x ?? 50,
-            y: getItem("text", activeDesign)?.y ?? 40,
-            size: getItem("text", activeDesign)?.size ?? 24,
-          }
-        : null,
-      "text"
-    );
+    if (selectedItem?.type === "text") {
+      setDesignItem({ ...selectedItem, content: text });
+      return;
+    }
+    if (!text) return;
+
+    const newItem: DesignItem = {
+      id: `text-${Date.now()}`,
+      type: "text",
+      content: text,
+      x: 50,
+      y: 40,
+      size: 24,
+      color: colorPickerValue,
+    };
+    applyDesignUpdate(newItem);
+    setSelectedItemId(newItem.id);
   };
 
   const setLogo = (logo: string | null) => {
-    setDesignItem(
-      logo
-        ? {
-            id: getItem("logo", activeDesign)?.id ?? "logo-1",
-            type: "logo",
-            content: logo,
-            x: getItem("logo", activeDesign)?.x ?? 50,
-            y: getItem("logo", activeDesign)?.y ?? 62,
-            size: getItem("logo", activeDesign)?.size ?? 36,
-            color: getItem("logo", activeDesign)?.color ?? logoColor,
-          }
-        : null,
-      "logo"
-    );
+    if (!logo) {
+      if (selectedItem?.type === "logo") {
+        removeDesignItemById(selectedItem.id);
+      }
+      return;
+    }
+
+    if (selectedItem?.type === "logo") {
+      setDesignItem({ ...selectedItem, content: logo });
+      return;
+    }
+
+    const newItem: DesignItem = {
+      id: `logo-${Date.now()}`,
+      type: "logo",
+      content: logo,
+      x: 50,
+      y: 62,
+      size: 36,
+      color: logoColor,
+    };
+    applyDesignUpdate(newItem);
+    setSelectedItemId(newItem.id);
+  };
+
+  const updateSelectedItemColor = (color: string) => {
+    setColorPickerValue(color);
+    if (!selectedItem) return;
+    setDesignItem({ ...selectedItem, color });
+    if (selectedItem.type === "logo") {
+      setLogoColor(color);
+    }
   };
 
   const updateLogoColor = (color: string) => {
     setLogoColor(color);
-    const updateDesign = (design: ShirtDesign) => {
-      const item = design.items.find((existing) => existing.type === "logo");
-      if (!item) return design;
-      return buildItems(design, { ...item, color }, "logo");
-    };
-
-    if (applyToBoth) {
-      setFrontDesign(updateDesign);
-      setBackDesign(updateDesign);
-      return;
+    if (selectedItem?.type === "logo") {
+      setSelectedItemId(selectedItem.id);
+      setDesignItem({ ...selectedItem, color });
     }
+  };
 
-    setDesignForSide(side, updateDesign(activeDesign));
+  const updateSelectedItemSize = (delta: number) => {
+    if (!selectedItem) return;
+    const nextSize = Math.max(10, Math.min(160, selectedItem.size + delta));
+    setDesignItem({ ...selectedItem, size: nextSize });
   };
 
   useEffect(() => {
@@ -376,7 +514,32 @@ export default function CustomOrder() {
     }
   };
 
-  // ===== HÀM ĐĂNG BÀI THỐNG NHẤT (dùng chung cho cả 2 mode) =====
+  // ---- Upload mode handlers ----
+  const handleFrontFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
+      return;
+    }
+    setUploadFrontFile(file);
+    setUploadFrontPreviewUrl(URL.createObjectURL(file));
+    setMessage("Đã tải ảnh mặt trước. Tiếp tục chọn ảnh mặt sau nếu cần.");
+  };
+
+  const handleBackFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
+      return;
+    }
+    setUploadBackFile(file);
+    setUploadBackPreviewUrl(URL.createObjectURL(file));
+    setMessage("Đã tải ảnh mặt sau. Nhấn Đăng bài ngay để hoàn tất.");
+  };
+
+  // ===== ĐĂNG BÀI NGAY =====
   const handleSubmitPost = async () => {
     if (!postTitle.trim()) { setMessage("Vui lòng nhập tiêu đề bài đăng."); return; }
     if (!postQuantity || postQuantity < 1) { setMessage("Vui lòng nhập số lượng hợp lệ."); return; }
@@ -389,7 +552,6 @@ export default function CustomOrder() {
 
       if (mode === "design") {
         // ---- Tự thiết kế: lưu JSON design ----
-        // Tạo custom product nếu chưa có
         if (!customProductId) {
           const cpRes = await createCustomProduct({
             name: postTitle.trim(),
@@ -401,20 +563,46 @@ export default function CustomOrder() {
           cpId = customProductId;
         }
 
-        // Lưu thiết kế JSON
         const payload: DesignPayload = { front: frontDesign, back: backDesign };
         const json = JSON.stringify(payload);
         const base64 = base64FromString(json);
+
+        // Chụp ảnh màn hình mặt trước & mặt sau
+        let frontImgUrl = "", backImgUrl = "";
+        try {
+          if (frontCardRef.current) {
+            const frontDataUrl = await toPng(frontCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2 });
+            const frontBlob = await (await fetch(frontDataUrl)).blob();
+            const fdFront = new FormData();
+            fdFront.append("file", frontBlob, `design_front_${cpId}.png`);
+            fdFront.append("type", "products");
+            const frontRes = await http.post("/upload", fdFront, { headers: { "Content-Type": "multipart/form-data" } });
+            frontImgUrl = frontRes.data?.data?.url || "";
+          }
+          if (backCardRef.current) {
+            const backDataUrl = await toPng(backCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2 });
+            const backBlob = await (await fetch(backDataUrl)).blob();
+            const fdBack = new FormData();
+            fdBack.append("file", backBlob, `design_back_${cpId}.png`);
+            fdBack.append("type", "products");
+            const backRes = await http.post("/upload", fdBack, { headers: { "Content-Type": "multipart/form-data" } });
+            backImgUrl = backRes.data?.data?.url || "";
+          }
+        } catch (imgErr) {
+          console.error("Lỗi chụp ảnh thiết kế:", imgErr);
+        }
+
         await uploadDesignJson(cpId, {
           jsonBase64: base64,
           fileName: `custom_design_${cpId}.json`,
+          designFileUrl: frontImgUrl || undefined,
+          designFileUrlBack: backImgUrl || undefined,
         });
 
-        // Mô tả đầy đủ
         const fullDesc = [
           postDescription,
           "",
-          `🎨 Thiết kế: Màu áo trước ${frontDesign.color}, ${frontDesign.items.length} thành phần`,
+          `🎨 Thiết kế: Mặt trước (màu ${frontDesign.color}, ${frontDesign.items.length} thành phần) | Mặt sau (màu ${backDesign.color}, ${backDesign.items.length} thành phần)`,
           `📐 Size: ${postSize} | 🧵 Chất liệu: ${postMaterial}`,
           postNotes ? `📝 Ghi chú: ${postNotes}` : "",
         ].filter(Boolean).join("\n");
@@ -433,7 +621,7 @@ export default function CustomOrder() {
       } else {
         // ---- Tải mẫu sẵn: upload ảnh ----
         if (!uploadFrontFile && !uploadBackFile) {
-          setMessage("Vui lòng chọn ít nhất một ảnh thiết kế."); return;
+          setMessage("Vui lòng chọn ít nhất một ảnh thiết kế."); setLoading(false); return;
         }
 
         let frontUrl = "", backUrl = "";
@@ -496,44 +684,7 @@ export default function CustomOrder() {
     setCustomProductId(null);
     setFrontDesign(defaultDesign);
     setBackDesign(defaultDesign);
-    setMessage("Đã xóa thiết kế hiện tại. Hãy tạo thiết kế mới.");
-    localStorage.removeItem("customProductDraftId");
-  };
-
-  // ---- Upload mode handlers ----
-  const handleFrontFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
-      return;
-    }
-    setUploadFrontFile(file);
-    const previewUrl = URL.createObjectURL(file);
-    setUploadFrontPreviewUrl(previewUrl);
-    setMessage("Đã tải ảnh mặt trước. Tiếp tục chọn ảnh mặt sau nếu cần.");
-  };
-
-  const handleBackFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
-      return;
-    }
-    setUploadBackFile(file);
-    const previewUrl = URL.createObjectURL(file);
-    setUploadBackPreviewUrl(previewUrl);
-    setMessage("Đã tải ảnh mặt sau. Nhấn Lưu thiết kế để hoàn tất.");
-  };
-
-  const handleClearUpload = () => {
-    setUploadFrontFile(null);
-    setUploadBackFile(null);
-    if (uploadFrontPreviewUrl) URL.revokeObjectURL(uploadFrontPreviewUrl);
-    if (uploadBackPreviewUrl) URL.revokeObjectURL(uploadBackPreviewUrl);
-    setUploadFrontPreviewUrl(null);
-    setUploadBackPreviewUrl(null);
+    setSelectedItemId(null);
     setPostTitle("");
     setPostDescription("");
     setPostQuantity(50);
@@ -543,8 +694,14 @@ export default function CustomOrder() {
     setPostSize("M");
     setPostMaterial("Cotton 100%");
     setPostNotes("");
-    setCustomProductId(null);
-    setMessage("Đã xóa tất cả. Vui lòng tải lại file và điền thông tin.");
+    setUploadFrontFile(null);
+    setUploadBackFile(null);
+    if (uploadFrontPreviewUrl) URL.revokeObjectURL(uploadFrontPreviewUrl);
+    if (uploadBackPreviewUrl) URL.revokeObjectURL(uploadBackPreviewUrl);
+    setUploadFrontPreviewUrl(null);
+    setUploadBackPreviewUrl(null);
+    setMessage("Đã xóa thiết kế hiện tại. Hãy tạo thiết kế mới.");
+    localStorage.removeItem("customProductDraftId");
   };
 
   return (
@@ -578,9 +735,6 @@ export default function CustomOrder() {
           </button>
         </div>
 
-        
-
-        
         <section className="custom-card shirt-customizer-page">
           <div className="workspace-header">
             <span className="text-label-sm font-label uppercase tracking-widest text-secondary">
@@ -600,19 +754,38 @@ export default function CustomOrder() {
               {mode === "design" ? (
                 <>
                   <div className="view-toggle">
-                    <button className={side === "front" ? "active" : ""} onClick={() => setSide("front")}>Mặt trước</button>
-                    <button className={side === "back" ? "active" : ""} onClick={() => setSide("back")}>Mặt sau</button>
+                    <button
+                      className={side === "front" ? "active" : ""}
+                      onClick={() => setSide("front")}
+                    >
+                      Mặt trước
+                    </button>
+                    <button
+                      className={side === "back" ? "active" : ""}
+                      onClick={() => setSide("back")}
+                    >
+                      Mặt sau
+                    </button>
                   </div>
                   <div className="apply-both-row">
-                    <label><input type="checkbox" checked={applyToBoth} onChange={(e) => setApplyToBoth(e.target.checked)} /> Áp dụng lên cả hai mặt</label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={applyToBoth}
+                        onChange={(e) => setApplyToBoth(e.target.checked)}
+                      />
+                      Áp dụng lên cả hai mặt
+                    </label>
                   </div>
                 </>
               ) : null}
 
               <div className="shirt-preview-grid">
-                {/* Mặt trước */}
+                {/* MẶT TRƯỚC */}
                 <div className={`shirt-preview ${mode === "design" ? (side === "front" ? "active-preview" : "inactive-preview") : "active-preview"}`}>
-                  <div className="shirt-card"
+                  <div
+                    ref={frontCardRef}
+                    className="shirt-card"
                     onPointerMove={mode === "design" && side === "front" ? handlePointerMove : undefined}
                     onPointerUp={mode === "design" && side === "front" ? endDrag : undefined}
                     onPointerLeave={mode === "design" && side === "front" ? endDrag : undefined}
@@ -622,8 +795,15 @@ export default function CustomOrder() {
                         <img className="shirt-image" src={uploadFrontPreviewUrl} alt="thiết kế mặt trước" style={{ objectFit: "contain" }} />
                       ) : (
                         <>
-                          <img className="shirt-image" src={mode === "design" ? getShirtImage(frontDesign.color) : shirtWhite} alt="áo trước" />
-                          {mode === "design" && <div className="shirt-color-overlay" style={{ backgroundColor: frontDesign.color }} />}
+                          <img
+                            className="shirt-image"
+                            src={getShirtImage(frontDesign.color, "front")}
+                            alt="áo trước"
+                          />
+                          <div
+                            className="shirt-color-overlay"
+                            style={{ backgroundColor: shirtImages[frontDesign.color] ? "transparent" : frontDesign.color }}
+                          />
                         </>
                       )}
                     </div>
@@ -640,9 +820,11 @@ export default function CustomOrder() {
                   </div>
                 </div>
 
-                {/* Mặt sau */}
+                {/* MẶT SAU */}
                 <div className={`shirt-preview ${mode === "design" ? (side === "back" ? "active-preview" : "inactive-preview") : "active-preview"}`}>
-                  <div className="shirt-card"
+                  <div
+                    ref={backCardRef}
+                    className="shirt-card"
                     onPointerMove={mode === "design" && side === "back" ? handlePointerMove : undefined}
                     onPointerUp={mode === "design" && side === "back" ? endDrag : undefined}
                     onPointerLeave={mode === "design" && side === "back" ? endDrag : undefined}
@@ -652,8 +834,15 @@ export default function CustomOrder() {
                         <img className="shirt-image" src={uploadBackPreviewUrl} alt="thiết kế mặt sau" style={{ objectFit: "contain" }} />
                       ) : (
                         <>
-                          <img className="shirt-image" src={mode === "design" ? getShirtImage(backDesign.color) : shirtWhite} alt="áo sau" />
-                          {mode === "design" && <div className="shirt-color-overlay" style={{ backgroundColor: backDesign.color }} />}
+                          <img
+                            className="shirt-image"
+                            src={getShirtImage(backDesign.color, "back")}
+                            alt="áo sau"
+                          />
+                          <div
+                            className="shirt-color-overlay"
+                            style={{ backgroundColor: shirtImages[backDesign.color] ? "transparent" : backDesign.color }}
+                          />
                         </>
                       )}
                     </div>
@@ -682,29 +871,198 @@ export default function CustomOrder() {
               <div className="sidebar-content">
                 {mode === "design" ? (
                   <>
-                    <div className="sidebar-section"><h4>Chọn màu áo</h4>
-                      <div className="color-grid">{colors.map(c => <button key={c} className={`color-swatch ${activeDesign.color === c ? "active-swatch" : ""}`} style={{ backgroundColor: c }} onClick={() => setColor(c)} />)}</div>
+                {/* ---- CHỌN MÀU ÁO ---- */}
+                <div className="sidebar-section">
+                  <h4>Chọn màu áo</h4>
+                  <div className="color-grid">
+                    {colors.map((color) => (
+                      <button
+                        key={color}
+                        className={`color-swatch ${activeDesign.color === color ? "active-swatch" : ""}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setColor(color)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* ---- THƯ VIỆN LOGO ---- */}
+                <div className="sidebar-section">
+                  <div className="section-header">
+                    <h4>Thư viện Logo</h4>
+                    <button className="add-btn" onClick={addLogoItem} disabled={loading}>
+                      + Thêm icon
+                    </button>
+                  </div>
+                  <div className="logo-grid">
+                    {logos.map((logo) => (
+                      <button
+                        key={logo}
+                        className={`logo-item ${selectedItem?.type === "logo" && selectedItem.content === logo ? "active-logo" : ""}`}
+                        onClick={() => setLogo(logo)}
+                      >
+                        {logo}
+                      </button>
+                    ))}
+                    <button
+                      className="logo-item clear-logo"
+                      onClick={() => setLogo(null)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                  {logoItems.length > 0 ? (
+                    <div className="item-list">
+                      {logoItems.map((item, index) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
+                          onClick={() => setSelectedItemId(item.id)}
+                        >
+                          Icon {index + 1}: {item.content}
+                        </button>
+                      ))}
                     </div>
-                    <div className="sidebar-section"><h4>Thư viện Logo</h4>
-                      <div className="logo-grid">
-                        {logos.map(l => <button key={l} className={`logo-item ${getItem("logo", activeDesign)?.content === l ? "active-logo" : ""}`} onClick={() => setLogo(l)}>{l}</button>)}
-                        <button className="logo-item clear-logo" onClick={() => setLogo(null)}>Xóa</button>
+                  ) : (
+                    <div className="item-empty">Chưa có icon. Nhấn + để thêm icon mới.</div>
+                  )}
+                  <h4>Chọn màu logo</h4>
+                  <div className="logo-color-grid">
+                    {logoColors.map((color) => (
+                      <button
+                        key={color}
+                        className={`logo-color-swatch ${logoColor === color ? "active-swatch" : ""}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => updateLogoColor(color)}
+                        aria-label={`Chọn màu logo ${color}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="logo-color-picker-row">
+                    <input
+                      type="color"
+                      value={logoColor}
+                      onChange={(e) => updateLogoColor(e.target.value)}
+                      className="color-input"
+                    />
+                    <input
+                      type="text"
+                      value={logoColor}
+                      onChange={(e) => updateLogoColor(e.target.value)}
+                      className="hex-input"
+                      placeholder="#000000"
+                    />
+                  </div>
+                </div>
+
+                {/* ---- NỘI DUNG TÙY CHỈNH (TEXT) ---- */}
+                <div className="sidebar-section">
+                  <div className="section-header">
+                    <h4>Nội dung tùy chỉnh</h4>
+                    <button className="add-btn" onClick={addTextItem} disabled={loading}>
+                      + Thêm text
+                    </button>
+                  </div>
+                  {textItems.length > 0 ? (
+                    <div className="item-list">
+                      {textItems.map((item, index) => (
+                        <div key={item.id} className="item-chip-row">
+                          <button
+                            type="button"
+                            className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
+                            onClick={() => setSelectedItemId(item.id)}
+                          >
+                            Text {index + 1}: {item.content || "Mục văn bản mới"}
+                          </button>
+                          <button
+                            type="button"
+                            className="item-remove-btn"
+                            onClick={() => removeDesignItemById(item.id)}
+                            aria-label={`Xóa Text ${index + 1}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="item-empty">Chưa có văn bản. Nhấn + để thêm văn bản mới.</div>
+                  )}
+
+                  {selectedItem ? (
+                    <>
+                      {selectedItem.type === "text" ? (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Nhập nội dung"
+                            value={selectedItem.content}
+                            onChange={(e) => setText(e.target.value)}
+                            className="text-input"
+                          />
+                          <div className="field-row">
+                            <label>Màu văn bản</label>
+                            <div className="logo-color-grid">
+                              {logoColors.map((color) => (
+                                <button
+                                  key={color}
+                                  className={`logo-color-swatch ${colorPickerValue === color ? "active-swatch" : ""}`}
+                                  style={{ backgroundColor: color }}
+                                  onClick={() => updateSelectedItemColor(color)}
+                                  aria-label={`Chọn màu chữ ${color}`}
+                                />
+                              ))}
+                            </div>
+                            <div className="logo-color-picker-row">
+                              <input
+                                type="color"
+                                value={colorPickerValue}
+                                onChange={(e) => updateSelectedItemColor(e.target.value)}
+                                className="color-input"
+                              />
+                              <input
+                                type="text"
+                                value={colorPickerValue}
+                                onChange={(e) => updateSelectedItemColor(e.target.value)}
+                                className="hex-input"
+                                placeholder="#000000"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="info-box">
+                          Chọn icon để thay đổi nội dung và kích thước.
+                        </div>
+                      )}
+
+                      <div className="size-control">
+                        <div className="size-label">
+                          Kích thước: {selectedItem.size}px
+                        </div>
+                        <div className="size-actions">
+                          <button type="button" className="size-btn" onClick={() => updateSelectedItemSize(-1)}>-</button>
+                          <button type="button" className="size-btn" onClick={() => updateSelectedItemSize(+1)}>+</button>
+                        </div>
                       </div>
+                    </>
+                  ) : (
+                    <div className="info-box">
+                      Chọn một mục văn bản hoặc icon để chỉnh sửa nội dung, màu sắc và kích thước.
                     </div>
-                    <div className="sidebar-section"><h4>Chọn màu logo</h4>
-                      <div className="logo-color-grid">{logoColors.map(c => <button key={c} className={`logo-color-swatch ${logoColor === c ? "active-swatch" : ""}`} style={{ backgroundColor: c }} onClick={() => updateLogoColor(c)} aria-label={`Màu ${c}`} />)}</div>
-                      <div className="logo-color-picker-row">
-                        <input type="color" value={logoColor} onChange={(e) => updateLogoColor(e.target.value)} className="color-input" />
-                        <input type="text" value={logoColor} onChange={(e) => updateLogoColor(e.target.value)} className="hex-input" placeholder="#000000" />
-                      </div>
-                    </div>
-                    <div className="sidebar-section"><h4>Nội dung tùy chỉnh</h4>
-                      <input type="text" placeholder="Nhập nội dung" value={getItem("text", activeDesign)?.content ?? ""} onChange={(e) => setText(e.target.value)} className="text-input" />
-                    </div>
+                  )}
+
+                  <div className="info-box">
+                    Nội dung sẽ được in bằng công nghệ in lụa cao cấp,
+                    đảm bảo độ bền và sắc nét.
+                  </div>
+                </div>
                   </>
                 ) : (
                   <>
-                    <div className="sidebar-section"><h4>File đã chọn</h4>
+                    <div className="sidebar-section">
+                      <h4>File đã chọn</h4>
                       {(uploadFrontFile || uploadBackFile) ? (
                         <div className="upload-files-summary">
                           {uploadFrontFile && <div className="upload-file-row"><img src={uploadFrontPreviewUrl!} alt="front" className="upload-preview-thumb-small" /><div><span className="upload-file-label">Mặt trước:</span><span className="upload-file-name-sm">{uploadFrontFile.name}</span></div></div>}
@@ -734,19 +1092,19 @@ export default function CustomOrder() {
                 <div className="sidebar-section"><h4>📅 Hạn chót</h4><input type="date" value={postDeadline} onChange={e => setPostDeadline(e.target.value)} className="text-input" /></div>
                 <div className="sidebar-section"><h4>📝 Ghi chú</h4><textarea
                   placeholder={mode === "upload" ? "VD: 20 áo size M, 20 áo size L, 10 áo size XL - Chất liệu: Cotton 100%. Yêu cầu in sắc nét, không phai màu." : "Yêu cầu đặc biệt..."}
-                  value={postNotes}
-                  onChange={e => setPostNotes(e.target.value)}
-                  className="text-input post-textarea" rows={4}
-                /></div>
+                  value={postNotes} onChange={e => setPostNotes(e.target.value)} className="text-input post-textarea" rows={4} /></div>
               </div>
 
               <div className="sidebar-footer">
                 <button className="save-btn" onClick={handleSubmitPost} disabled={loading}>
                   {loading ? "Đang đăng bài..." : "🚀 Đăng bài ngay"}
                 </button>
-                <button className="clear-btn" onClick={mode === "design" ? handleClearDraft : handleClearUpload} disabled={loading}>
+                <button className="clear-btn" onClick={handleClearDraft} disabled={loading}>
                   Xóa tất cả
                 </button>
+                {customProductId ? (
+                  <div className="draft-id">Draft ID: {customProductId}</div>
+                ) : null}
               </div>
             </aside>
           </div>
