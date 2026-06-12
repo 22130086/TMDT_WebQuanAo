@@ -1,9 +1,13 @@
 package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.request.PaymentRequest;
+import com.fashion.marketplace.entity.Order;
+import com.fashion.marketplace.exception.ResourceNotFoundException;
+import com.fashion.marketplace.repository.OrderRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +17,8 @@ import java.util.UUID;
 public class PaymentService {
 
     private final VNPayService vnPayService;
+    private final OrderRepository orderRepository;
+    private final NotificationService notificationService;
 
     public String createPaymentUrl(HttpServletRequest request, PaymentRequest paymentRequest) throws Exception {
         String ipAddr = request.getRemoteAddr();
@@ -49,12 +55,32 @@ public class PaymentService {
             System.out.println("Đơn hàng mã: " + orderCode);
             System.out.println("Số tiền: " + (Double.parseDouble(amount) / 100) + " VND");
 
-            // TODO: Viết thêm hàm lưu hóa đơn hoặc cập nhật trạng thái đơn hàng dưới DB của bạn tại đây
+            // Cập nhật payment_status của order thành FULLY_PAID
+            try {
+                Long orderId = Long.parseLong(orderCode);
+                updateOrderPaymentStatus(orderId);
+            } catch (NumberFormatException e) {
+                System.err.println("Lỗi parse Order ID từ VNPAY callback: " + e.getMessage());
+            }
 
             return "SUCCESS";
         } else {
             System.out.println("Giao dịch thất bại/Hủy. Mã phản hồi lỗi: " + responseCode);
             return "FAILED_OR_CANCELED";
         }
+    }
+
+    @Transactional
+    private void updateOrderPaymentStatus(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+        
+        order.setPaymentStatus(Order.PaymentStatus.FULLY_PAID);
+        orderRepository.save(order);
+        
+        notificationService.push(order.getCustomer().getId(),
+                "Thanh toán thành công", 
+                "Thanh toán cho đơn hàng #" + orderId + " đã thành công.",
+                "ORDER", orderId);
     }
 }

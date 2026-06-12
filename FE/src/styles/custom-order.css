@@ -130,22 +130,27 @@
 
 /* COLOR */
 
-.color-list {
+.color-list, .logo-list {
     display: flex;
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 3px; /* Thu hẹp khoảng cách giữa những ô màu kề nhau */
+    margin-bottom: 4px;
 }
 
 .color-item {
-    width: 50px;
-    height: 50px;
-
-    border-radius: 50%;
-
-    border: 4px solid white;
-
+    width: 100% !important;          /* Tự động lấp đầy ô của hàng Grid */
+    max-width: 28px !important;      /* Giới hạn đường kính tối đa là 28px gọn gàng */
+    aspect-ratio: 1 / 1 !important;   /* 🌟 QUAN TRỌNG: Ép chiều cao luôn bằng chiều rộng để tạo hình tròn hoàn hảo */
+    
+    font-size: 12px !important;       /* Kích thước icon bên trong logo nếu có */
+    border-radius: 50%;              /* Bo tròn tuyệt đối */
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     cursor: pointer;
-
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
 }
 
 .color-item.active {
@@ -412,10 +417,143 @@
     border: 1px solid #e5e7eb;
 
     padding: 0 20px;
+}
 
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.add-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.add-btn:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+}
+
+.item-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.item-chip {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #111827;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.item-chip:hover,
+.item-chip.active-chip {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1d4ed8;
+}
+
+.item-empty {
+    color: #6b7280;
+    font-size: 14px;
+    padding: 10px 0;
+}
+
+.field-row {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.active-item {
+    outline: 2px dashed #2563eb;
+    outline-offset: 2px;
+}
+
+.item-chip-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.item-remove-btn {
+    background: transparent;
+    border: 2px solid #ffd5d5;
+    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    color: #ef4444;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex: 0 0 auto;
+}
+
+.item-remove-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.size-control {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    background: #f8fafc;
+}
+
+.size-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.size-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.size-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: white;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    color: #334155;
+    transition: all 0.2s ease;
+}
+
+.size-btn:hover {
+    background: #e2e8f0;
 }
 
 /* Shirt customizer styles */
@@ -430,7 +568,7 @@
 }
 
 .workspace {
-    background: #ffffff;
+    background: #EFF6FF;
     border-radius: 28px;
     padding: 24px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
@@ -503,40 +641,41 @@
 .shirt-card {
     position: relative;
     width: 100%;
-    min-height: 420px;
-    background: #f1f5f9;
-    border-radius: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 32px;
+    aspect-ratio: 1 / 1; /* Giữ cho khung luôn là hình vuông hoàn hảo */
+    background-color: #EFF6FF; 
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); /* Đổ bóng nhẹ cho khung nổi lên */
     overflow: hidden;
 }
 
 .shirt-base {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
+    padding: 12px; /* 🌟 Ép ảnh áo cách viền card 12px để "to gần bằng" chứ không chạm hẳn viền */
 }
 
 .shirt-image {
-    width: auto;
-    max-width: 72%;
-    max-height: 90%;
-    object-fit: contain;
-    z-index: 1;
+    width: 100% !important;  
+    height: 100% !important; 
+    object-fit: contain; /* 🌟 Cực kỳ quan trọng: Ép ảnh to ra hết cỡ nhưng KHÔNG bao giờ bị méo tỷ lệ */
+    pointer-events: none; /* Vẫn giữ để không cản trở việc kéo thả logo */
+    user-select: none;
 }
 
 .shirt-color-overlay {
     position: absolute;
-    inset: 0;
-    opacity: 0.18;
-    mix-blend-mode: multiply;
-    z-index: 2;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
     pointer-events: none;
+    /* Có thể dùng mask-image hoặc mix-blend-mode để phủ màu chuẩn nếu bạn dùng ảnh nền trong suốt */
 }
 
 .design-item {
@@ -604,62 +743,99 @@
 }
 
 .design-sidebar {
-    background: #ffffff;
-    border-radius: 28px;
-    padding: 24px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    position: sticky;
+    top: 20px; /* Ghim cứng sidebar khi cuộn trang, không cho trôi tự do */
+    height: calc(100vh - 100px); /* Giới hạn chiều cao sidebar vừa khít khung màn hình */
     display: flex;
-    flex-direction: column;
-    gap: 24px;
+    flex-direction: column; /* Chia sidebar thành 3 tầng: Header - Content - Footer */
+    background: #ffffff;
+    border-radius: 16px; /* Giảm bo góc một chút nhìn sẽ đứng dáng và gọn hơn */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    overflow: hidden; /* Giữ các phần tử con không bị lồi ra ngoài góc bo */
 }
 
+.sidebar-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f3f4f6;
+    background: #ffffff;
+}
 .sidebar-header h3 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 800;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2px;
 }
-
 .sidebar-header p {
-    margin: 8px 0 0;
+    font-size: 11px;
     color: #6b7280;
 }
 
 .sidebar-content {
+    flex: 1; /* Tự động chiếm trọn không gian trống ở giữa */
+    overflow-y: auto; /* Kích hoạt thanh kéo khi nội dung bên trong quá dài */
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 12px; /* Giảm khoảng cách (gap) giữa các mục xuống 12px cho khít */
+}
+/* Tùy biến thanh kéo (Webkit Scrollbar) mảnh, gọn và hiện đại */
+.sidebar-content::-webkit-scrollbar {
+    width: 5px; /* Thanh kéo mỏng chỉ 5px không tốn diện tích */
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1; /* Màu thanh kéo nhã nhặn */
+    border-radius: 10px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+.sidebar-section {
+    background: #f8fafc; /* Đổ nền nhẹ để phân tách rõ ràng các nhóm chức năng */
+    border-radius: 10px;
+    padding: 12px 14px; /* Giảm padding từ 20px-24px xuống còn 12px */
+    border: 1px solid #f1f5f9;
 }
 
 .sidebar-section h4 {
-    margin: 0 0 12px;
-    font-size: 16px;
+    font-size: 12px; /* Thu nhỏ chữ tiêu đề mục (Chọn màu, Nhập chữ...) */
     font-weight: 700;
-    color: #111827;
+    color: #475569;
+    margin-bottom: 8px;
+    text-transform: uppercase; /* Tạo kiểu viết hoa cho gọn gàng */
+    letter-spacing: 0.5px;
 }
 
 .color-grid,
 .logo-grid,
 .logo-color-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .color-swatch,
 .logo-item,
 .logo-color-swatch {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    border: 2px solid transparent;
-    border-radius: 18px;
+    width: 100% !important;          /* Tự động lấp đầy ô của hàng Grid */
+    max-width: 28px !important;      /* Giới hạn đường kính tối đa là 28px gọn gàng */
+    aspect-ratio: 1 / 1 !important;   /* 🌟 QUAN TRỌNG: Ép chiều cao luôn bằng chiều rộng để tạo hình tròn hoàn hảo */
+    
+    font-size: 12px !important;       /* Kích thước icon bên trong logo nếu có */
+    border-radius: 50%;              /* Bo tròn tuyệt đối */
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     cursor: pointer;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
-    color: #111827;
-    background: #f8fafc;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+    transition: all 0.2s;
 }
 
 .color-swatch:hover,
@@ -717,21 +893,32 @@
 }
 
 .info-box {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 16px;
-    color: #475569;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 11px !important;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    margin-top: 6px;
+    line-height: 1.4;
 }
 
 .sidebar-footer {
+    padding: 12px 18px;
+    border-top: 1px solid #f3f4f6;
+    background: #ffffff;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px; /* Giảm gap giữa nút Lưu và nút Xóa */
 }
-
+.sidebar-footer button {
+    width: 100%;
+    padding: 8px 0 !important; /* Làm nút bấm dẹt và gọn hơn */
+    font-size: 12px !important; /* Thu nhỏ cỡ chữ nút bấm */
+    font-weight: 600;
+    border-radius: 6px !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
 .save-btn,
 .clear-btn {
     width: 100%;
@@ -744,19 +931,25 @@
 
 .save-btn {
     background: #2563eb;
-    color: #ffffff;
+    color: white;
+    border: none;
 }
-
+.save-btn:hover {
+    background: #1d4ed8;
+}
 .clear-btn {
-    background: #f8fafc;
-    color: #111827;
-    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
 }
-
+.clear-btn:hover {
+    background: #fef2f2;
+}
 .draft-id {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #475569;
+font-size: 10px;
+    color: #94a3b8;
+    text-align: center;
+    margin-top: 2px;
 }
 
 @media (max-width: 1100px) {
