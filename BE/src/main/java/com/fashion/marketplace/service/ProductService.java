@@ -75,9 +75,15 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse  hide(Long userId, Long productId) {
+    public ProductResponse hide(Long userId, Long productId) {
         Product product = getOwnedProduct(userId, productId);
         product.setStatus(Product.ProductStatus.HIDDEN);
+        return toResponse(productRepository.save(product));
+    }
+
+    public ProductResponse unhide(Long userId, Long productId) {
+        Product product = getOwnedProduct(userId, productId);
+        product.setStatus(Product.ProductStatus.ACTIVE);
         return toResponse(productRepository.save(product));
     }
 

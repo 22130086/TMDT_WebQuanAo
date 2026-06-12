@@ -114,13 +114,21 @@ export const productService = {
 
     // Ẩn sản phẩm
     hideProduct: async (id: number) => {
-
         const response = await axios.patch(
             `${API_BASE_URL}/factory/products/${id}/hide`,
             {},
             getAuthHeader()
         );
+        return response.data;
+    },
 
+    // Hiện sản phẩm
+    unhideProduct: async (id: number) => {
+        const response = await axios.patch(
+            `${API_BASE_URL}/factory/products/${id}/unhide`,
+            {},
+            getAuthHeader()
+        );
         return response.data;
     },
 

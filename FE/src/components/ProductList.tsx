@@ -1,4 +1,4 @@
-import { Plus, Eye, Edit2, EyeOff, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Eye, Edit2, EyeOff, Trash2, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
 import '../styles/product-list.css';
 import { productService } from '../services/productService';
 import { useEffect, useState } from 'react';
@@ -22,9 +22,11 @@ export default function ProductList({ onNavigate }: ProductListProps) {
     // 🛠️ Thay thế any[] thành ProductItem[]
     const [products, setProducts] = useState<ProductItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [filterTab, setFilterTab] = useState<"ALL" | "ACTIVE" | "HIDDEN">("ALL");
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const fetchProducts = () => {
-        productService.getMyProducts(0, 10)
+        productService.getMyProducts(0, 50)
             .then((res) => {
                 if (res.success && res.data && res.data.content) {
                     setProducts(res.data.content);
@@ -36,7 +38,7 @@ export default function ProductList({ onNavigate }: ProductListProps) {
 
     useEffect(() => {
         fetchProducts();
-    }, []);
+    }, [refreshKey]);
 
     // Nhận tín hiệu từ DeleteModal để cập nhật dữ liệu tự động
     useEffect(() => {
@@ -46,6 +48,8 @@ export default function ProductList({ onNavigate }: ProductListProps) {
     }, []);
 
     if (loading) return <div className="main-content">Đang tải dữ liệu sản phẩm từ xưởng...</div>;
+
+  const filteredProducts = filterTab === "ALL" ? products : products.filter(p => p.status === filterTab);
 
     return (
         <div className="product-list-container">
@@ -62,9 +66,12 @@ export default function ProductList({ onNavigate }: ProductListProps) {
 
             {/* Filter Tabs */}
             <div className="filter-tabs">
-                <button className="tab-btn active-tab">Tất cả</button>
-                <button className="tab-btn outline-tab">Đang hiển thị</button>
-                <button className="tab-btn outline-tab">Đã ẩn</button>
+                <button className={`tab-btn ${filterTab === "ALL" ? "active-tab" : "outline-tab"}`}
+                    onClick={() => setFilterTab("ALL")}>Tất cả ({products.length})</button>
+                <button className={`tab-btn ${filterTab === "ACTIVE" ? "active-tab" : "outline-tab"}`}
+                    onClick={() => setFilterTab("ACTIVE")}>Đang hiển thị</button>
+                <button className={`tab-btn ${filterTab === "HIDDEN" ? "active-tab" : "outline-tab"}`}
+                    onClick={() => setFilterTab("HIDDEN")}>Đã ẩn</button>
             </div>
 
             {/* Table Data */}
@@ -82,7 +89,7 @@ export default function ProductList({ onNavigate }: ProductListProps) {
                     </tr>
                     </thead>
                     <tbody>
-                    {products.map((p, idx) => (
+                    {filteredProducts.map((p, idx) => (
                         <tr key={idx}>
                             <td>
                                 <div className="product-img-box">
@@ -110,15 +117,22 @@ export default function ProductList({ onNavigate }: ProductListProps) {
                             </td>
                             <td>
                                 <div className="action-buttons-group">
-                                    {/* 🛠️ Sửa TS2322: Gỡ bỏ thuộc tính 'title' trực tiếp trên tag SVG của Lucide-react */}
-                                    <Eye size={18} />
+                                    {p.status === 'HIDDEN' ? (
+                                        <Eye size={18} style={{ color: "#16a34a", cursor: "pointer" }}
+                                            onClick={() => {
+                                                productService.unhideProduct(p.id)
+                                                    .then((res) => {
+                                                        if (res.success) {
+                                                            window.location.reload();
+                                                        }
+                                                    })
+                                                    .catch((err) => console.error("Lỗi hiện sản phẩm:", err));
+                                            }} />
+                                    ) : (
+                                        <EyeOff size={18} onClick={() => onNavigate(`hide?id=${p.id}`)} />
+                                    )}
                                     <Edit2 size={18} onClick={() => onNavigate(`edit?id=${p.id}`)} />
-                                    <EyeOff size={18} onClick={() => onNavigate(`hide?id=${p.id}`)} />
-                                    <Trash2
-                                        size={18}
-                                        className="delete-icon"
-                                        onClick={() => onNavigate(`delete?id=${p.id}`)}
-                                    />
+                                    <Trash2 size={18} className="delete-icon" onClick={() => onNavigate(`delete?id=${p.id}`)} />
                                 </div>
                             </td>
                         </tr>
