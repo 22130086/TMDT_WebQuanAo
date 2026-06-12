@@ -62,16 +62,16 @@ public class FactoryProfileController {
     @GetMapping("/api/factory/profile")
     @PreAuthorize("hasRole('FACTORY')")
     public ResponseEntity<ApiResponse<FactoryProfileResponse>> myProfile() {
-        return ResponseEntity.ok(ApiResponse.ok(
-                factoryProfileService.getByUserIdResponse(authUtil.currentUserId())));
+        FactoryProfileResponse profile = factoryProfileService.getByUserIdResponse(authUtil.currentUserId());
+        return ResponseEntity.ok(ApiResponse.ok(profile != null ? "Lấy hồ sơ thành công" : "Chưa có hồ sơ", profile));
     }
 
     @PostMapping("/api/factory/profile")
     @PreAuthorize("hasRole('FACTORY')")
-    public ResponseEntity<ApiResponse<FactoryProfile>> upsertProfile(
+    public ResponseEntity<ApiResponse<FactoryProfileResponse>> upsertProfile(
             @RequestBody FactoryProfileRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật hồ sơ thành công",
-                factoryProfileService.createOrUpdate(authUtil.currentUserId(), req)));
+                factoryProfileService.createOrUpdateResponse(authUtil.currentUserId(), req)));
     }
 
     @PostMapping("/api/factory/profile/images")

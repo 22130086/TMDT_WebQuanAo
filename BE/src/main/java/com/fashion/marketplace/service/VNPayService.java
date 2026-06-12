@@ -95,6 +95,15 @@ public class VNPayService {
         return result;
     }
 
+    // Hàm tạo payment URL đơn giản (dùng nội bộ, không cần HttpServletRequest)
+    public String createPaymentUrl(long amount, String orderCode) throws Exception {
+        if (orderCode == null || orderCode.isBlank()) {
+            orderCode = "ORDER_" + System.currentTimeMillis();
+        }
+        Map<String, Object> result = createPaymentRequest((double) amount, "127.0.0.1", orderCode);
+        return (String) result.get("vnpay_url");
+    }
+
     // Hàm kiểm tra chữ ký dữ liệu từ VNPay trả về (Tránh sửa đổi dữ liệu phản hồi)
     public boolean verifyCallback(Map<String, String> anyRequestParams) {
         String vnp_SecureHash = anyRequestParams.get("vnp_SecureHash");

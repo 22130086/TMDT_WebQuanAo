@@ -1,9 +1,11 @@
 package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.request.PaymentRequest;
+import com.fashion.marketplace.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +15,8 @@ import java.util.UUID;
 public class PaymentService {
 
     private final VNPayService vnPayService;
+    private final OrderRepository orderRepository;
+    private final QuotationService quotationService;
 
     public String createPaymentUrl(HttpServletRequest request, PaymentRequest paymentRequest) throws Exception {
         String ipAddr = request.getRemoteAddr();
@@ -34,27 +38,29 @@ public class PaymentService {
         return (String) response.get("vnpay_url");
     }
 
+    @Transactional
     public String processVNPayCallback(Map<String, String> allRequestParams) {
-        // Kiểm tra chữ ký bảo mật hợp lệ chống gian lận tiền bạc
         if (!vnPayService.verifyCallback(allRequestParams)) {
             return "INVALID_SIGNATURE";
         }
 
         String responseCode = allRequestParams.get("vnp_ResponseCode");
         String orderCode = allRequestParams.get("vnp_TxnRef");
-        String amount = allRequestParams.get("vnp_Amount");
 
-        if ("00".equals(responseCode)) {
-            System.out.println("--- GIAO DỊCH THÀNH CÔNG ---");
-            System.out.println("Đơn hàng mã: " + orderCode);
-            System.out.println("Số tiền: " + (Double.parseDouble(amount) / 100) + " VND");
+        try {
+            Long orderId = Long.parseLong(orderCode);
 
-            // TODO: Viết thêm hàm lưu hóa đơn hoặc cập nhật trạng thái đơn hàng dưới DB của bạn tại đây
-
-            return "SUCCESS";
-        } else {
-            System.out.println("Giao dịch thất bại/Hủy. Mã phản hồi lỗi: " + responseCode);
-            return "FAILED_OR_CANCELED";
+            if ("00".equals(responseCode)) {
+                // Thanh toán thành công → accept quotation, reject others, post IN_PROGRESS
+                quotationService.confirmOrder(orderId);
+                return "SUCCESS";
+            } else {
+                // Thất bại → chỉ hủy order, quotation & post giữ nguyên
+                quotationService.cancelOrder(orderId);
+                return "ROLLBACK";
+            }
+        } catch (Exception e) {
+            return "ERROR: " + e.getMessage();
         }
     }
 }

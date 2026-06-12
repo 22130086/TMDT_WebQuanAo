@@ -48,14 +48,16 @@ public class OrderService {
 
         return OrderResponse.builder()
                 .id(order.getId())
-                .customerId(order.getCustomer().getId())
-                .customerEmail(order.getCustomer().getEmail()) // Giả định User entity có trường email
-                .customerName(order.getCustomer().getFullName()) // Giả định User entity có trường fullName/name
-                .factoryId(order.getFactory().getId())
-                .orderType(order.getOrderType().name())
+                .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
+                .customerEmail(order.getCustomer() != null ? order.getCustomer().getEmail() : null)
+                .customerName(order.getCustomer() != null ? order.getCustomer().getFullName() : null)
+                .factoryId(order.getFactory() != null ? order.getFactory().getId() : null)
+                .factoryName(order.getFactory() != null ? order.getFactory().getFactoryName() : null)
+                .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
                 .totalAmount(order.getTotalAmount())
                 .discountAmount(order.getDiscountAmount())
                 .finalAmount(order.getFinalAmount())
+                .depositAmount(order.getDepositAmount())
                 .status(order.getStatus().name())
                 .receiverName(order.getReceiverName())
                 .receiverPhone(order.getReceiverPhone())
@@ -65,7 +67,22 @@ public class OrderService {
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .createdAt(order.getCreatedAt())
                 .items(itemResponses)
+                .designFileUrl(getDesignUrl(order, true))
+                .designFileUrlBack(getDesignUrl(order, false))
                 .build();
+    }
+
+    private String getDesignUrl(Order order, boolean isFront) {
+        try {
+            if (order.getQuotation() != null
+                    && order.getQuotation().getPost() != null
+                    && order.getQuotation().getPost().getCustomProduct() != null) {
+                return isFront
+                        ? order.getQuotation().getPost().getCustomProduct().getDesignFileUrl()
+                        : order.getQuotation().getPost().getCustomProduct().getDesignFileUrlBack();
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     @Transactional
@@ -256,13 +273,11 @@ public class OrderService {
 
         return convertToResponse(saved);
     }
-    // Thay đổi kiểu trả về từ Order -> OrderResponse và gọi hàm convert
     @Transactional(readOnly = true)
     public OrderResponse getById(Long orderId) {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
-        
-        return convertToResponse(order); // Tái sử dụng hàm map DTO của bạn!
+        return convertToResponse(order);
     }
 
     private BigDecimal applyDiscount(DiscountCode code, BigDecimal total) {

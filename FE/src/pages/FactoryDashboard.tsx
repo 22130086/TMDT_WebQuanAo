@@ -1,169 +1,44 @@
-import "../styles/factory-dashboard.css";
+import { useEffect, useState } from "react";
+import http from "../services/http";
+
 export default function FactoryDashboard() {
-    return (
-        <>
-            <div className="page-title">
-                <h2>Trang tổng quan</h2>
-                <p>Chào mừng trở lại! Đây là tóm tắt hoạt động sản xuất hôm nay.</p>
-            </div>
+  const [stats, setStats] = useState({ products: 0, quotes: 0, orders: 0 });
 
-            {/* Stats */}
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <span className="material-symbols-outlined">checkroom</span>
-                    <h3>45</h3>
-                    <p>Tổng số sản phẩm mẫu</p>
-                </div>
+  useEffect(() => {
+    Promise.all([
+      http.get("/factory/products?size=1"),
+      http.get("/factory/quotations?size=1"),
+      http.get("/factory/orders/outsourcing?size=1"),
+    ]).then(([p, q, o]) => {
+      setStats({
+        products: p.data?.data?.totalElements || 0,
+        quotes: q.data?.data?.totalElements || 0,
+        orders: o.data?.data?.totalElements || 0,
+      });
+    }).catch(() => {});
+  }, []);
 
-                <div className="stat-card">
-                    <span className="material-symbols-outlined">request_quote</span>
-                    <h3>128</h3>
-                    <p>Báo giá đã gửi</p>
-                </div>
+  const cards = [
+    { icon: "checkroom", label: "Sản phẩm mẫu", val: stats.products },
+    { icon: "request_quote", label: "Báo giá đã gửi", val: stats.quotes },
+    { icon: "inventory_2", label: "Đơn hàng", val: stats.orders },
+    { icon: "star", label: "Đánh giá", val: "—" },
+  ];
 
-                <div className="stat-card">
-                    <span className="material-symbols-outlined">precision_manufacturing</span>
-                    <h3>12</h3>
-                    <p>Đơn hàng đang sản xuất</p>
-                </div>
-
-                <div className="stat-card">
-                    <span className="material-symbols-outlined">star</span>
-                    <h3>4.8/5</h3>
-                    <p>Điểm đánh giá trung bình</p>
-                </div>
-            </div>
-
-            {/* Layout Grid */}
-            <div className="factory-grid">
-                {/* Table */}
-                <div className="table-card">
-                    <div className="card-header">
-                        <div>
-                            <h3>Yêu cầu gia công mới</h3>
-                            <p>Cần xử lý ngay</p>
-                        </div>
-                        <button>Xem tất cả</button>
-                    </div>
-
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Tên sản phẩm</th>
-                            <th>Số lượng</th>
-                            <th>Thời hạn</th>
-                            <th>Thao tác</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td>Áo thun Cotton Premium</td>
-                            <td>500 cái</td>
-                            <td>20/11/2023</td>
-                            <td><button>Chi tiết</button></td>
-                        </tr>
-                        <tr>
-                            <td>Áo khoác Kaki công sở</td>
-                            <td>200 cái</td>
-                            <td>15/11/2023</td>
-                            <td><button>Chi tiết</button></td>
-                        </tr>
-                        <tr>
-                            <td>Quần Jean Denim Wash</td>
-                            <td>1,200 cái</td>
-                            <td>01/12/2023</td>
-                            <td><button>Chi tiết</button></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Quote */}
-                <div className="quote-card">
-                    <div className="card-header">
-                        <div>
-                            <h3>Báo giá gần đây</h3>
-                            <p>Theo dõi phản hồi</p>
-                        </div>
-                    </div>
-
-                    <div className="quote-item">
-                        <div>
-                            <h4>Đồng phục học sinh</h4>
-                            <span className="pending">Đang chờ</span>
-                        </div>
-                        <strong>85.000đ</strong>
-                    </div>
-
-                    <div className="quote-item">
-                        <div>
-                            <h4>Sơ mi Oxford Nam</h4>
-                            <span className="success">Đã chấp nhận</span>
-                        </div>
-                        <strong>145.000đ</strong>
-                    </div>
-
-                    <div className="quote-item">
-                        <div>
-                            <h4>Túi Canvas Logo</h4>
-                            <span className="danger">Đã từ chối</span>
-                        </div>
-                        <strong>32.000đ</strong>
-                    </div>
-                </div>
-
-                {/* Progress */}
-                <div className="progress-card">
-                    <div className="card-header">
-                        <div>
-                            <h3>Tiến độ đơn hàng</h3>
-                            <p>Hoạt động sản xuất</p>
-                        </div>
-                    </div>
-
-                    <div className="progress-item">
-                        <div className="progress-info">
-                            <span>#ORD-2023-098 — Vest công sở</span>
-                            <span>75%</span>
-                        </div>
-                        <div className="progress-bar">
-                            <div style={{ width: "75%" }}></div>
-                        </div>
-                    </div>
-
-                    <div className="progress-item">
-                        <div className="progress-info">
-                            <span>#ORD-2023-102 — Áo Hoodie Nỉ</span>
-                            <span>15%</span>
-                        </div>
-                        <div className="progress-bar">
-                            <div style={{ width: "15%" }}></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Reviews */}
-                <div className="review-card">
-                    <div className="card-header">
-                        <div>
-                            <h3>Đánh giá mới nhất</h3>
-                            <p>Phản hồi khách hàng</p>
-                        </div>
-                    </div>
-
-                    <div className="review-item">
-                        <div className="stars">★★★★★</div>
-                        <p>Đường may cực kỳ sắc sảo, giao hàng đúng hẹn.</p>
-                        <span>Lê Tuấn - Fashion Brand</span>
-                    </div>
-
-                    <div className="review-item">
-                        <div className="stars">★★★★☆</div>
-                        <p>Sản phẩm mẫu làm rất nhanh, hỗ trợ tốt.</p>
-                        <span>Minh Hà - Uniform Co.</span>
-                    </div>
-                </div>
-            </div>
-        </>
-    );
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: "0 0 4px" }}>Trang tổng quan</h2>
+        <p style={{ color: "#6b7280", margin: 0 }}>Chào mừng trở lại! Tóm tắt hoạt động sản xuất.</p>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+        {cards.map((c, i) => (
+          <div key={i} style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 14 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 32, color: "#2563eb", background: "#eff6ff", borderRadius: 14, padding: 10 }}>{c.icon}</span>
+            <div><h3 style={{ margin: 0, fontSize: 24 }}>{c.val}</h3><p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>{c.label}</p></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

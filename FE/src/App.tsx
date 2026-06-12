@@ -16,6 +16,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import FactoryRoute from "./components/FactoryRoute";
 import CustomOrder from "./pages/CustomOrder";
+import MyPosts from "./pages/UserPages/MyPosts";
+import PostQuotesDetail from "./pages/UserPages/PostQuotesDetail";
 import FactoryProfile from "./pages/FactoryProfile";
 
 import "./styles/product-detail.css";
@@ -101,6 +103,10 @@ function App() {
           }
         />
         <Route path="/payment-result" element={<PaymentResult />} />
+
+        {/* CUSTOMER POSTS */}
+        <Route path="/my-posts" element={<ProtectedRoute><MyPosts /></ProtectedRoute>} />
+        <Route path="/my-posts/:id" element={<ProtectedRoute><PostQuotesDetail /></ProtectedRoute>} />
 
         {/* ADMIN */}
         <Route

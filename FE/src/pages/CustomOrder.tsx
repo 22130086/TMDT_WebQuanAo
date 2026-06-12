@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import http from "../services/http";
@@ -118,6 +119,7 @@ function base64FromString(value: string) {
 }
 
 export default function CustomOrder() {
+  const navigate = useNavigate();
   const [customProductId, setCustomProductId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(
@@ -550,6 +552,14 @@ export default function CustomOrder() {
       <Header />
 
       <div className="custom-order-page">
+        {/* ---- TOP BAR ---- */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button onClick={() => navigate("/my-posts")}
+            style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 14, padding: "10px 20px", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
+            📋 Bài đăng của tôi
+          </button>
+        </div>
+
         {/* ---- MODE SELECTOR ---- */}
         <div className="mode-selector">
           <button

@@ -31,6 +31,7 @@ interface OrderItem {
 
 interface OrderDetailData {
   factoryId: string | undefined;
+  factoryName?: string;
   id: number;
   orderType: "READY_MADE" | "OUTSOURCING";
   totalAmount: number;
@@ -46,6 +47,8 @@ interface OrderDetailData {
   note: string;
   createdAt: string;
   items: OrderItem[];
+  designFileUrl?: string;
+  designFileUrlBack?: string;
 }
 
 export default function OrderDetail() {
@@ -310,13 +313,57 @@ export default function OrderDetail() {
         {/* PHẦN NỘI DUNG CHÍNH (GRID 2 CỘT) */}
         <div className="order-grid">
           
-          {/* CỘT TRÁI: CHI TIẾT SẢN PHẨM SẢN XUẤT */}
+          {/* CỘT TRÁI: CHI TIẾT */}
           <div className="products-panel">
             <div className="panel-header">
-              <h2>Sản phẩm bàn giao</h2>
-              <span className="items-count">{order.items?.length || 0} mục</span>
+              <h2>{order.orderType === "OUTSOURCING" ? "Chi tiết đơn gia công" : "Sản phẩm bàn giao"}</h2>
+              {order.orderType !== "OUTSOURCING" && <span className="items-count">{order.items?.length || 0} mục</span>}
             </div>
 
+            {order.orderType === "OUTSOURCING" ? (
+              <div style={{ padding: 16 }}>
+                {(order.designFileUrl || order.designFileUrlBack) && (
+                  <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                    {order.designFileUrl && (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Mặt trước</div>
+                        <img src={`http://localhost:8080${order.designFileUrl}`} alt="Mặt trước"
+                          style={{ width: 140, height: 160, objectFit: "contain", borderRadius: 12, border: "1px solid #e5e7eb", background: "#f9fafb" }} />
+                      </div>
+                    )}
+                    {order.designFileUrlBack && (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Mặt sau</div>
+                        <img src={`http://localhost:8080${order.designFileUrlBack}`} alt="Mặt sau"
+                          style={{ width: 140, height: 160, objectFit: "contain", borderRadius: 12, border: "1px solid #e5e7eb", background: "#f9fafb" }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ color: "#6b7280", fontSize: 13 }}>🏭 Xưởng: </span>
+                  <strong>{order.factoryName || "Đang cập nhật"}</strong>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ color: "#6b7280", fontSize: 13 }}>💰 Đơn giá: </span>
+                  <strong>{formatVND(order.totalAmount)} / {order.items?.[0]?.quantity || "—"} áo</strong>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ color: "#6b7280", fontSize: 13 }}>💵 Đã cọc (30%): </span>
+                  <strong style={{ color: "#f59e0b" }}>{formatVND(order.depositAmount)}</strong>
+                </div>
+                <div style={{ marginBottom: 12, padding: 12, background: "#fef3c7", borderRadius: 8 }}>
+                  <span style={{ color: "#92400e", fontSize: 13 }}>⚠️ Còn phải thanh toán: </span>
+                  <strong style={{ color: "#d97706", fontSize: 18 }}>{formatVND((order.finalAmount || order.totalAmount) - (order.depositAmount || 0))}</strong>
+                </div>
+                {order.note && (
+                  <div style={{ marginTop: 12, padding: 12, background: "#f9fafb", borderRadius: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>📝 Ghi chú: </span>
+                    <span style={{ fontSize: 14, color: "#4b5563" }}>{order.note}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
             <div className="products-list" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {order.items && order.items.map((item, index) => (
                 <div key={item.id || index} className="product-item" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid #f3f4f6" }}>
@@ -351,9 +398,10 @@ export default function OrderDetail() {
                 </div>
               ))}
             </div>
+            )}
 
-            {/* Mục hiển thị ghi chú của khách hàng */}
-            {order.note && (
+            {/* Ghi chú (cho ready-made) */}
+            {order.orderType !== "OUTSOURCING" && order.note && (
               <div style={{ marginTop: "20px", padding: "16px", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
                 <h5 style={{ margin: "0 0 6px 0", color: "#374151", fontWeight: "600" }}>Ghi chú từ khách hàng:</h5>
                 <p style={{ margin: 0, fontSize: "14px", color: "#4b5563", fontStyle: "italic" }}>"{order.note}"</p>
@@ -440,6 +488,14 @@ export default function OrderDetail() {
                 <div>
                   <span>Số tiền đã cọc trước</span>
                   <span style={{ color: "#f59e0b", fontWeight: "500" }}>{formatVND(order.depositAmount)}</span>
+                </div>
+              )}
+              {order.depositAmount > 0 && (
+                <div>
+                  <span>Còn phải thanh toán</span>
+                  <span style={{ color: "#d97706", fontWeight: "700" }}>
+                    {formatVND((order.finalAmount || order.totalAmount) - (order.depositAmount || 0))}
+                  </span>
                 </div>
               )}
 

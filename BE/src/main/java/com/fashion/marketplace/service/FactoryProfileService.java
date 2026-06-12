@@ -24,6 +24,10 @@ public class FactoryProfileService {
     private final WalletRepository walletRepository;
     private final NotificationService notificationService;
 
+    @Transactional
+    public FactoryProfileResponse createOrUpdateResponse(Long userId, FactoryProfileRequest req) {
+        return toResponse(createOrUpdate(userId, req));
+    }
     // ---- Xưởng: quản lý hồ sơ ----
 
     @Transactional
@@ -62,7 +66,9 @@ public class FactoryProfileService {
 
     @Transactional(readOnly = true)
     public FactoryProfileResponse getByUserIdResponse(Long userId) {
-        return toResponse(getByUserId(userId));
+        return factoryProfileRepository.findByUserId(userId)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
     // ---- Admin: xét duyệt hồ sơ ----

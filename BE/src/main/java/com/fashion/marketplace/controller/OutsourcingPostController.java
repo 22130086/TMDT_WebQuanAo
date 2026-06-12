@@ -28,6 +28,11 @@ public class OutsourcingPostController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // Mặc định chỉ hiện bài đã duyệt (OPEN), admin dùng endpoint riêng /api/admin/outsourcing-posts
+        if (status == null || status.isBlank()) {
+            return ResponseEntity.ok(ApiResponse.ok(
+                    postService.searchOpen(keyword, categoryId, pageable)));
+        }
         return ResponseEntity.ok(ApiResponse.ok(
                 postService.search(keyword, categoryId, status, pageable)));
     }
