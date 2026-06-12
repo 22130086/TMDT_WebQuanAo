@@ -42,7 +42,8 @@ public class CustomProductService {
                 .name(req.getName())
                 .description(req.getDescription())
                 .status(CustomProduct.Status.DRAFT)
-                .designFileUrl(null)
+                .designFileUrl(req.getDesignFileUrl())
+                .designFileUrlBack(req.getDesignFileUrlBack())
                 .build();
 
         return toResponse(customProductRepository.save(cp));
@@ -101,6 +102,7 @@ public class CustomProductService {
                 .name(cp.getName())
                 .description(cp.getDescription())
                 .designFileUrl(cp.getDesignFileUrl())
+                .designFileUrlBack(cp.getDesignFileUrlBack())
                 .status(cp.getStatus())
                 .createdAt(cp.getCreatedAt())
                 .updatedAt(cp.getUpdatedAt())

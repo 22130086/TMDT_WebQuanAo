@@ -18,6 +18,7 @@ public class OutsourcingPostService {
     private final OutsourcingPostRepository postRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final CustomProductRepository customProductRepository;
 
     @Transactional
     public OutsourcingPostResponse create(Long customerId, OutsourcingPostRequest req) {
@@ -32,11 +33,14 @@ public class OutsourcingPostService {
                 .budgetMin(req.getBudgetMin())
                 .budgetMax(req.getBudgetMax())
                 .deadline(req.getDeadline())
-                .status(OutsourcingPost.PostStatus.OPEN)
+                .status(OutsourcingPost.PostStatus.PENDING)
                 .build();
 
         if (req.getCategoryId() != null) {
             post.setCategory(categoryRepository.findById(req.getCategoryId()).orElse(null));
+        }
+        if (req.getCustomProductId() != null) {
+            post.setCustomProduct(customProductRepository.findById(req.getCustomProductId()).orElse(null));
         }
         return toResponse(postRepository.save(post));
     }
@@ -101,6 +105,7 @@ public class OutsourcingPostService {
     }
 
     public OutsourcingPostResponse toResponse(OutsourcingPost p) {
+        CustomProduct cp = p.getCustomProduct();
         return OutsourcingPostResponse.builder()
                 .id(p.getId())
                 .title(p.getTitle())
@@ -114,6 +119,9 @@ public class OutsourcingPostService {
                 .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
                 .customerId(p.getCustomer().getId())
                 .customerName(p.getCustomer().getFullName())
+                .customProductId(cp != null ? cp.getId() : null)
+                .designFileUrl(cp != null ? cp.getDesignFileUrl() : null)
+                .designFileUrlBack(cp != null ? cp.getDesignFileUrlBack() : null)
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();

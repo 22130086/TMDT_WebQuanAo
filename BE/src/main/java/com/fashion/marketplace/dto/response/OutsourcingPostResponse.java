@@ -24,6 +24,11 @@ public class OutsourcingPostResponse {
     private Long customerId;
     private String customerName;
 
+    // CustomProduct / Thiết kế áo đính kèm
+    private Long customProductId;
+    private String designFileUrl;
+    private String designFileUrlBack;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

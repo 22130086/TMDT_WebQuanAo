@@ -18,6 +18,8 @@ export interface CustomProductDesignJsonResponse {
 export interface CustomProductCreateRequest {
   name: string;
   description?: string;
+  designFileUrl?: string;
+  designFileUrlBack?: string;
 }
 
 export interface CustomProductDesignJsonRequest {

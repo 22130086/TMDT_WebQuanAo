@@ -1,6 +1,7 @@
 package com.fashion.marketplace.controller;
 
 import com.fashion.marketplace.dto.response.OrderResponse;
+import com.fashion.marketplace.dto.response.OutsourcingPostResponse;
 import com.fashion.marketplace.dto.response.QuotationResponse;
 import com.fashion.marketplace.dto.response.WithdrawalResponse;
 import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
@@ -251,7 +252,7 @@ public class AdminController {
     // ==================== OUTSOURCING POSTS ====================
 
     @GetMapping("/api/admin/outsourcing-posts")
-    public ResponseEntity<ApiResponse<Page<OutsourcingPost>>> allOutsourcingPosts(
+    public ResponseEntity<ApiResponse<Page<OutsourcingPostResponse>>> allOutsourcingPosts(
             @RequestParam(required = false) OutsourcingPost.PostStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -260,8 +261,14 @@ public class AdminController {
     }
 
     @GetMapping("/api/admin/outsourcing-posts/{id}")
-    public ResponseEntity<ApiResponse<OutsourcingPost>> outsourcingPostDetail(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<OutsourcingPostResponse>> outsourcingPostDetail(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getOutsourcingPostDetail(id)));
+    }
+
+    @PatchMapping("/api/admin/outsourcing-posts/{id}/approve")
+    public ResponseEntity<ApiResponse<OutsourcingPostResponse>> approveOutsourcingPost(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã duyệt bài đăng",
+                adminService.approveOutsourcingPost(id)));
     }
 
     @PatchMapping("/api/admin/outsourcing-posts/{id}/close")

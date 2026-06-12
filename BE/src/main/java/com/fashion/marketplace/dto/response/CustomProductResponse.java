@@ -18,6 +18,7 @@ public class CustomProductResponse {
     private String description;
 
     private String designFileUrl;
+    private String designFileUrlBack;
     private CustomProduct.Status status;
 
     private LocalDateTime createdAt;

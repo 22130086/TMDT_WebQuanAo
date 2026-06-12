@@ -129,6 +129,25 @@ export default function CustomOrder() {
   const [applyToBoth, setApplyToBoth] = useState(false);
   const [logoColor, setLogoColor] = useState("#111827");
 
+  // ---- Upload mode states ----
+  type PageMode = "design" | "upload";
+  const [mode, setMode] = useState<PageMode>("design");
+  const [uploadFrontFile, setUploadFrontFile] = useState<File | null>(null);
+  const [uploadFrontPreviewUrl, setUploadFrontPreviewUrl] = useState<string | null>(null);
+  const [uploadBackFile, setUploadBackFile] = useState<File | null>(null);
+  const [uploadBackPreviewUrl, setUploadBackPreviewUrl] = useState<string | null>(null);
+
+  // ---- Upload form fields ----
+  const [postTitle, setPostTitle] = useState("");
+  const [postDescription, setPostDescription] = useState("");
+  const [postQuantity, setPostQuantity] = useState(50);
+  const [postBudgetMin, setPostBudgetMin] = useState("");
+  const [postBudgetMax, setPostBudgetMax] = useState("");
+  const [postDeadline, setPostDeadline] = useState("");
+  const [postSize, setPostSize] = useState("M");
+  const [postMaterial, setPostMaterial] = useState("Cotton 100%");
+  const [postNotes, setPostNotes] = useState("");
+
   const activeDesign = side === "front" ? frontDesign : backDesign;
   const dragState = useRef<{
     itemId: string;
@@ -355,54 +374,117 @@ export default function CustomOrder() {
     }
   };
 
-  const handleCreateDesign = async (productName = "Thiết kế áo của tôi"): Promise<number | null> => {
-    setLoading(true);
-    try {
-      const response = await createCustomProduct({
-        name: productName,
-        description: "Thiết kế áo custom tại FE",
-      });
-      const id = response.data.id;
-      setCustomProductId(id);
-      localStorage.setItem("customProductDraftId", String(id));
-      setMessage("Tạo thiết kế mới thành công. Bạn có thể bắt đầu thiết kế.");
-      return id;
-    } catch (error) {
-      setMessage(`Tạo thiết kế mới thất bại. ${(error as Error)?.message || ""}`);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveDesign = async () => {
-    let id = customProductId;
-    if (!id) {
-      id = await handleCreateDesign();
-      if (!id) return;
-    }
-
-    const payload: DesignPayload = {
-      front: frontDesign,
-      back: backDesign,
-    };
-
-    const json = JSON.stringify(payload);
-    const base64 = base64FromString(json);
+  // ===== HÀM ĐĂNG BÀI THỐNG NHẤT (dùng chung cho cả 2 mode) =====
+  const handleSubmitPost = async () => {
+    if (!postTitle.trim()) { setMessage("Vui lòng nhập tiêu đề bài đăng."); return; }
+    if (!postQuantity || postQuantity < 1) { setMessage("Vui lòng nhập số lượng hợp lệ."); return; }
 
     setLoading(true);
+    setMessage("Đang tạo bài đăng...");
+
     try {
-      await uploadDesignJson(id, {
-        jsonBase64: base64,
-        fileName: `custom_design_${id}.json`,
-      });
-      setCustomProductId(id);
-      localStorage.setItem("customProductDraftId", String(id));
-      setMessage("Thiết kế đã được lưu thành công.");
+      let cpId: number | null = null;
+
+      if (mode === "design") {
+        // ---- Tự thiết kế: lưu JSON design ----
+        // Tạo custom product nếu chưa có
+        if (!customProductId) {
+          const cpRes = await createCustomProduct({
+            name: postTitle.trim(),
+            description: `Size: ${postSize} | Chất liệu: ${postMaterial}`,
+          });
+          cpId = cpRes.data.id;
+          setCustomProductId(cpId);
+        } else {
+          cpId = customProductId;
+        }
+
+        // Lưu thiết kế JSON
+        const payload: DesignPayload = { front: frontDesign, back: backDesign };
+        const json = JSON.stringify(payload);
+        const base64 = base64FromString(json);
+        await uploadDesignJson(cpId, {
+          jsonBase64: base64,
+          fileName: `custom_design_${cpId}.json`,
+        });
+
+        // Mô tả đầy đủ
+        const fullDesc = [
+          postDescription,
+          "",
+          `🎨 Thiết kế: Màu áo trước ${frontDesign.color}, ${frontDesign.items.length} thành phần`,
+          `📐 Size: ${postSize} | 🧵 Chất liệu: ${postMaterial}`,
+          postNotes ? `📝 Ghi chú: ${postNotes}` : "",
+        ].filter(Boolean).join("\n");
+
+        const postPayload: any = {
+          title: postTitle.trim(),
+          description: fullDesc,
+          quantity: postQuantity,
+          customProductId: cpId,
+        };
+        if (postBudgetMin) postPayload.budgetMin = parseFloat(postBudgetMin);
+        if (postBudgetMax) postPayload.budgetMax = parseFloat(postBudgetMax);
+        if (postDeadline) postPayload.deadline = postDeadline;
+        await http.post("/posts", postPayload);
+
+      } else {
+        // ---- Tải mẫu sẵn: upload ảnh ----
+        if (!uploadFrontFile && !uploadBackFile) {
+          setMessage("Vui lòng chọn ít nhất một ảnh thiết kế."); return;
+        }
+
+        let frontUrl = "", backUrl = "";
+        if (uploadFrontFile) {
+          const fd = new FormData(); fd.append("file", uploadFrontFile); fd.append("type", "products");
+          const res = await http.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+          frontUrl = res.data?.data?.url || "";
+        }
+        if (uploadBackFile) {
+          const fd = new FormData(); fd.append("file", uploadBackFile); fd.append("type", "products");
+          const res = await http.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+          backUrl = res.data?.data?.url || "";
+        }
+
+        const cpRes = await createCustomProduct({
+          name: postTitle.trim(),
+          description: `Size: ${postSize} | Chất liệu: ${postMaterial} | Ghi chú: ${postNotes || "Không có"}`,
+          designFileUrl: frontUrl || undefined,
+          designFileUrlBack: backUrl || undefined,
+        } as any);
+        cpId = cpRes.data.id;
+        setCustomProductId(cpId);
+
+        const fullDesc = [
+          postDescription,
+          "",
+          `📐 Size: ${postSize} | 🧵 Chất liệu: ${postMaterial}`,
+          postNotes ? `📝 Ghi chú: ${postNotes}` : "",
+          frontUrl ? `🖼️ Mặt trước: đã đính kèm` : "",
+          backUrl ? `🖼️ Mặt sau: đã đính kèm` : "",
+        ].filter(Boolean).join("\n");
+
+        const postPayload: any = {
+          title: postTitle.trim(),
+          description: fullDesc,
+          quantity: postQuantity,
+          customProductId: cpId,
+        };
+        if (postBudgetMin) postPayload.budgetMin = parseFloat(postBudgetMin);
+        if (postBudgetMax) postPayload.budgetMax = parseFloat(postBudgetMax);
+        if (postDeadline) postPayload.deadline = postDeadline;
+        await http.post("/posts", postPayload);
+      }
+
+      localStorage.setItem("customProductDraftId", String(cpId));
+      setMessage("🎉 Đăng bài thành công! Bài đăng đang chờ Admin duyệt. Sau khi duyệt, xưởng sẽ gửi báo giá cho bạn.");
+
+      // Reset form
+      setPostTitle(""); setPostDescription(""); setPostQuantity(50);
+      setPostBudgetMin(""); setPostBudgetMax(""); setPostDeadline("");
+      setPostSize("M"); setPostMaterial("Cotton 100%"); setPostNotes("");
     } catch (error) {
-      setMessage(
-        `Lưu thiết kế thất bại. Vui lòng thử lại. ${(error as Error)?.message || ""}`
-      );
+      setMessage(`Lỗi: ${(error as Error)?.message || "Vui lòng thử lại."}`);
     } finally {
       setLoading(false);
     }
@@ -416,39 +498,86 @@ export default function CustomOrder() {
     localStorage.removeItem("customProductDraftId");
   };
 
+  // ---- Upload mode handlers ----
+  const handleFrontFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
+      return;
+    }
+    setUploadFrontFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setUploadFrontPreviewUrl(previewUrl);
+    setMessage("Đã tải ảnh mặt trước. Tiếp tục chọn ảnh mặt sau nếu cần.");
+  };
+
+  const handleBackFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
+      return;
+    }
+    setUploadBackFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setUploadBackPreviewUrl(previewUrl);
+    setMessage("Đã tải ảnh mặt sau. Nhấn Lưu thiết kế để hoàn tất.");
+  };
+
+  const handleClearUpload = () => {
+    setUploadFrontFile(null);
+    setUploadBackFile(null);
+    if (uploadFrontPreviewUrl) URL.revokeObjectURL(uploadFrontPreviewUrl);
+    if (uploadBackPreviewUrl) URL.revokeObjectURL(uploadBackPreviewUrl);
+    setUploadFrontPreviewUrl(null);
+    setUploadBackPreviewUrl(null);
+    setPostTitle("");
+    setPostDescription("");
+    setPostQuantity(50);
+    setPostBudgetMin("");
+    setPostBudgetMax("");
+    setPostDeadline("");
+    setPostSize("M");
+    setPostMaterial("Cotton 100%");
+    setPostNotes("");
+    setCustomProductId(null);
+    setMessage("Đã xóa tất cả. Vui lòng tải lại file và điền thông tin.");
+  };
+
   return (
     <>
       <Header />
 
       <div className="custom-order-page">
-        <section className="custom-hero">
-          <div className="hero-left">
-            <span className="hero-badge">THIẾT KẾ CUSTOM</span>
-            <h1>Thiết kế trực tuyến</h1>
-            <p>
-              Thiết kế giao diện giống ShirtCustomizer: chọn màu áo, thêm text,
-              chọn logo, và xem trước mặt trước / mặt sau ngay lập tức.
-            </p>
-            <div className="hero-rating">
-              ✅ Front / Back • Chọn màu • Chọn logo • Lưu thiết kế
-            </div>
-          </div>
-          <div className="hero-right">
-            <img
-              src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1200"
-              alt="custom shirt"
-            />
-          </div>
-        </section>
+        {/* ---- MODE SELECTOR ---- */}
+        <div className="mode-selector">
+          <button
+            className={`mode-btn ${mode === "design" ? "mode-active" : ""}`}
+            onClick={() => { setMode("design"); setMessage("Tự thiết kế áo của bạn, sau đó điền thông tin và đăng bài yêu cầu in."); }}
+          >
+            <span className="mode-icon">🎨</span>
+            <span>Tự thiết kế</span>
+          </button>
+          <button
+            className={`mode-btn ${mode === "upload" ? "mode-active" : ""}`}
+            onClick={() => { setMode("upload"); setMessage("Tải ảnh mặt trước + mặt sau, điền thông tin và đăng bài."); }}
+          >
+            <span className="mode-icon">📤</span>
+            <span>Tải mẫu sẵn</span>
+          </button>
+        </div>
 
+        
+
+        
         <section className="custom-card shirt-customizer-page">
           <div className="workspace-header">
             <span className="text-label-sm font-label uppercase tracking-widest text-secondary">
-              Mẫu thiết kế
+              {mode === "design" ? "Mẫu thiết kế" : "Xem trước thiết kế"}
             </span>
-
             <h2 className="text-headline-sm font-headline font-bold text-on-surface uppercase">
-              Thiết kế áo của bạn
+              {mode === "design" ? "Thiết kế & Đăng bài" : "Tải mẫu & Đăng bài"}
             </h2>
           </div>
           <div className="design-notice customizer-notice">
@@ -456,184 +585,158 @@ export default function CustomOrder() {
           </div>
 
           <div className="customizer-layout">
+            {/* ===== WORKSPACE ===== */}
             <section className="workspace">
-              <div className="view-toggle">
-                <button
-                  className={side === "front" ? "active" : ""}
-                  onClick={() => setSide("front")}
-                >
-                  Mặt trước
-                </button>
-                <button
-                  className={side === "back" ? "active" : ""}
-                  onClick={() => setSide("back")}
-                >
-                  Mặt sau
-                </button>
-              </div>
-
-              <div className="apply-both-row">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={applyToBoth}
-                    onChange={(e) => setApplyToBoth(e.target.checked)}
-                  />
-                  Áp dụng lên cả hai mặt
-                </label>
-              </div>
+              {mode === "design" ? (
+                <>
+                  <div className="view-toggle">
+                    <button className={side === "front" ? "active" : ""} onClick={() => setSide("front")}>Mặt trước</button>
+                    <button className={side === "back" ? "active" : ""} onClick={() => setSide("back")}>Mặt sau</button>
+                  </div>
+                  <div className="apply-both-row">
+                    <label><input type="checkbox" checked={applyToBoth} onChange={(e) => setApplyToBoth(e.target.checked)} /> Áp dụng lên cả hai mặt</label>
+                  </div>
+                </>
+              ) : null}
 
               <div className="shirt-preview-grid">
-                <div className={`shirt-preview ${side === "front" ? "active-preview" : "inactive-preview"}`}>
-                  <div
-                    className="shirt-card"
-                    onPointerMove={side === "front" ? handlePointerMove : undefined}
-                    onPointerUp={side === "front" ? endDrag : undefined}
-                    onPointerLeave={side === "front" ? endDrag : undefined}
+                {/* Mặt trước */}
+                <div className={`shirt-preview ${mode === "design" ? (side === "front" ? "active-preview" : "inactive-preview") : "active-preview"}`}>
+                  <div className="shirt-card"
+                    onPointerMove={mode === "design" && side === "front" ? handlePointerMove : undefined}
+                    onPointerUp={mode === "design" && side === "front" ? endDrag : undefined}
+                    onPointerLeave={mode === "design" && side === "front" ? endDrag : undefined}
                   >
                     <div className="shirt-base">
-                      <img
-                        className="shirt-image"
-                        src={getShirtImage(frontDesign.color)}
-                        alt="áo trước"
-                      />
-                      <div
-                        className="shirt-color-overlay"
-                        style={{ backgroundColor: frontDesign.color }}
-                      />
+                      {mode === "upload" && uploadFrontPreviewUrl ? (
+                        <img className="shirt-image" src={uploadFrontPreviewUrl} alt="thiết kế mặt trước" style={{ objectFit: "contain" }} />
+                      ) : (
+                        <>
+                          <img className="shirt-image" src={mode === "design" ? getShirtImage(frontDesign.color) : shirtWhite} alt="áo trước" />
+                          {mode === "design" && <div className="shirt-color-overlay" style={{ backgroundColor: frontDesign.color }} />}
+                        </>
+                      )}
                     </div>
-                    {renderDesignItems(frontDesign, side === "front")}
+                    {mode === "design" && renderDesignItems(frontDesign, side === "front")}
                   </div>
                   <div className="shirt-footer">
                     <span>Mặt trước</span>
+                    {mode === "upload" && (
+                      <label className="upload-inline-btn">
+                        {uploadFrontFile ? "✓ Đã chọn" : "📷 Tải ảnh"}
+                        <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFrontFileSelect} style={{ display: "none" }} />
+                      </label>
+                    )}
                   </div>
                 </div>
 
-                <div className={`shirt-preview ${side === "back" ? "active-preview" : "inactive-preview"}`}>
-                  <div
-                    className="shirt-card"
-                    onPointerMove={side === "back" ? handlePointerMove : undefined}
-                    onPointerUp={side === "back" ? endDrag : undefined}
-                    onPointerLeave={side === "back" ? endDrag : undefined}
+                {/* Mặt sau */}
+                <div className={`shirt-preview ${mode === "design" ? (side === "back" ? "active-preview" : "inactive-preview") : "active-preview"}`}>
+                  <div className="shirt-card"
+                    onPointerMove={mode === "design" && side === "back" ? handlePointerMove : undefined}
+                    onPointerUp={mode === "design" && side === "back" ? endDrag : undefined}
+                    onPointerLeave={mode === "design" && side === "back" ? endDrag : undefined}
                   >
                     <div className="shirt-base">
-                      <img
-                        className="shirt-image"
-                        src={getShirtImage(backDesign.color)}
-                        alt="áo sau"
-                      />
-                      <div
-                        className="shirt-color-overlay"
-                        style={{ backgroundColor: backDesign.color }}
-                      />
+                      {mode === "upload" && uploadBackPreviewUrl ? (
+                        <img className="shirt-image" src={uploadBackPreviewUrl} alt="thiết kế mặt sau" style={{ objectFit: "contain" }} />
+                      ) : (
+                        <>
+                          <img className="shirt-image" src={mode === "design" ? getShirtImage(backDesign.color) : shirtWhite} alt="áo sau" />
+                          {mode === "design" && <div className="shirt-color-overlay" style={{ backgroundColor: backDesign.color }} />}
+                        </>
+                      )}
                     </div>
-                    {renderDesignItems(backDesign, side === "back")}
+                    {mode === "design" && renderDesignItems(backDesign, side === "back")}
                   </div>
                   <div className="shirt-footer">
                     <span>Mặt sau</span>
+                    {mode === "upload" && (
+                      <label className="upload-inline-btn">
+                        {uploadBackFile ? "✓ Đã chọn" : "📷 Tải ảnh"}
+                        <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleBackFileSelect} style={{ display: "none" }} />
+                      </label>
+                    )}
                   </div>
                 </div>
               </div>
             </section>
 
+            {/* ===== SIDEBAR ===== */}
             <aside className="design-sidebar">
               <div className="sidebar-header">
-                <h3>Công cụ thiết kế</h3>
-                <p>Tùy chỉnh sản phẩm của bạn</p>
+                <h3>{mode === "design" ? "Công cụ thiết kế" : "Tải mẫu thiết kế"}</h3>
+                <p>{mode === "design" ? "Tùy chỉnh sản phẩm của bạn" : "Chọn ảnh mặt trước & mặt sau"}</p>
               </div>
 
               <div className="sidebar-content">
-                <div className="sidebar-section">
-                  <h4>Chọn màu áo</h4>
-                  <div className="color-grid">
-                    {colors.map((color) => (
-                      <button
-                        key={color}
-                        className={`color-swatch ${activeDesign.color === color ? "active-swatch" : ""}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setColor(color)}
-                      />
-                    ))}
-                  </div>
-                </div>
+                {mode === "design" ? (
+                  <>
+                    <div className="sidebar-section"><h4>Chọn màu áo</h4>
+                      <div className="color-grid">{colors.map(c => <button key={c} className={`color-swatch ${activeDesign.color === c ? "active-swatch" : ""}`} style={{ backgroundColor: c }} onClick={() => setColor(c)} />)}</div>
+                    </div>
+                    <div className="sidebar-section"><h4>Thư viện Logo</h4>
+                      <div className="logo-grid">
+                        {logos.map(l => <button key={l} className={`logo-item ${getItem("logo", activeDesign)?.content === l ? "active-logo" : ""}`} onClick={() => setLogo(l)}>{l}</button>)}
+                        <button className="logo-item clear-logo" onClick={() => setLogo(null)}>Xóa</button>
+                      </div>
+                    </div>
+                    <div className="sidebar-section"><h4>Chọn màu logo</h4>
+                      <div className="logo-color-grid">{logoColors.map(c => <button key={c} className={`logo-color-swatch ${logoColor === c ? "active-swatch" : ""}`} style={{ backgroundColor: c }} onClick={() => updateLogoColor(c)} aria-label={`Màu ${c}`} />)}</div>
+                      <div className="logo-color-picker-row">
+                        <input type="color" value={logoColor} onChange={(e) => updateLogoColor(e.target.value)} className="color-input" />
+                        <input type="text" value={logoColor} onChange={(e) => updateLogoColor(e.target.value)} className="hex-input" placeholder="#000000" />
+                      </div>
+                    </div>
+                    <div className="sidebar-section"><h4>Nội dung tùy chỉnh</h4>
+                      <input type="text" placeholder="Nhập nội dung" value={getItem("text", activeDesign)?.content ?? ""} onChange={(e) => setText(e.target.value)} className="text-input" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="sidebar-section"><h4>File đã chọn</h4>
+                      {(uploadFrontFile || uploadBackFile) ? (
+                        <div className="upload-files-summary">
+                          {uploadFrontFile && <div className="upload-file-row"><img src={uploadFrontPreviewUrl!} alt="front" className="upload-preview-thumb-small" /><div><span className="upload-file-label">Mặt trước:</span><span className="upload-file-name-sm">{uploadFrontFile.name}</span></div></div>}
+                          {uploadBackFile && <div className="upload-file-row"><img src={uploadBackPreviewUrl!} alt="back" className="upload-preview-thumb-small" /><div><span className="upload-file-label">Mặt sau:</span><span className="upload-file-name-sm">{uploadBackFile.name}</span></div></div>}
+                        </div>
+                      ) : <div className="info-box">Chưa chọn file. Nhấn "📷 Tải ảnh" dưới mỗi mặt áo.</div>}
+                    </div>
+                  </>
+                )}
 
-                <div className="sidebar-section">
-                  <h4>Thư viện Logo</h4>
-                  <div className="logo-grid">
-                    {logos.map((logo) => (
-                      <button
-                        key={logo}
-                        className={`logo-item ${getItem("logo", activeDesign)?.content === logo ? "active-logo" : ""}`}
-                        onClick={() => setLogo(logo)}
-                      >
-                        {logo}
-                      </button>
-                    ))}
-                    <button
-                      className="logo-item clear-logo"
-                      onClick={() => setLogo(null)}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
+                {/* ===== FORM ĐĂNG BÀI (chung) ===== */}
+                <div className="sidebar-section"><h4>📝 Tiêu đề bài đăng *</h4><input type="text" placeholder="VD: Đặt in áo thun cổ tròn" value={postTitle} onChange={e => setPostTitle(e.target.value)} className="text-input" /></div>
+                <div className="sidebar-section"><h4>📄 Mô tả yêu cầu</h4><textarea placeholder="Mô tả chi tiết yêu cầu in ấn..." value={postDescription} onChange={e => setPostDescription(e.target.value)} className="text-input post-textarea" rows={3} /></div>
+                <div className="sidebar-section"><h4>🔢 Số lượng *</h4><input type="number" min={1} value={postQuantity} onChange={e => setPostQuantity(Number(e.target.value))} className="text-input" /></div>
 
-                <div className="sidebar-section">
-                  <h4>Chọn màu logo</h4>
-                  <div className="logo-color-grid">
-                    {logoColors.map((color) => (
-                      <button
-                        key={color}
-                        className={`logo-color-swatch ${logoColor === color ? "active-swatch" : ""}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => updateLogoColor(color)}
-                        aria-label={`Chọn màu logo ${color}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="logo-color-picker-row">
-                    <input
-                      type="color"
-                      value={logoColor}
-                      onChange={(e) => updateLogoColor(e.target.value)}
-                      className="color-input"
-                    />
-                    <input
-                      type="text"
-                      value={logoColor}
-                      onChange={(e) => updateLogoColor(e.target.value)}
-                      className="hex-input"
-                      placeholder="#000000"
-                    />
-                  </div>
+                {mode === "design" && (
+                <div className="sidebar-row-2">
+                  <div className="sidebar-section"><h4>📐 Size</h4><select value={postSize} onChange={e => setPostSize(e.target.value)} className="text-input">{["XS","S","M","L","XL","XXL","3XL"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+                  <div className="sidebar-section"><h4>🧵 Chất liệu</h4><select value={postMaterial} onChange={e => setPostMaterial(e.target.value)} className="text-input">{["Cotton 100%","Cotton 65/35","Polyester","Vải thun lạnh","Vải cá sấu","Khác"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                 </div>
+                )}
 
-                <div className="sidebar-section">
-                  <h4>Nội dung tùy chỉnh</h4>
-                  <input
-                    type="text"
-                    placeholder="Nhập nội dung"
-                    value={getItem("text", activeDesign)?.content ?? ""}
-                    onChange={(e) => setText(e.target.value)}
-                    className="text-input"
-                  />
-                  <div className="info-box">
-                    Nội dung sẽ được in bằng công nghệ in lụa cao cấp,
-                    đảm bảo độ bền và sắc nét.
-                  </div>
+                <div className="sidebar-row-2">
+                  <div className="sidebar-section"><h4>💰 NS tối thiểu</h4><input type="number" placeholder="VNĐ" value={postBudgetMin} onChange={e => setPostBudgetMin(e.target.value)} className="text-input" /></div>
+                  <div className="sidebar-section"><h4>💰 NS tối đa</h4><input type="number" placeholder="VNĐ" value={postBudgetMax} onChange={e => setPostBudgetMax(e.target.value)} className="text-input" /></div>
                 </div>
+                <div className="sidebar-section"><h4>📅 Hạn chót</h4><input type="date" value={postDeadline} onChange={e => setPostDeadline(e.target.value)} className="text-input" /></div>
+                <div className="sidebar-section"><h4>📝 Ghi chú</h4><textarea
+                  placeholder={mode === "upload" ? "VD: 20 áo size M, 20 áo size L, 10 áo size XL - Chất liệu: Cotton 100%. Yêu cầu in sắc nét, không phai màu." : "Yêu cầu đặc biệt..."}
+                  value={postNotes}
+                  onChange={e => setPostNotes(e.target.value)}
+                  className="text-input post-textarea" rows={4}
+                /></div>
               </div>
 
               <div className="sidebar-footer">
-                <button className="save-btn" onClick={handleSaveDesign} disabled={loading}>
-                  {loading ? "Đang lưu..." : "Lưu thiết kế"}
+                <button className="save-btn" onClick={handleSubmitPost} disabled={loading}>
+                  {loading ? "Đang đăng bài..." : "🚀 Đăng bài ngay"}
                 </button>
-                <button className="clear-btn" onClick={handleClearDraft} disabled={loading}>
-                  Xóa thiết kế
+                <button className="clear-btn" onClick={mode === "design" ? handleClearDraft : handleClearUpload} disabled={loading}>
+                  Xóa tất cả
                 </button>
-                {customProductId ? (
-                  <div className="draft-id">Draft ID: {customProductId}</div>
-                ) : null}
               </div>
             </aside>
           </div>

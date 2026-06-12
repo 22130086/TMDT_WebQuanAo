@@ -18,24 +18,21 @@ public class FileUploadController {
 
     @PostMapping("/api/upload")
     public ResponseEntity<ApiResponse<Map<String, String>>> upload(
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "type", defaultValue = "products") String type) {
         try {
-            // Dùng đường dẫn tuyệt đối từ current working directory
-            Path dir = Paths.get(System.getProperty("user.dir"), uploadDir, "factories").toAbsolutePath().normalize();
+            Path dir = Paths.get(System.getProperty("user.dir"), uploadDir, type).toAbsolutePath().normalize();
             Files.createDirectories(dir);
 
-            // Tạo tên file unique
             String originalName = file.getOriginalFilename();
             String ext = (originalName != null && originalName.contains("."))
                     ? originalName.substring(originalName.lastIndexOf(".")) : "";
             String fileName = UUID.randomUUID().toString() + ext;
             Path filePath = dir.resolve(fileName);
 
-            // Lưu file
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            // Trả về URL
-            String fileUrl = "/uploads/factories/" + fileName;
+            String fileUrl = "/uploads/" + type + "/" + fileName;
             Map<String, String> result = new LinkedHashMap<>();
             result.put("url", fileUrl);
             result.put("fileName", fileName);
