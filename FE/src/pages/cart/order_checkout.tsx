@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import http from "../../services/http.ts"; // Đường dẫn file axios của bạn
 import { deleteCartItem } from "../../services/cartService"; // 🌟 Import hàm xóa item giỏ hàng từ service của bạn
