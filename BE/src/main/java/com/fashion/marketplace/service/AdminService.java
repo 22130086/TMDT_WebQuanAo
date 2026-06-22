@@ -246,6 +246,7 @@ public class AdminService {
 
     // ---- 6. Quản lý đơn hàng (Admin) ----
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable).map(this::toOrderResponse);
     }
@@ -332,6 +333,7 @@ public class AdminService {
                 .customerEmail(order.getCustomer() != null ? order.getCustomer().getEmail() : null)
                 .customerName(order.getCustomer() != null ? order.getCustomer().getFullName() : null)
                 .factoryId(order.getFactory() != null ? order.getFactory().getId() : null)
+                .factoryName(order.getFactory() != null ? order.getFactory().getFactoryName() : null)
                 .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
                 .totalAmount(order.getTotalAmount())
                 .discountAmount(order.getDiscountAmount())
@@ -344,12 +346,17 @@ public class AdminService {
                 .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .createdAt(order.getCreatedAt())
-                .items(order.getItems() != null ? order.getItems().stream().map(i ->
-                        OrderResponse.OrderItemResponse.builder()
+                .items(order.getItems() != null ? order.getItems().stream().map(i -> {
+                        String img = null;
+                        if (i.getProduct() != null && i.getProduct().getImages() != null
+                                && !i.getProduct().getImages().isEmpty()) {
+                            img = i.getProduct().getImages().get(0).getImageUrl();
+                        }
+                        return OrderResponse.OrderItemResponse.builder()
                                 .id(i.getId()).productId(i.getProduct() != null ? i.getProduct().getId() : null)
-                                .productName(i.getProductName()).quantity(i.getQuantity())
-                                .unitPrice(i.getUnitPrice()).build()
-                ).collect(Collectors.toList()) : null)
+                                .productName(i.getProductName()).productImage(img)
+                                .quantity(i.getQuantity()).unitPrice(i.getUnitPrice()).build();
+                }).collect(Collectors.toList()) : null)
                 .build();
     }
 

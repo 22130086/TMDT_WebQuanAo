@@ -15,6 +15,7 @@ import EditQuote from "../../components/EditQuote";
 import DeleteQuoteModal from "../../components/DeleteQuoteModal";
 import FactoryOrders from "./FactoryOrders";
 import FactoryProfileEdit from "./FactoryProfileEdit";
+import FactoryReviewManagement from "./FactoryReviewManagement";
 
 const Factory = () => {
     const [refreshSignal, setRefreshSignal] = useState(0);
@@ -51,6 +52,7 @@ const Factory = () => {
                     <Link to="/factory/products" className={isActive('/factory/products')}><span className="material-symbols-outlined">checkroom</span> Sản phẩm mẫu</Link>
                     <Link to="/factory/outsourcing" className={isActive('/factory/outsourcing')}><span className="material-symbols-outlined">precision_manufacturing</span> Yêu cầu gia công</Link>
                     <Link to="/factory/orders" className={isActive('/factory/orders')}><span className="material-symbols-outlined">inventory_2</span> Đơn hàng</Link>
+                    <Link to="/factory/reviews" className={isActive('/factory/reviews')}><span className="material-symbols-outlined">reviews</span> Đánh giá</Link>
                     <Link to="/factory/profile" className={isActive('/factory/profile')}><span className="material-symbols-outlined">factory</span> Hồ sơ xưởng</Link>
                 </nav>
             </aside>
@@ -74,6 +76,7 @@ const Factory = () => {
                         <Route path="outsourcing/send-quote" element={<SendQuote onNavigate={handleNavigation} />} />
                         <Route path="outsourcing/edit-quote" element={<EditQuote onNavigate={handleNavigation} />} />
                         <Route path="orders" element={<FactoryOrders />} />
+                        <Route path="reviews" element={<FactoryReviewManagement />} />
                         <Route path="profile" element={<FactoryProfileEdit />} />
                     </Routes>
                 </section>

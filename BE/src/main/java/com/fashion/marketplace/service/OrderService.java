@@ -37,13 +37,21 @@ public class OrderService {
     // 🌟 HÀM CHUYỂN ĐỔI CHUNG (MAPPER) TỪ ENTITY SANG DTO AN TOÀN
     private OrderResponse convertToResponse(Order order) {
         List<OrderResponse.OrderItemResponse> itemResponses = order.getItems().stream()
-                .map(item -> OrderResponse.OrderItemResponse.builder()
+                .map(item -> {
+                    String firstImage = null;
+                    if (item.getProduct() != null && item.getProduct().getImages() != null
+                            && !item.getProduct().getImages().isEmpty()) {
+                        firstImage = item.getProduct().getImages().get(0).getImageUrl();
+                    }
+                    return OrderResponse.OrderItemResponse.builder()
                         .id(item.getId())
                         .productId(item.getProduct() != null ? item.getProduct().getId() : null)
                         .productName(item.getProductName())
+                        .productImage(firstImage)
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
-                        .build())
+                        .build();
+                })
                 .collect(Collectors.toList());
 
         return OrderResponse.builder()
@@ -187,16 +195,19 @@ public class OrderService {
     }
 
     // 🌟 Chuyển đổi Page<Order> sang Page<OrderResponse> bằng hàm .map()
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getByCustomer(Long customerId, Pageable pageable) {
         return orderRepository.findByCustomerId(customerId, pageable).map(this::convertToResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getReadyMadeByFactory(Long userId, Pageable pageable) {
         FactoryProfile f = factoryProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
         return orderRepository.findByFactoryIdAndOrderType(f.getId(), Order.OrderType.READY_MADE, pageable).map(this::convertToResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getOutsourcingByFactory(Long userId, Pageable pageable) {
         FactoryProfile f = factoryProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));

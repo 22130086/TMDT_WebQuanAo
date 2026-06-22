@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { productService } from "../services/productService";
+import { getImageUrl } from "../services/http";
 import "../styles/products.css";
 
 interface Product {
@@ -111,14 +112,13 @@ export default function Products() {
                   <div className="product-image-wrapper">
 
                     <img
-                      src={
-                        product.imageUrls &&
-                        product.imageUrls.length > 0
-                          ? product.imageUrls[0]
-                          : "https://placehold.co/600x600?text=No+Image"
-                      }
+                      src={getImageUrl(product.imageUrls?.[0])}
                       alt={product.name}
                       className="product-image"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "https://placehold.co/600x600?text=No+Image";
+                      }}
                     />
 
                   </div>

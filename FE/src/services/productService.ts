@@ -1,20 +1,4 @@
-import axios from "axios";
-
-const API_BASE_URL = "http://localhost:8080/api";
-
-// =========================
-// AUTH HEADER
-// =========================
-const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-
-    return {
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
-    };
-};
+import http from "./http";
 
 export const productService = {
 
@@ -31,17 +15,17 @@ export const productService = {
     ) => {
 
         let url =
-            `${API_BASE_URL}/products?page=${page}&size=${size}`;
+            `/products?page=${page}&size=${size}`;
 
         if (keyword) {
-            url += `&keyword=${keyword}`;
+            url += `&keyword=${encodeURIComponent(keyword)}`;
         }
 
         if (categoryId) {
             url += `&categoryId=${categoryId}`;
         }
 
-        const response = await axios.get(url);
+        const response = await http.get(url);
 
         return response.data;
     },
@@ -49,8 +33,8 @@ export const productService = {
     // Lấy chi tiết sản phẩm
     getProductById: async (id: number) => {
 
-        const response = await axios.get(
-            `${API_BASE_URL}/products/${id}`
+        const response = await http.get(
+            `/products/${id}`
         );
 
         return response.data;
@@ -63,9 +47,8 @@ export const productService = {
     // Danh sách sản phẩm của xưởng
     getMyProducts: async (page = 0, size = 20) => {
 
-        const response = await axios.get(
-            `${API_BASE_URL}/factory/products?page=${page}&size=${size}`,
-            getAuthHeader()
+        const response = await http.get(
+            `/factory/products?page=${page}&size=${size}`
         );
 
         return response.data;
@@ -81,10 +64,9 @@ export const productService = {
         imageUrls: string[];
     }) => {
 
-        const response = await axios.post(
-            `${API_BASE_URL}/factory/products`,
-            productData,
-            getAuthHeader()
+        const response = await http.post(
+            `/factory/products`,
+            productData
         );
 
         return response.data;
@@ -103,10 +85,9 @@ export const productService = {
         }
     ) => {
 
-        const response = await axios.put(
-            `${API_BASE_URL}/factory/products/${id}`,
-            productData,
-            getAuthHeader()
+        const response = await http.put(
+            `/factory/products/${id}`,
+            productData
         );
 
         return response.data;
@@ -114,20 +95,16 @@ export const productService = {
 
     // Ẩn sản phẩm
     hideProduct: async (id: number) => {
-        const response = await axios.patch(
-            `${API_BASE_URL}/factory/products/${id}/hide`,
-            {},
-            getAuthHeader()
+        const response = await http.patch(
+            `/factory/products/${id}/hide`
         );
         return response.data;
     },
 
     // Hiện sản phẩm
     unhideProduct: async (id: number) => {
-        const response = await axios.patch(
-            `${API_BASE_URL}/factory/products/${id}/unhide`,
-            {},
-            getAuthHeader()
+        const response = await http.patch(
+            `/factory/products/${id}/unhide`
         );
         return response.data;
     },
@@ -135,9 +112,8 @@ export const productService = {
     // Xóa sản phẩm
     deleteProduct: async (id: number) => {
 
-        const response = await axios.delete(
-            `${API_BASE_URL}/factory/products/${id}`,
-            getAuthHeader()
+        const response = await http.delete(
+            `/factory/products/${id}`
         );
 
         return response.data;

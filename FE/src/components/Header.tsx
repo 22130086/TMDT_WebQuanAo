@@ -102,7 +102,7 @@ export default function Header({ onLogout }: HeaderProps) {
             </button>
 
             <button className="profile-btn">
-              <Link to="/order-history">Hồ sơ</Link>
+              <Link to="/customer-profile">Hồ sơ</Link>
             </button>
 
             <button

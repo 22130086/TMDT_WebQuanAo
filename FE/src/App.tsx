@@ -18,6 +18,7 @@ import FactoryRoute from "./components/FactoryRoute";
 import CustomOrder from "./pages/CustomOrder";
 import MyPosts from "./pages/UserPages/MyPosts";
 import PostQuotesDetail from "./pages/UserPages/PostQuotesDetail";
+import CustomerProfile from "./pages/UserPages/CustomerProfile";
 import FactoryProfile from "./pages/FactoryProfile";
 
 import "./styles/product-detail.css";
@@ -27,6 +28,7 @@ import "./styles/register.css";
 import "./styles/home.css";
 import "./styles/factory.css";
 import "./styles/order_checkout.css";
+import "./styles/customer-profile.css";
 import Cart from "./pages/cart/cart";
 import OrderCheckout from "./pages/cart/order_checkout";
 import AdminLayout from "./components/AdminLayout";
@@ -107,6 +109,9 @@ function App() {
         {/* CUSTOMER POSTS */}
         <Route path="/my-posts" element={<ProtectedRoute><MyPosts /></ProtectedRoute>} />
         <Route path="/my-posts/:id" element={<ProtectedRoute><PostQuotesDetail /></ProtectedRoute>} />
+
+        {/* CUSTOMER PROFILE */}
+        <Route path="/customer-profile" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
 
         {/* ADMIN */}
         <Route

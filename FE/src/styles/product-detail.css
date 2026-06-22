@@ -324,6 +324,281 @@ body {
   font-size: 12px;
 }
 
+/* ---- NEW REVIEW FORM ---- */
+
+.write-review-btn {
+  display: inline-block;
+  margin-bottom: 20px;
+  padding: 10px 24px;
+  background: #ee4d2d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.write-review-btn:hover {
+  opacity: 0.85;
+}
+
+.review-form {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.review-form h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #222;
+}
+
+.star-picker {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.star-picker .star {
+  font-size: 28px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  user-select: none;
+}
+
+.star-picker .star:hover {
+  transform: scale(1.2);
+}
+
+.star-picker.small .star {
+  font-size: 22px;
+}
+
+.review-form textarea,
+.review-edit-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.review-form textarea:focus,
+.review-edit-form textarea:focus {
+  outline: none;
+  border-color: #ee4d2d;
+}
+
+.review-form-actions,
+.review-edit-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.review-form-actions button[type="submit"],
+.review-edit-actions button[type="submit"] {
+  padding: 8px 20px;
+  background: #ee4d2d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.review-form-actions button[type="submit"]:disabled,
+.review-edit-actions button[type="submit"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  padding: 8px 20px;
+  background: white;
+  color: #666;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cancel-btn:hover {
+  background: #f0f0f0;
+}
+
+/* ---- REVIEW LOGIN HINT ---- */
+
+.review-login-hint {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+  font-size: 14px;
+}
+
+.review-login-hint a {
+  color: #ee4d2d;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* ---- NO REVIEWS / LOADING ---- */
+
+.no-reviews,
+.review-loading {
+  text-align: center;
+  padding: 30px;
+  color: #999;
+  font-size: 15px;
+}
+
+/* ---- REVIEW LIST ---- */
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-body {
+  flex: 1;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.review-header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.review-header small {
+  color: #aaa;
+  margin-left: auto;
+}
+
+.review-stars {
+  color: #ffb400;
+  letter-spacing: 1px;
+}
+
+.review-comment {
+  color: #333;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+
+/* ---- FACTORY REPLY ---- */
+
+.review-reply {
+  background: #f0f7ff;
+  border-left: 3px solid #1890ff;
+  padding: 10px 14px;
+  margin-top: 10px;
+  border-radius: 0 8px 8px 0;
+}
+
+.review-reply strong {
+  font-size: 13px;
+  color: #1890ff;
+}
+
+.review-reply p {
+  margin: 4px 0;
+  color: #444;
+  font-size: 14px;
+}
+
+.review-reply small {
+  color: #aaa;
+}
+
+/* ---- OWNER ACTIONS ---- */
+
+.review-owner-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.review-owner-actions button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.review-owner-actions button:hover {
+  color: #ee4d2d;
+}
+
+/* ---- REVIEW EDIT FORM ---- */
+
+.review-edit-form {
+  margin-top: 8px;
+}
+
+/* ---- PAGINATION ---- */
+
+.review-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.review-pagination button {
+  padding: 6px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.review-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.review-pagination button:not(:disabled):hover {
+  background: #f5f5f5;
+}
+
+.review-pagination span {
+  font-size: 14px;
+  color: #666;
+}
+
+/* ---- AVATAR ---- */
+
+.review-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0;
+}
+
 /* RELATED PRODUCTS */
 .related-section {
   max-width: 1300px;

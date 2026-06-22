@@ -23,4 +23,8 @@ public class ProductResponse {
 
     private List<String> imageUrls;
     private LocalDateTime createdAt;
+
+    // Đánh giá
+    private Double rating;
+    private Long reviewCount;
 }

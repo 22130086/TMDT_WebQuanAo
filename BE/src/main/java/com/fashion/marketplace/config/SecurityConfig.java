@@ -50,6 +50,7 @@ public class SecurityConfig {
                 // Public
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/factories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
@@ -62,6 +63,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Factory only
                 .requestMatchers("/api/factory/**").hasRole("FACTORY")
+                // Customer only
+                .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
                 // Authenticated
                 .anyRequest().authenticated()
             )

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import http from "../../services/http"; // Đường dẫn tới axios/http instance của bạn
+import http from "../../services/http";
+import { getImageUrl } from "../../services/http";
+import { reviewService } from "../../services/reviewService";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import "../../styles/order-detail.css"; // Giữ nguyên file CSS của bạn
+import "../../styles/order-detail.css";
 import {
   Check,
   Package,
@@ -56,6 +58,48 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+
+  // Review modal
+  const [reviewModal, setReviewModal] = useState<{ productId: number; productName: string } | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState<Set<number>>(() => {
+    // Load from localStorage on mount
+    try {
+      const saved = localStorage.getItem(`reviewed_order_${id}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Save to localStorage whenever it changes
+  useEffect(() => {
+    if (reviewedProductIds.size > 0) {
+      localStorage.setItem(`reviewed_order_${id}`, JSON.stringify([...reviewedProductIds]));
+    }
+  }, [reviewedProductIds, id]);
+
+  const handleSubmitReview = async () => {
+    if (!reviewModal || !reviewComment.trim()) return;
+    try {
+      setSubmittingReview(true);
+      const res = await reviewService.addProductReview({
+        productId: reviewModal.productId,
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        orderId: Number(id),
+      });
+      if (res.success) {
+        alert("Đánh giá thành công!");
+        setReviewedProductIds(prev => new Set(prev).add(reviewModal.productId));
+        setReviewModal(null);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Lỗi gửi đánh giá");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // 2. Gọi API lấy chi tiết một đơn hàng
   useEffect(() => {
@@ -327,14 +371,14 @@ export default function OrderDetail() {
                     {order.designFileUrl && (
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Mặt trước</div>
-                        <img src={`http://localhost:8080${order.designFileUrl}`} alt="Mặt trước"
+                        <img src={getImageUrl(order.designFileUrl)} alt="Mặt trước"
                           style={{ width: 140, height: 160, objectFit: "contain", borderRadius: 12, border: "1px solid #e5e7eb", background: "#f9fafb" }} />
                       </div>
                     )}
                     {order.designFileUrlBack && (
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Mặt sau</div>
-                        <img src={`http://localhost:8080${order.designFileUrlBack}`} alt="Mặt sau"
+                        <img src={getImageUrl(order.designFileUrlBack)} alt="Mặt sau"
                           style={{ width: 140, height: 160, objectFit: "contain", borderRadius: 12, border: "1px solid #e5e7eb", background: "#f9fafb" }} />
                       </div>
                     )}
@@ -370,7 +414,7 @@ export default function OrderDetail() {
                   <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                     <img
                       className="product-thumb"
-                      src={item.productImage || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=150"}
+                      src={getImageUrl(item.productImage) || "https://placehold.co/60x60?text=No+Img"}
                       alt={item.productName}
                       style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", border: "1px solid #e5e7eb" }}
                     />
@@ -394,6 +438,26 @@ export default function OrderDetail() {
                     <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#9ca3af" }}>
                       Thành tiền: {formatVND(item.unitPrice * item.quantity)}
                     </p>
+                    {order.status === "COMPLETED" && item.productId && (
+                      reviewedProductIds.has(item.productId) ? (
+                        <span style={{
+                          marginTop: 6, padding: "4px 12px", background: "#d1fae5", color: "#065f46",
+                          borderRadius: 6, fontSize: 12, fontWeight: 500, display: "inline-block"
+                        }}>
+                          ✅ Đã đánh giá
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setReviewModal({ productId: item.productId!, productName: item.productName })}
+                          style={{
+                            marginTop: 6, padding: "4px 12px", background: "#f59e0b", color: "white",
+                            border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500
+                          }}
+                        >
+                          ⭐ Đánh giá
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
               ))}
@@ -441,19 +505,40 @@ export default function OrderDetail() {
               </div>
             </div>
 
-            {/* Thẻ hỗ trợ liên hệ xưởng */}
-            <div className="support-card">
-              <div className="support-icon">
-                <MessageCircle size={24} />
+            {/* Thẻ thông tin xưởng may */}
+            {order.factoryId && (
+              <div className="support-card" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                  <div className="support-icon">
+                    <MessageCircle size={24} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>🏭 {order.factoryName || 'Xưởng may'}</h4>
+                    <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>Xưởng sản xuất đơn hàng này</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                  <Link
+                    to={`/factory-profile/${order.factoryId}`}
+                    style={{
+                      flex: 1, textAlign: 'center', padding: '8px 0', background: '#0037b0',
+                      color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 500
+                    }}
+                  >
+                    📋 Xem hồ sơ xưởng
+                  </Link>
+                  <button
+                    onClick={() => alert(`Tính năng chat với xưởng đang được cập nhật!`)}
+                    style={{
+                      flex: 1, padding: '8px 0', background: 'white', color: '#0037b0',
+                      border: '1px solid #0037b0', borderRadius: '8px', cursor: 'pointer', fontSize: '14px'
+                    }}
+                  >
+                    💬 Chat với xưởng
+                  </button>
+                </div>
               </div>
-              <div>
-                <h4>Hỗ trợ trực tuyến</h4>
-                <p>Mã xưởng đối tác: <div id={order.factoryId}></div></p>
-              </div>
-              <button onClick={() => alert(`Tính năng kết nối chat với xưởng #${order.factoryId} đang được cập nhật!`)}>
-                Chat với Shop Owner
-              </button>
-            </div>
+            )}
 
             {/* BẢNG TỔNG KẾT TÀI CHÍNH ĐƠN HÀNG */}
             <div className="order-summary">
@@ -517,6 +602,35 @@ export default function OrderDetail() {
         </div>
         
       </main>
+
+      {/* Review Modal */}
+      {reviewModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setReviewModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 32, width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 20px" }}>Đánh giá: {reviewModal.productName}</h3>
+            <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <span key={s} style={{ fontSize: 32, cursor: "pointer" }} onClick={() => setReviewRating(s)}>
+                  {s <= reviewRating ? "⭐" : "☆"}
+                </span>
+              ))}
+            </div>
+            <textarea placeholder="Chia sẻ trải nghiệm của bạn..." value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)} rows={4}
+              style={{ width: "100%", padding: 12, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }} />
+            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+              <button onClick={handleSubmitReview} disabled={submittingReview || !reviewComment.trim()}
+                style={{ padding: "10px 24px", background: "#ee4d2d", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
+                {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+              </button>
+              <button onClick={() => setReviewModal(null)}
+                style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer" }}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
