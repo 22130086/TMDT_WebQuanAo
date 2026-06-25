@@ -49,6 +49,20 @@ public class ComplaintService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        // Validate: only the order owner can create a complaint
+        if (!order.getCustomer().getId().equals(userId)) {
+            throw new IllegalStateException("Bạn chỉ có thể tạo khiếu nại cho đơn hàng của chính mình");
+        }
+        // Validate: order must be in a complainable status
+        if (order.getStatus() != Order.OrderStatus.DELIVERED
+                && order.getStatus() != Order.OrderStatus.COMPLETED
+                && order.getStatus() != Order.OrderStatus.SHIPPING
+                && order.getStatus() != Order.OrderStatus.IN_PRODUCTION
+                && order.getStatus() != Order.OrderStatus.READY_TO_SHIP) {
+            throw new IllegalStateException("Chỉ có thể tạo khiếu nại khi đơn hàng đang sản xuất, chuẩn bị giao, đang giao, đã giao hoặc hoàn thành");
+        }
+
         Complaint complaint = Complaint.builder()
                 .order(order)
                 .raisedBy(raisedBy)

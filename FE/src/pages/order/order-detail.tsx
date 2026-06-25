@@ -18,7 +18,9 @@ import {
   MessageCircle,
   ClipboardCheck,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Gavel,
+  FileWarning
 } from "lucide-react";
 
 // 1. Định nghĩa Interface khớp dữ liệu thực tế từ Backend
@@ -72,12 +74,37 @@ export default function OrderDetail() {
     } catch { return new Set(); }
   });
 
+  // Dispute & Complaint state
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeDesc, setDisputeDesc] = useState('');
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [complaintReason, setComplaintReason] = useState('');
+  const [submittingComplaint, setSubmittingComplaint] = useState(false);
+  const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showActionMsg = (type: 'success' | 'error', text: string) => {
+    setActionMsg({ type, text });
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
   // Save to localStorage whenever it changes
   useEffect(() => {
     if (reviewedProductIds.size > 0) {
       localStorage.setItem(`reviewed_order_${id}`, JSON.stringify([...reviewedProductIds]));
     }
   }, [reviewedProductIds, id]);
+
+  // Load already-reviewed products from backend on mount
+  useEffect(() => {
+    if (!id) return;
+    reviewService.getMyReviewsForOrder(Number(id)).then(res => {
+      if (res.success && Array.isArray(res.data)) {
+        const ids = new Set(res.data.map((r: any) => r.productId).filter(Boolean));
+        if (ids.size > 0) setReviewedProductIds(ids);
+      }
+    }).catch(() => {});
+  }, [id]);
 
   const handleSubmitReview = async () => {
     if (!reviewModal || !reviewComment.trim()) return;
@@ -90,15 +117,41 @@ export default function OrderDetail() {
         orderId: Number(id),
       });
       if (res.success) {
-        alert("Đánh giá thành công!");
+        showActionMsg('success', 'Đánh giá thành công!');
         setReviewedProductIds(prev => new Set(prev).add(reviewModal.productId));
         setReviewModal(null);
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || "Lỗi gửi đánh giá");
+      showActionMsg('error', err.response?.data?.message || 'Bạn đã đánh giá sản phẩm này rồi');
     } finally {
       setSubmittingReview(false);
     }
+  };
+
+  const handleSubmitDispute = async () => {
+    if (!disputeDesc.trim()) return;
+    setSubmittingDispute(true);
+    try {
+      await http.post('/disputes', { orderId: Number(id), description: disputeDesc.trim() });
+      showActionMsg('success', 'Tạo tranh chấp thành công! Admin sẽ xem xét.');
+      setShowDisputeModal(false);
+      setDisputeDesc('');
+    } catch (e: any) {
+      showActionMsg('error', e?.response?.data?.message || 'Tạo tranh chấp thất bại');
+    } finally { setSubmittingDispute(false); }
+  };
+
+  const handleSubmitComplaint = async () => {
+    if (!complaintReason.trim()) return;
+    setSubmittingComplaint(true);
+    try {
+      await http.post('/complaints', { orderId: Number(id), reason: complaintReason.trim() });
+      showActionMsg('success', 'Tạo khiếu nại thành công! Xưởng sẽ xem xét.');
+      setShowComplaintModal(false);
+      setComplaintReason('');
+    } catch (e: any) {
+      showActionMsg('error', e?.response?.data?.message || 'Tạo khiếu nại thất bại');
+    } finally { setSubmittingComplaint(false); }
   };
 
   // 2. Gọi API lấy chi tiết một đơn hàng
@@ -385,7 +438,7 @@ export default function OrderDetail() {
                   </div>
                 )}
                 <div style={{ marginBottom: 12 }}>
-                  <span style={{ color: "#6b7280", fontSize: 13 }}>🏭 Xưởng: </span>
+                  <span style={{ color: "#6b7280", fontSize: 13 }}><span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: 'middle' }}>factory</span> Xưởng: </span>
                   <strong>{order.factoryName || "Đang cập nhật"}</strong>
                 </div>
                 <div style={{ marginBottom: 12 }}>
@@ -397,12 +450,12 @@ export default function OrderDetail() {
                   <strong style={{ color: "#f59e0b" }}>{formatVND(order.depositAmount)}</strong>
                 </div>
                 <div style={{ marginBottom: 12, padding: 12, background: "#fef3c7", borderRadius: 8 }}>
-                  <span style={{ color: "#92400e", fontSize: 13 }}>⚠️ Còn phải thanh toán: </span>
+                  <span style={{ color: "#92400e", fontSize: 13 }}>Còn phải thanh toán: </span>
                   <strong style={{ color: "#d97706", fontSize: 18 }}>{formatVND((order.finalAmount || order.totalAmount) - (order.depositAmount || 0))}</strong>
                 </div>
                 {order.note && (
                   <div style={{ marginTop: 12, padding: 12, background: "#f9fafb", borderRadius: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>📝 Ghi chú: </span>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>Ghi chú: </span>
                     <span style={{ fontSize: 14, color: "#4b5563" }}>{order.note}</span>
                   </div>
                 )}
@@ -444,7 +497,7 @@ export default function OrderDetail() {
                           marginTop: 6, padding: "4px 12px", background: "#d1fae5", color: "#065f46",
                           borderRadius: 6, fontSize: 12, fontWeight: 500, display: "inline-block"
                         }}>
-                          ✅ Đã đánh giá
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check_circle</span> Đã đánh giá
                         </span>
                       ) : (
                         <button
@@ -454,7 +507,7 @@ export default function OrderDetail() {
                             border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500
                           }}
                         >
-                          ⭐ Đánh giá
+                          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>star</span> Đánh giá
                         </button>
                       )
                     )}
@@ -471,6 +524,40 @@ export default function OrderDetail() {
                 <p style={{ margin: 0, fontSize: "14px", color: "#4b5563", fontStyle: "italic" }}>"{order.note}"</p>
               </div>
             )}
+
+            {/* ── TRANH CHẤP & KHIẾU NẠI ── */}
+            <div style={{ marginTop: "24px", padding: "16px", backgroundColor: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+              <h4 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "#1e293b", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }}>
+                <Gavel size={18} style={{ color: "#475569" }} /> Hành động bổ sung
+              </h4>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setShowDisputeModal(true)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    padding: "8px 16px", background: "#fef2f2", color: "#991b1b",
+                    border: "1px solid #fecaca", borderRadius: "8px", cursor: "pointer",
+                    fontSize: "13px", fontWeight: "500"
+                  }}
+                >
+                  <Gavel size={16} /> Tạo tranh chấp
+                </button>
+                <button
+                  onClick={() => setShowComplaintModal(true)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    padding: "8px 16px", background: "#fffbeb", color: "#92400e",
+                    border: "1px solid #fcd34d", borderRadius: "8px", cursor: "pointer",
+                    fontSize: "13px", fontWeight: "500"
+                  }}
+                >
+                  <FileWarning size={16} /> Tạo khiếu nại
+                </button>
+              </div>
+              <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#94a3b8" }}>
+                Tranh chấp → Admin giải quyết. Khiếu nại → Xưởng & Admin giải quyết.
+              </p>
+            </div>
           </div>
 
           {/* CỘT PHẢI: SIDEBAR THÔNG TIN KHÁCH HÀNG & THÀNH TIỀN */}
@@ -513,7 +600,7 @@ export default function OrderDetail() {
                     <MessageCircle size={24} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>🏭 {order.factoryName || 'Xưởng may'}</h4>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}><span className="material-symbols-outlined" style={{ fontSize: 16, verticalAlign: 'middle' }}>factory</span> {order.factoryName || 'Xưởng may'}</h4>
                     <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>Xưởng sản xuất đơn hàng này</p>
                   </div>
                 </div>
@@ -611,7 +698,7 @@ export default function OrderDetail() {
             <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
               {[1, 2, 3, 4, 5].map((s) => (
                 <span key={s} style={{ fontSize: 32, cursor: "pointer" }} onClick={() => setReviewRating(s)}>
-                  {s <= reviewRating ? "⭐" : "☆"}
+                  {s <= reviewRating ? <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#f59e0b' }}>star</span> : <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#d1d5db' }}>star</span>}
                 </span>
               ))}
             </div>
@@ -624,6 +711,73 @@ export default function OrderDetail() {
                 {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
               </button>
               <button onClick={() => setReviewModal(null)}
+                style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer" }}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Message Toast */}
+      {actionMsg && (
+        <div style={{
+          position: "fixed", top: 16, right: 16, zIndex: 9999, padding: "12px 20px", borderRadius: 10,
+          fontWeight: 500, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          background: actionMsg.type === 'success' ? '#ecfdf5' : '#fef2f2',
+          color: actionMsg.type === 'success' ? '#065f46' : '#991b1b',
+          border: actionMsg.type === 'success' ? '1px solid #a7f3d0' : '1px solid #fecaca'
+        }}>
+          {actionMsg.text}
+        </div>
+      )}
+
+      {/* Dispute Modal */}
+      {showDisputeModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowDisputeModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 32, width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 8px", display: "flex", alignItems: "center", gap: 8 }}>
+              <Gavel size={20} style={{ color: "#dc2626" }} /> Tạo tranh chấp
+            </h3>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
+              Đơn hàng #{id} - Tranh chấp sẽ được Admin xem xét và đưa ra phán quyết.
+            </p>
+            <textarea placeholder="Mô tả vấn đề tranh chấp..." value={disputeDesc}
+              onChange={(e) => setDisputeDesc(e.target.value)} rows={4}
+              style={{ width: "100%", padding: 12, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }} />
+            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+              <button onClick={handleSubmitDispute} disabled={submittingDispute || !disputeDesc.trim()}
+                style={{ padding: "10px 24px", background: "#dc2626", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
+                {submittingDispute ? "Đang gửi..." : "Gửi tranh chấp"}
+              </button>
+              <button onClick={() => setShowDisputeModal(false)}
+                style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer" }}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complaint Modal */}
+      {showComplaintModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowComplaintModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 32, width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 8px", display: "flex", alignItems: "center", gap: 8 }}>
+              <FileWarning size={20} style={{ color: "#d97706" }} /> Tạo khiếu nại
+            </h3>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>
+              Đơn hàng #{id} - Khiếu nại sẽ được xưởng và Admin cùng giải quyết.
+            </p>
+            <textarea placeholder="Mô tả lý do khiếu nại..." value={complaintReason}
+              onChange={(e) => setComplaintReason(e.target.value)} rows={4}
+              style={{ width: "100%", padding: 12, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }} />
+            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+              <button onClick={handleSubmitComplaint} disabled={submittingComplaint || !complaintReason.trim()}
+                style={{ padding: "10px 24px", background: "#d97706", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
+                {submittingComplaint ? "Đang gửi..." : "Gửi khiếu nại"}
+              </button>
+              <button onClick={() => setShowComplaintModal(false)}
                 style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer" }}>
                 Hủy
               </button>

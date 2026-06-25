@@ -26,6 +26,12 @@ export interface DisputeStats {
   closed: number;
 }
 
+export interface DisputeRequest {
+  orderId: number;
+  description: string;
+  evidenceUrl?: string;
+}
+
 interface PageResponse<T> {
   content: T[];
   totalElements: number;
@@ -39,6 +45,29 @@ interface ApiResponse<T> {
 }
 
 class DisputeService {
+  // ---- Customer ----
+  static async createDispute(data: DisputeRequest) {
+    const res = await http.post<ApiResponse<Dispute>>('/disputes', data);
+    return res.data.data;
+  }
+
+  static async getMyDisputes(page = 0, size = 10) {
+    const res = await http.get<ApiResponse<PageResponse<Dispute>>>('/disputes/my', { params: { page, size } });
+    return res.data.data;
+  }
+
+  static async getDisputeDetail(id: number) {
+    const res = await http.get<ApiResponse<Dispute>>(`/disputes/${id}`);
+    return res.data.data;
+  }
+
+  // ---- Factory ----
+  static async getFactoryDisputes(page = 0, size = 10) {
+    const res = await http.get<ApiResponse<PageResponse<Dispute>>>('/factory/disputes', { params: { page, size } });
+    return res.data.data;
+  }
+
+  // ---- Admin ----
   static async getAll(page = 0, size = 10) {
     const res = await http.get<ApiResponse<PageResponse<Dispute>>>('/admin/disputes', { params: { page, size } });
     return res.data.data;
@@ -69,6 +98,15 @@ class DisputeService {
   }
   static async requestInfo(id: number, note: string) {
     const res = await http.patch<ApiResponse<Dispute>>(`/admin/disputes/${id}/request-info`, { note });
+    return res.data.data;
+  }
+  static async closeDispute(id: number, note?: string) {
+    const res = await http.patch<ApiResponse<Dispute>>(`/admin/disputes/${id}/close`, { note });
+    return res.data.data;
+  }
+  // ---- Factory ----
+  static async factoryRespond(id: number, response: string) {
+    const res = await http.patch<ApiResponse<Dispute>>(`/factory/disputes/${id}/respond`, { response });
     return res.data.data;
   }
 }

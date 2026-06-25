@@ -43,6 +43,7 @@ public class OutsourcingPost {
     private CustomProduct customProduct;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "VARCHAR(50)")
     private PostStatus status = PostStatus.PENDING;
 
     private LocalDateTime createdAt;

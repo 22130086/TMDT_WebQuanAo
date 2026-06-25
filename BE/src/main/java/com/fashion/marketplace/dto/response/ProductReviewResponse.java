@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public class ProductReviewResponse {
     private Long id;
     private Long productId;
+    private String productName;
     private Integer rating;
     private String comment;
 
@@ -18,6 +19,9 @@ public class ProductReviewResponse {
     // Factory reply
     private String reply;
     private LocalDateTime repliedAt;
+
+    // Report
+    private Boolean isReported;
 
     private LocalDateTime createdAt;
 }

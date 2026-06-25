@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import http from "../../services/http";
 import { getImageUrl } from "../../services/http";
-import { reviewService } from "../../services/reviewService";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import "../../styles/order-history.css";
@@ -43,26 +42,6 @@ export default function OrderHistory() {
   const [error, setError] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("ALL"); // ALL, PROCESSING, COMPLETED, CANCELLED
 
-  // Review modal
-  const [reviewModal, setReviewModal] = useState<{ orderId: number; productId: number; productName: string } | null>(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewedProductIds, setReviewedProductIds] = useState<Set<number>>(() => {
-    try {
-      const saved = localStorage.getItem("reviewed_products");
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch { return new Set(); }
-  });
-
-  const addReviewedProduct = (productId: number) => {
-    setReviewedProductIds(prev => {
-      const next = new Set(prev).add(productId);
-      localStorage.setItem("reviewed_products", JSON.stringify([...next]));
-      return next;
-    });
-  };
-
   // 1. Hàm gọi API lấy danh sách đơn hàng từ Backend
   const loadOrders = async () => {
     setLoading(true);
@@ -96,29 +75,6 @@ export default function OrderHistory() {
       }
     } catch (err: any) {
       alert(err.response?.data?.message || "Không thể hủy đơn hàng này.");
-    }
-  };
-
-  // Hàm gửi đánh giá
-  const handleSubmitReview = async () => {
-    if (!reviewModal || !reviewComment.trim()) return;
-    try {
-      setSubmittingReview(true);
-      const res = await reviewService.addProductReview({
-        productId: reviewModal.productId,
-        rating: reviewRating,
-        comment: reviewComment.trim(),
-        orderId: reviewModal.orderId,
-      });
-      if (res.success) {
-        alert("Đánh giá thành công!");
-        addReviewedProduct(reviewModal.productId);
-        setReviewModal(null);
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Lỗi gửi đánh giá");
-    } finally {
-      setSubmittingReview(false);
     }
   };
 
@@ -369,24 +325,6 @@ export default function OrderHistory() {
                     <button className="btn-outline" style={{ width: "100%" }}>Xem chi tiết</button>
                   </Link>
 
-                  {order.status === "COMPLETED" && order.items?.map((item) => {
-                    const alreadyReviewed = reviewedProductIds.has(item.productId || 0);
-                    return alreadyReviewed ? (
-                      <div key={item.id} style={{ width: "100%", background: "#d1fae5", color: "#065f46", textAlign: "center", padding: "10px 0", borderRadius: 6, fontWeight: 500, fontSize: 14 }}>
-                        ✅ Đã đánh giá
-                      </div>
-                    ) : (
-                      <button
-                        key={item.id}
-                        className="btn-primary"
-                        style={{ width: "100%", background: "#f59e0b" }}
-                        onClick={() => setReviewModal({ orderId: order.id, productId: item.productId || 0, productName: item.productName || `SP #${item.id}` })}
-                      >
-                        ⭐ Đánh giá
-                      </button>
-                    );
-                  })}
-
                   {order.status === "PENDING" && (
                     <button 
                       className="btn-primary" 
@@ -404,41 +342,6 @@ export default function OrderHistory() {
         })}
 
       </div>
-
-      {/* Review Modal */}
-      {reviewModal && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
-        }} onClick={() => setReviewModal(null)}>
-          <div style={{
-            background: "white", borderRadius: 16, padding: 32, width: "100%", maxWidth: 480
-          }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 20px" }}>Đánh giá: {reviewModal.productName}</h3>
-            <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
-              {[1,2,3,4,5].map(s => (
-                <span key={s} style={{ fontSize: 32, cursor: "pointer" }}
-                  onClick={() => setReviewRating(s)}>
-                  {s <= reviewRating ? "⭐" : "☆"}
-                </span>
-              ))}
-            </div>
-            <textarea placeholder="Chia sẻ trải nghiệm của bạn..." value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)} rows={4}
-              style={{ width: "100%", padding: 12, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }} />
-            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              <button onClick={handleSubmitReview} disabled={submittingReview || !reviewComment.trim()}
-                style={{ padding: "10px 24px", background: "#ee4d2d", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
-                {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
-              </button>
-              <button onClick={() => setReviewModal(null)}
-                style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer" }}>
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </main>

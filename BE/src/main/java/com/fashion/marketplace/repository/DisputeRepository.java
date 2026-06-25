@@ -23,4 +23,8 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
            "d.description LIKE %:keyword% OR d.verdict LIKE %:keyword% OR " +
            "CONCAT(d.order.id, '') LIKE %:keyword% ORDER BY d.createdAt DESC")
     Page<Dispute> searchDisputes(@Param("keyword") String keyword, Pageable pageable);
+
+    // Find disputes where the factory is involved (order belongs to factory)
+    @Query("SELECT d FROM Dispute d WHERE d.order.factory.id = :factoryId ORDER BY d.createdAt DESC")
+    Page<Dispute> findByFactoryId(@Param("factoryId") Long factoryId, Pageable pageable);
 }

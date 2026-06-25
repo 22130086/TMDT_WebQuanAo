@@ -16,26 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * ComplaintController
- *
- * CUSTOMER:
- *   POST  /api/complaints                     → Tạo khiếu nại mới
- *   GET   /api/complaints/my                  → Danh sách khiếu nại của tôi
- *   GET   /api/complaints/{id}                → Xem chi tiết khiếu nại
- *   GET   /api/orders/{orderId}/complaints    → Khiếu nại của một đơn hàng
- *
- * FACTORY:
- *   GET   /api/factory/complaints             → Khiếu nại liên quan đến xưởng
- *   PATCH /api/complaints/{id}/resolve        → Giải quyết khiếu nại
- *   PATCH /api/complaints/{id}/status         → Cập nhật trạng thái
- *
- * ADMIN:
- *   GET   /api/admin/complaints               → Tất cả khiếu nại
- *   GET   /api/admin/complaints/status/{status} → Lọc theo trạng thái
- *   GET   /api/admin/complaints/search        → Tìm kiếm
- *   GET   /api/admin/complaints/stats         → Thống kê
- */
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 public class ComplaintController {
@@ -48,8 +30,8 @@ public class ComplaintController {
     @PostMapping("/api/complaints")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<ComplaintResponse>> createComplaint(@Valid @RequestBody ComplaintRequest request) {
-        ComplaintResponse complaint = complaintService.createComplaint(authUtil.currentUserId(), request);
-        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại được tạo thành công", complaint));
+        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại được tạo thành công",
+                complaintService.createComplaint(authUtil.currentUserId(), request)));
     }
 
     @GetMapping("/api/complaints/my")
@@ -58,14 +40,13 @@ public class ComplaintController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ComplaintResponse> complaints = complaintService.getMyComplaints(authUtil.currentUserId(), pageable);
-        return ResponseEntity.ok(ApiResponse.ok("Danh sách khiếu nại của tôi", complaints));
+        return ResponseEntity.ok(ApiResponse.ok("Danh sách khiếu nại của tôi",
+                complaintService.getMyComplaints(authUtil.currentUserId(), pageable)));
     }
 
     @GetMapping("/api/complaints/{id}")
     public ResponseEntity<ApiResponse<ComplaintResponse>> getComplaint(@PathVariable Long id) {
-        ComplaintResponse complaint = complaintService.getComplaint(id);
-        return ResponseEntity.ok(ApiResponse.ok("Chi tiết khiếu nại", complaint));
+        return ResponseEntity.ok(ApiResponse.ok("Chi tiết khiếu nại", complaintService.getComplaint(id)));
     }
 
     @GetMapping("/api/orders/{orderId}/complaints")
@@ -74,8 +55,8 @@ public class ComplaintController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ComplaintResponse> complaints = complaintService.getComplaintsByOrder(orderId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại của đơn hàng", complaints));
+        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại của đơn hàng",
+                complaintService.getComplaintsByOrder(orderId, pageable)));
     }
 
     // ==================== FACTORY ====================
@@ -86,10 +67,8 @@ public class ComplaintController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        // TODO: Get factory ID from current user
-        Long factoryId = authUtil.currentUserId(); // Simplified for now
-        Page<ComplaintResponse> complaints = complaintService.getFactoryComplaints(factoryId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok("Danh sách khiếu nại xưởng", complaints));
+        return ResponseEntity.ok(ApiResponse.ok("Danh sách khiếu nại xưởng",
+                complaintService.getFactoryComplaints(authUtil.currentUserId(), pageable)));
     }
 
     @PatchMapping("/api/complaints/{id}/resolve")
@@ -97,17 +76,17 @@ public class ComplaintController {
     public ResponseEntity<ApiResponse<ComplaintResponse>> resolveComplaint(
             @PathVariable Long id,
             @Valid @RequestBody ComplaintResolveRequest request) {
-        ComplaintResponse complaint = complaintService.resolveComplaint(id, authUtil.currentUserId(), request);
-        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại được giải quyết", complaint));
+        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại được giải quyết",
+                complaintService.resolveComplaint(id, authUtil.currentUserId(), request)));
     }
 
     @PatchMapping("/api/complaints/{id}/status")
     @PreAuthorize("hasAnyRole('FACTORY','ADMIN')")
     public ResponseEntity<ApiResponse<ComplaintResponse>> updateStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
-        ComplaintResponse complaint = complaintService.updateStatus(id, status);
-        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái thành công", complaint));
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái thành công",
+                complaintService.updateStatus(id, body.get("status"))));
     }
 
     // ==================== ADMIN ====================
@@ -118,8 +97,7 @@ public class ComplaintController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ComplaintResponse> complaints = complaintService.getAllComplaints(pageable);
-        return ResponseEntity.ok(ApiResponse.ok("Tất cả khiếu nại", complaints));
+        return ResponseEntity.ok(ApiResponse.ok("Tất cả khiếu nại", complaintService.getAllComplaints(pageable)));
     }
 
     @GetMapping("/api/admin/complaints/status/{status}")
@@ -129,8 +107,8 @@ public class ComplaintController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ComplaintResponse> complaints = complaintService.getComplaintsByStatus(status, pageable);
-        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại theo trạng thái", complaints));
+        return ResponseEntity.ok(ApiResponse.ok("Khiếu nại theo trạng thái",
+                complaintService.getComplaintsByStatus(status, pageable)));
     }
 
     @GetMapping("/api/admin/complaints/search")
@@ -140,14 +118,13 @@ public class ComplaintController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ComplaintResponse> complaints = complaintService.searchComplaints(keyword, pageable);
-        return ResponseEntity.ok(ApiResponse.ok("Kết quả tìm kiếm", complaints));
+        return ResponseEntity.ok(ApiResponse.ok("Kết quả tìm kiếm",
+                complaintService.searchComplaints(keyword, pageable)));
     }
 
     @GetMapping("/api/admin/complaints/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ComplaintStatsResponse>> getComplaintStats() {
-        ComplaintStatsResponse stats = complaintService.getStats();
-        return ResponseEntity.ok(ApiResponse.ok("Thống kê khiếu nại", stats));
+        return ResponseEntity.ok(ApiResponse.ok("Thống kê khiếu nại", complaintService.getStats()));
     }
 }

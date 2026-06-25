@@ -3,6 +3,7 @@ import http from "./http";
 export interface ReviewData {
   id: number;
   productId: number;
+  productName?: string;
   rating: number;
   comment: string;
   customerId: number;
@@ -10,6 +11,7 @@ export interface ReviewData {
   customerAvatar: string | null;
   reply: string | null;
   repliedAt: string | null;
+  isReported?: boolean;
   createdAt: string;
 }
 
@@ -81,6 +83,15 @@ export const reviewService = {
     orderId: number
   ): Promise<{ success: boolean; data: ReviewData[] }> => {
     const response = await http.get(`/reviews/my-reviews?orderId=${orderId}`);
+    return response.data;
+  },
+
+  /** Lấy tất cả đánh giá của tôi (trang quản lý) */
+  getMyAllReviews: async (
+    page = 0,
+    size = 10
+  ): Promise<{ success: boolean; data: ReviewPage; message?: string }> => {
+    const response = await http.get(`/reviews/my?page=${page}&size=${size}`);
     return response.data;
   },
 };

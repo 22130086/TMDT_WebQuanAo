@@ -29,6 +29,11 @@ public class ReviewService {
 
     @Transactional
     public ProductReviewResponse reviewProduct(Long customerId, ProductReviewRequest req) {
+        // Chặn đánh giá trùng: mỗi customer chỉ được đánh giá 1 sản phẩm 1 lần duy nhất
+        if (productReviewRepository.existsByCustomerIdAndProductId(customerId, req.getProductId())) {
+            throw new IllegalStateException("Bạn đã đánh giá sản phẩm này rồi. Vào mục 'Đánh giá của tôi' để sửa hoặc xóa.");
+        }
+
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
         Product product = productRepository.findById(req.getProductId())
@@ -91,6 +96,7 @@ public class ReviewService {
         return ProductReviewResponse.builder()
                 .id(r.getId())
                 .productId(r.getProduct() != null ? r.getProduct().getId() : null)
+                .productName(r.getProduct() != null ? r.getProduct().getName() : null)
                 .rating(r.getRating())
                 .comment(r.getComment())
                 .customerId(customer.getId())
@@ -98,6 +104,7 @@ public class ReviewService {
                 .customerAvatar(customer.getAvatarUrl())
                 .reply(r.getReply())
                 .repliedAt(r.getRepliedAt())
+                .isReported(r.getIsReported())
                 .createdAt(r.getCreatedAt())
                 .build();
     }
@@ -107,6 +114,13 @@ public class ReviewService {
     public List<ProductReviewResponse> getMyReviewsForOrder(Long customerId, Long orderId) {
         return productReviewRepository.findByCustomerIdAndOrderId(customerId, orderId)
                 .stream().map(this::toResponse).toList();
+    }
+
+    /** Lấy tất cả đánh giá của customer (cho trang quản lý đánh giá) */
+    @Transactional(readOnly = true)
+    public Page<ProductReviewResponse> getMyAllReviews(Long customerId, Pageable pageable) {
+        return productReviewRepository.findByCustomerId(customerId, pageable)
+                .map(this::toResponse);
     }
 
     /** Lấy tất cả đánh giá sản phẩm của 1 xưởng (cho factory management) */
@@ -200,6 +214,44 @@ public class ReviewService {
                 : BigDecimal.ZERO);
         factory.setTotalRatings((int) count);
         factoryProfileRepository.save(factory);
+    }
+
+    // ---- Admin Methods ----
+
+    @Transactional(readOnly = true)
+    public Page<ProductReviewResponse> getAllProductReviews(Pageable pageable) {
+        return productReviewRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    @Transactional
+    public void adminDeleteReview(Long reviewId) {
+        ProductReview review = productReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đánh giá không tồn tại"));
+        productReviewRepository.delete(review);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductReviewResponse> getReportedReviews(Pageable pageable) {
+        return productReviewRepository.findByIsReportedTrue(pageable).map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public long getReportedReviewCount() {
+        return productReviewRepository.countByIsReportedTrue();
+    }
+
+    @Transactional
+    public ProductReviewResponse resolveReportedReview(Long reviewId, String action) {
+        ProductReview review = productReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đánh giá không tồn tại"));
+        if ("DELETE".equalsIgnoreCase(action)) {
+            productReviewRepository.delete(review);
+            return null;
+        } else {
+            // "DISMISS" - bỏ báo cáo
+            review.setIsReported(false);
+            return toResponse(productReviewRepository.save(review));
+        }
     }
 
     // ---- Inner DTOs ----

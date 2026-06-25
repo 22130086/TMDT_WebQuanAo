@@ -1,534 +1,210 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "../styles/factory-profile.css";
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import http, { getImageUrl } from "../services/http";
+import { reviewService } from "../services/reviewService";
+import "../styles/factory.css";
 
-interface StatItem {
-  label: string;
-  value: string | number;
-  suffix?: string;
-  icon: string;
-}
-
-interface StrengthItem {
-  icon: string;
-  title: string;
+interface FactoryData {
+  id: number;
+  factoryName: string;
   description: string;
+  address: string;
+  phone: string;
+  email: string;
+  ratingAvg: number;
+  totalRatings: number;
+  totalProducts: number;
+  totalOrders: number;
+  verifiedStatus: string;
+  imageUrls: string[];
+  images: { id: number; imageUrl: string }[];
 }
 
-interface Certificate {
-  name: string;
-  issuer: string;
-  icon: string;
+interface ReviewItem {
+  id: number;
+  rating: number;
+  comment: string;
+  customerName: string;
+  customerAvatar: string | null;
+  reply: string | null;
+  repliedAt: string | null;
+  createdAt: string;
 }
 
-interface Project {
-  name: string;
-  description: string;
-  image: string;
-}
+export default function FactoryProfile() {
+  const { id } = useParams<{ id: string }>();
+  const [factory, setFactory] = useState<FactoryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [imageIdx, setImageIdx] = useState(0);
 
-const FactoryProfile: React.FC = () => {
-  const navigate = useNavigate();
+  // Reviews
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewPage, setReviewPage] = useState(0);
+  const [totalReviewPages, setTotalReviewPages] = useState(0);
 
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "capacity" | "certificates" | "projects"
-  >("overview");
+  // Products
+  const [products, setProducts] = useState<any[]>([]);
 
-  const stats: StatItem[] = [
-    {
-      label: "Máy móc JUKI",
-      value: "450+",
-      icon: "precision_manufacturing",
-    },
-    {
-      label: "Năng suất",
-      value: "50k",
-      suffix: "sp/tháng",
-      icon: "speed",
-    },
-    {
-      label: "Đánh giá",
-      value: "4.9",
-      suffix: "★",
-      icon: "star",
-    },
-    {
-      label: "Kinh nghiệm",
-      value: "15+",
-      suffix: "năm",
-      icon: "history_edu",
-    },
-  ];
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    Promise.all([
+      http.get(`/factories/${id}`),
+      http.get(`/reviews/factories/${id}?page=0&size=5`),
+      http.get(`/products?size=20&factoryId=${id}`)
+    ]).then(([fRes, rRes, pRes]) => {
+      if (fRes.data?.data) setFactory(fRes.data.data);
+      if (rRes.data?.data) {
+        setReviews(rRes.data.data.content || []);
+        setTotalReviewPages(rRes.data.data.totalPages || 0);
+      }
+      if (pRes.data?.data) setProducts(pRes.data.data.content || []);
+    }).catch(err => {
+      setError("Không thể tải thông tin xưởng");
+      console.error(err);
+    }).finally(() => setLoading(false));
+  }, [id]);
 
-  const strengths: StrengthItem[] = [
-    {
-      icon: "apparel",
-      title: "Áo thun in logo",
-      description:
-        "Chất lượng vải cao cấp, in ấn sắc nét, bền màu.",
-    },
-    {
-      icon: "checkroom",
-      title: "Hoodie Oversize",
-      description:
-        "Form unisex, vải cotton 380gsm, phong cách trẻ trung.",
-    },
-    {
-      icon: "business_center",
-      title: "Đồng phục doanh nghiệp",
-      description:
-        "May đo chuyên nghiệp, phù hợp với văn hóa công ty.",
-    },
-  ];
+  const loadMoreReviews = async (p: number) => {
+    const res = await http.get(`/reviews/factories/${id}?page=${p}&size=5`);
+    if (res.data?.data) {
+      setReviews(res.data.data.content || []);
+      setReviewPage(p);
+    }
+  };
 
-  const certificates: Certificate[] = [
-    {
-      name: "ISO 9001:2015",
-      issuer: "Quản lý chất lượng toàn cầu",
-      icon: "verified",
-    },
-    {
-      name: "WRAP Gold",
-      issuer: "Trách nhiệm xã hội & môi trường",
-      icon: "eco",
-    },
-    {
-      name: "OEKO-TEX®",
-      issuer: "An toàn sợi vải",
-      icon: "health_and_safety",
-    },
-  ];
+  const formatMoney = (n: number) => n?.toLocaleString("vi-VN") + " ₫";
+  const renderStars = (n: number) => "⭐".repeat(n);
 
-  const projects: Project[] = [
-    {
-      name: "Viettel Telecom",
-      description: "5.000 áo thun kỹ thuật cao",
-      image: "https://picsum.photos/id/20/500/350",
-    },
-    {
-      name: "VinGroup Retail",
-      description: "Đồng phục siêu thị cao cấp",
-      image: "https://picsum.photos/id/30/500/350",
-    },
-    {
-      name: "FPT Software",
-      description: "Áo hoodie team building",
-      image: "https://picsum.photos/id/40/500/350",
-    },
-  ];
+  if (loading) return <><Header /><div style={{ textAlign: "center", padding: 80 }}>Đang tải...</div></>;
+  if (error || !factory) return <><Header /><div style={{ textAlign: "center", padding: 80, color: "red" }}>{error || "Không tìm thấy xưởng"}</div></>;
+
+  const images = factory.imageUrls?.length > 0
+    ? factory.imageUrls
+    : factory.images?.map(i => i.imageUrl) || [];
 
   return (
-    <div className="factory-layout">
-
-      {/* SIDEBAR */}
-      <aside className="sidebar">
-
-        <div>
-
-          <div className="brand">
-
-            <div className="brand-logo">
-              <span className="material-symbols-outlined">
-                factory
-              </span>
-            </div>
-
-            <div>
-              <h2>AZURE
-INDUSTRIAL</h2>
-              <p>Quản lý may đo</p>
-            </div>
-
-          </div>
-
-          <div className="sidebar-menu">
-
-            <div
-                className="menu-item"
-                onClick={() => navigate("/home")}
-              >
-                <span className="material-symbols-outlined">
-                  dashboard
-                </span>
-
-                <span>Tổng quan</span>
+    <>
+      <Header />
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 16px" }}>
+        {/* Hero */}
+        <div style={{ display: "flex", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+          <div style={{ flex: "0 0 360px", maxWidth: 360 }}>
+            {images.length > 0 ? (
+              <>
+                <img src={getImageUrl(images[imageIdx])} alt={factory.factoryName}
+                  style={{ width: "100%", height: 280, objectFit: "cover", borderRadius: 16 }} />
+                {images.length > 1 && (
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, overflow: "auto" }}>
+                    {images.map((img, i) => (
+                      <img key={i} src={getImageUrl(img)} alt=""
+                        onClick={() => setImageIdx(i)}
+                        style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, cursor: "pointer", border: i === imageIdx ? "2px solid #2563eb" : "2px solid transparent" }} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ width: "100%", height: 280, background: "#f1f5f9", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 64, color: "#94a3b8" }}>factory</span>
               </div>
-
-            <div className="menu-item active">
-              <span className="material-symbols-outlined">
-                factory
-              </span>
-              <span>Xưởng may</span>
-            </div>
-
-            <div className="menu-item">
-              <span className="material-symbols-outlined">
-                request_quote
-              </span>
-              <span>Báo giá & bài đăng yêu cầu</span>
-            </div>
-
-            <div className="menu-item">
-              <span className="material-symbols-outlined">
-                shopping_bag
-              </span>
-              <span>Đơn hàng</span>
-            </div>
-
-            
-
+            )}
           </div>
 
+          <div style={{ flex: 1, minWidth: 300 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>{factory.factoryName}</h1>
+              <span style={{ padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 500,
+                background: factory.verifiedStatus === "APPROVED" ? "#ecfdf5" : "#fef3c7",
+                color: factory.verifiedStatus === "APPROVED" ? "#065f46" : "#92400e" }}>
+                {factory.verifiedStatus === "APPROVED" ? "Đã xác minh" : "Chờ duyệt"}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#64748b" }}>location_on</span>
+              <span style={{ color: "#64748b" }}>{factory.address || "Chưa cập nhật địa chỉ"}</span>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12, alignItems: "center" }}>
+              {renderStars(Math.round(factory.ratingAvg || 0))}
+              <span style={{ fontWeight: 600 }}>{(factory.ratingAvg || 0).toFixed(1)}</span>
+              <span style={{ color: "#94a3b8" }}>({factory.totalRatings || 0} đánh giá)</span>
+            </div>
+            <p style={{ color: "#475569", lineHeight: 1.6 }}>{factory.description || "Chưa có mô tả"}</p>
+
+            <div style={{ display: "flex", gap: 32, marginTop: 16 }}>
+              <div style={{ textAlign: "center" }}><strong style={{ fontSize: 20 }}>{factory.totalProducts || 0}</strong><p style={{ color: "#64748b", fontSize: 13 }}>Sản phẩm</p></div>
+              <div style={{ textAlign: "center" }}><strong style={{ fontSize: 20 }}>{factory.totalOrders || 0}</strong><p style={{ color: "#64748b", fontSize: 13 }}>Đơn hàng</p></div>
+              <div style={{ textAlign: "center" }}><strong style={{ fontSize: 20 }}>{factory.totalRatings || 0}</strong><p style={{ color: "#64748b", fontSize: 13 }}>Đánh giá</p></div>
+            </div>
+          </div>
         </div>
 
-        <div className="sidebar-bottom">
-
-          <div className="menu-item">
-            <span className="material-symbols-outlined">
-              help
-            </span>
-            <span>Hỗ trợ</span>
-          </div>
-
-          <div className="menu-item">
-            <span className="material-symbols-outlined">
-              settings
-            </span>
-            <span>Cài đặt</span>
-          </div>
-
-        </div>
-
-      </aside>
-
-      {/* MAIN */}
-      <main className="main-content">
-
-        {/* HEADER */}
-        <header className="top-header">
-
-          <div className="search-box">
-
-            <span className="material-symbols-outlined">
-              search
-            </span>
-
-            <input
-              type="text"
-              placeholder="Tìm kiếm xưởng may, mẫu vải..."
-            />
-
-          </div>
-
-          <div className="header-right">
-
-            <button className="header-icon">
-              <span className="material-symbols-outlined">
-                notifications
-              </span>
-            </button>
-
-            <button className="header-icon">
-              <span className="material-symbols-outlined">
-                chat
-              </span>
-            </button>
-
-            <div className="user-box">
-
-              <div>
-                <h4>Minh Trần</h4>
-                <p>Khách hàng Premium</p>
-              </div>
-
-              <img
-                src="https://i.pravatar.cc/100"
-                alt="avatar"
-              />
-
+        {/* Products */}
+        {products.length > 0 && (
+          <section style={{ marginBottom: 32 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Sản phẩm của xưởng</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+              {products.map((p: any) => (
+                <Link key={p.id} to={`/products/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                  <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                    {p.imageUrls?.[0] ? (
+                      <img src={getImageUrl(p.imageUrls[0])} alt={p.name} style={{ width: "100%", height: 180, objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: 180, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 40, color: "#94a3b8" }}>image</span>
+                      </div>
+                    )}
+                    <div style={{ padding: 12 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>{p.name}</h4>
+                      <span style={{ fontWeight: 700, color: "#dc2626" }}>{formatMoney(p.price)}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
+          </section>
+        )}
 
-          </div>
-
-        </header>
-
-        {/* CONTENT */}
-        <div className="factory-profile">
-
-          {/* HERO */}
-          <div className="hero-grid">
-
-            <div className="info-card">
-
-              <div className="logo-wrapper">
-                <span className="material-symbols-outlined">
-                  factory
-                </span>
-              </div>
-
-              <div className="info-content">
-
-                <h1>Xưởng may Elite Garment</h1>
-
-                <div className="location">
-
-                  <span className="material-symbols-outlined">
-                    location_on
-                  </span>
-
-                  <span>KCN VSIP, Thuận An, Bình Dương</span>
-
-                </div>
-
-                <p className="description">
-                  Elite Garment là xưởng may chuyên về đồng phục doanh nghiệp,
-                  áo thun in logo và hoodie oversize.
-                </p>
-
-                <div className="tag-group">
-                  <span className="tag">Đồng phục</span>
-                  <span className="tag">Streetwear</span>
-                  <span className="tag">May số lượng lớn</span>
-                </div>
-
-              </div>
-
-              <div className="status-badge">
-                Đang hoạt động
-              </div>
-
-            </div>
-
-            <div className="cta-card">
-
-              <div className="cta-icon">
-                <span className="material-symbols-outlined">
-                  request_quote
-                </span>
-              </div>
-
-              <h3>Bắt đầu dự án của bạn</h3>
-
-              <p>Nhận báo giá chỉ sau 24 giờ làm việc</p>
-
-              <button className="cta-button">
-                Yêu cầu báo giá ngay
-              </button>
-
-            </div>
-
-          </div>
-
-          {/* STATS */}
-          <div className="stats-row">
-
-            {stats.map((stat, idx) => (
-              <div className="stat-card" key={idx}>
-
-                <span className="material-symbols-outlined stat-icon">
-                  {stat.icon}
-                </span>
-
-                <div className="stat-value">
-                  {stat.value}
-
-                  {stat.suffix && (
-                    <span className="stat-unit">
-                      {stat.suffix}
-                    </span>
+        {/* Reviews */}
+        <section>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Đánh giá ({factory.totalRatings || 0})</h2>
+          {reviews.length === 0 ? (
+            <p style={{ color: "#94a3b8" }}>Chưa có đánh giá nào.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {reviews.map((r: ReviewItem) => (
+                <div key={r.id} style={{ padding: 16, background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <img src={r.customerAvatar || "https://i.pravatar.cc/40"} alt="" style={{ width: 40, height: 40, borderRadius: "50%" }} />
+                    <div>
+                      <strong style={{ fontSize: 14 }}>{r.customerName}</strong>
+                      <div>{renderStars(r.rating)} <span style={{ fontSize: 12, color: "#94a3b8" }}>{new Date(r.createdAt).toLocaleDateString("vi-VN")}</span></div>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, color: "#334155" }}>{r.comment}</p>
+                  {r.reply && (
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: "#f0fdf4", borderRadius: 8, fontSize: 13, color: "#065f46" }}>
+                      <strong>Xưởng phản hồi:</strong> {r.reply}
+                      {r.repliedAt && <span style={{ display: "block", fontSize: 11, color: "#64748b", marginTop: 2 }}>{new Date(r.repliedAt).toLocaleString("vi-VN")}</span>}
+                    </div>
                   )}
                 </div>
-
-                <div className="stat-label">
-                  {stat.label}
-                </div>
-
-              </div>
-            ))}
-
-          </div>
-
-          {/* TABS */}
-          <div className="tabs-container">
-
-            <button
-              className={`tab-btn ${
-                activeTab === "overview" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("overview")}
-            >
-              Tổng quan
-            </button>
-
-            <button
-              className={`tab-btn ${
-                activeTab === "capacity" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("capacity")}
-            >
-              Năng lực sản xuất
-            </button>
-
-            <button
-              className={`tab-btn ${
-                activeTab === "certificates" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("certificates")}
-            >
-              Chứng chỉ
-            </button>
-
-            <button
-              className={`tab-btn ${
-                activeTab === "projects" ? "active" : ""
-              }`}
-              onClick={() => setActiveTab("projects")}
-            >
-              Dự án
-            </button>
-
-          </div>
-
-          {/* OVERVIEW */}
-          {activeTab === "overview" && (
-            <div className="panel-grid">
-
-              <div>
-
-                <div className="gallery-grid">
-
-                  <div className="gallery-main">
-                    <img
-                      src="https://picsum.photos/id/10/900/500"
-                      alt=""
-                    />
-                  </div>
-
-                  <div className="gallery-thumb">
-                    <img
-                      src="https://picsum.photos/id/24/400/300"
-                      alt=""
-                    />
-                  </div>
-
-                  <div className="gallery-thumb">
-                    <img
-                      src="https://picsum.photos/id/29/400/300"
-                      alt=""
-                    />
-                  </div>
-
-                </div>
-
-                <div className="strengths-section">
-
-                  <h3>Thế mạnh sản phẩm</h3>
-
-                  <div className="strength-grid">
-
-                    {strengths.map((item, idx) => (
-                      <div className="strength-card" key={idx}>
-
-                        <span className="material-symbols-outlined">
-                          {item.icon}
-                        </span>
-
-                        <h4>{item.title}</h4>
-
-                        <p>{item.description}</p>
-
-                      </div>
-                    ))}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div className="panel-right">
-
-                <div className="sidebar-card">
-
-                  <h4>Thông tin liên hệ</h4>
-
-                  <div className="contact-item">
-                    <span className="material-symbols-outlined">
-                      call
-                    </span>
-
-                    <div>
-                      <p className="label">Hotline</p>
-                      <p className="value">0274 388 99XX</p>
-                    </div>
-                  </div>
-
-                  <div className="contact-item">
-                    <span className="material-symbols-outlined">
-                      mail
-                    </span>
-
-                    <div>
-                      <p className="label">Email</p>
-                      <p className="value">
-                        sales@elitegarment.vn
-                      </p>
-                    </div>
-                  </div>
-
-                </div>
-
-                <div className="sidebar-card">
-
-                  <h4>Chứng chỉ</h4>
-
-                  {certificates.map((cert, idx) => (
-                    <div className="cert-item" key={idx}>
-
-                      <span className="material-symbols-outlined">
-                        {cert.icon}
-                      </span>
-
-                      <div>
-                        <h5>{cert.name}</h5>
-                        <p>{cert.issuer}</p>
-                      </div>
-
-                    </div>
-                  ))}
-
-                </div>
-
-              </div>
-
-            </div>
-          )}
-
-          {/* PROJECTS */}
-          {activeTab === "projects" && (
-            <div className="projects-grid">
-
-              {projects.map((project, idx) => (
-                <div className="project-card" key={idx}>
-
-                  <img src={project.image} alt="" />
-
-                  <div className="project-info">
-                    <h4>{project.name}</h4>
-                    <p>{project.description}</p>
-                  </div>
-
-                </div>
               ))}
-
             </div>
           )}
-
-        </div>
-
-      </main>
-    </div>
+          {totalReviewPages > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+              <button disabled={reviewPage === 0} onClick={() => loadMoreReviews(reviewPage - 1)} style={{ padding: "6px 14px", border: "1px solid #ddd", borderRadius: 6 }}>←</button>
+              <span style={{ padding: "6px 0" }}>{reviewPage + 1}/{totalReviewPages}</span>
+              <button disabled={reviewPage >= totalReviewPages - 1} onClick={() => loadMoreReviews(reviewPage + 1)} style={{ padding: "6px 14px", border: "1px solid #ddd", borderRadius: 6 }}>→</button>
+            </div>
+          )}
+        </section>
+      </div>
+      <Footer />
+    </>
   );
-};
-
-export default FactoryProfile;
+}

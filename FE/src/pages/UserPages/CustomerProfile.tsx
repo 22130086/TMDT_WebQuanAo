@@ -101,13 +101,31 @@ export default function CustomerProfile() {
         {/* ============ TABS ============ */}
         <div className="cp-tabs">
           <button className="cp-tab active">
-            👤 Thông tin cá nhân
+            <span className="material-symbols-outlined" style={{ fontSize: 18, marginRight: 4 }}>person</span> Thông tin cá nhân
           </button>
           <button
             className="cp-tab"
             onClick={() => navigate("/order-history")}
           >
-            📦 Đơn hàng của tôi
+            <span className="material-symbols-outlined" style={{ fontSize: 18, marginRight: 4 }}>inventory_2</span> Đơn hàng của tôi
+          </button>
+          <button
+            className="cp-tab"
+            onClick={() => navigate("/my-disputes")}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18, marginRight: 4 }}>gavel</span> Tranh chấp
+          </button>
+          <button
+            className="cp-tab"
+            onClick={() => navigate("/my-complaints")}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18, marginRight: 4 }}>report_problem</span> Khiếu nại
+          </button>
+          <button
+            className="cp-tab"
+            onClick={() => navigate("/my-reviews")}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18, marginRight: 4 }}>reviews</span> Đánh giá của tôi
           </button>
         </div>
 

@@ -19,8 +19,17 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, Lo
 
     boolean existsByCustomerIdAndProductIdAndOrderId(Long customerId, Long productId, Long orderId);
 
+    boolean existsByCustomerIdAndProductId(Long customerId, Long productId);
+
     List<ProductReview> findByCustomerIdAndOrderId(Long customerId, Long orderId);
 
     @Query("SELECT r FROM ProductReview r JOIN r.product p WHERE p.factory.id = :factoryId ORDER BY r.createdAt DESC")
     Page<ProductReview> findByFactoryId(@Param("factoryId") Long factoryId, Pageable pageable);
+
+    // All reviews by a customer (for customer review management page)
+    Page<ProductReview> findByCustomerId(Long customerId, Pageable pageable);
+
+    // Reported reviews for admin
+    Page<ProductReview> findByIsReportedTrue(Pageable pageable);
+    long countByIsReportedTrue();
 }

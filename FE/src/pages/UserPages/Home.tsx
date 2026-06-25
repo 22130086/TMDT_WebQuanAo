@@ -16,7 +16,7 @@ export default function Home() {
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   // State quản lý xưởng đang được đưa lên banner chính
   const [featuredIndex, setFeaturedIndex] = useState(0);
 
@@ -61,12 +61,21 @@ export default function Home() {
     loadCatalog();
   }, []);
 
+  // Scroll to hash when page loads
+  useEffect(() => {
+    if (window.location.hash === "#factories") {
+      setTimeout(() => {
+        document.getElementById("factories")?.scrollIntoView({ behavior: "smooth" });
+      }, 500);
+    }
+  }, []);
+
   // TỰ ĐỘNG CHUYỂN SLIDE SAU 5 GIÂY
   useEffect(() => {
-    if (factories.length <= 1) return; // Không cần tự chuyển nếu chỉ có 1 hoặc 0 xưởng
+    if (factories.length <= 1) return;
     const timer = setInterval(() => {
       setFeaturedIndex((prev) => (prev + 1) % factories.length);
-    }, 4000); 
+    }, 4000);
 
     return () => clearInterval(timer);
   }, [factories.length]);
@@ -97,7 +106,7 @@ export default function Home() {
 
       <div className="page-container">
         {error && <div className="list-error">{error}</div>}
-        
+
         {/* ======================================================== */}
         {/* SECTION: XƯỞNG MAY NỔI BẬT (BANNER DẠNG CAROUSEL)         */}
         {/* ======================================================== */}
@@ -115,7 +124,7 @@ export default function Home() {
             <div className="empty-state">Chưa có xưởng nào để hiển thị.</div>
           ) : (
             <div className="factory-banner-container">
-              
+
               {/* 1. CARD TO NỔI BẬT Ở TRÊN */}
               {featuredFactory && (
                 <div className="factory-hero-banner">
@@ -138,7 +147,7 @@ export default function Home() {
                         <span>{featuredFactory.ratingAvg ?? 4.8} / 5.0</span>
                       </div>
                       <p className="hero-desc">{featuredFactory.description || "Xưởng may chất lượng cao uy tín hàng đầu."}</p>
-                      
+
                       <Link to={`/factory-profile/${featuredFactory.id}`} className="btn-view-details">
                         Xem chi tiết xưởng
                       </Link>
@@ -155,10 +164,10 @@ export default function Home() {
               {/* 2. DANH SÁCH CARD NHỎ NGANG Ở DƯỚI (THUMBNAILS) */}
               <div className="factory-thumbnails-row">
                 {factories.map((factory, index) => (
-                  <div 
-                    key={factory.id} 
+                  <div
+                    key={factory.id}
                     className={`thumb-card ${index === featuredIndex ? 'active' : ''}`}
-                    onClick={() => setFeaturedIndex(index)} // Click vào thẻ nhỏ thì hiển thị lên thẻ to
+                    onClick={() => setFeaturedIndex(index)}
                   >
                     <img
                       src={factory.imageUrls?.[0] || "https://via.placeholder.com/150"}
@@ -166,7 +175,10 @@ export default function Home() {
                     />
                     <div className="thumb-info">
                       <h4>{factory.factoryName}</h4>
-                      <span className="thumb-rating">⭐ {factory.ratingAvg ?? 4.8}</span>
+                      <span className="thumb-rating">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>star</span>{" "}
+                        {factory.ratingAvg ?? 4.8}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -213,21 +225,15 @@ export default function Home() {
                         <span>4.8</span>
                       </div>
                       <div className="product-bottom">
-                        <div>
-                          <p className="price">{product.price}</p>
-                          <span className="old-price">250.000đ</span>
-                        </div>
-                        <button className="cart-btn">
-                          <span className="material-symbols-outlined">
-                            shopping_bag
-                          </span>
-                        </button>
+                        <span className="price">
+                          {product.price.toLocaleString("vi-VN")} ₫
+                        </span>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="empty-state">Chưa có sản phẩm để hiển thị.</div>
+                <div className="empty-state">Chưa có sản phẩm nào.</div>
               )}
             </div>
           )}

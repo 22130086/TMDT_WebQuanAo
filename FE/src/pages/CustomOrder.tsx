@@ -571,7 +571,7 @@ export default function CustomOrder() {
         let frontImgUrl = "", backImgUrl = "";
         try {
           if (frontCardRef.current) {
-            const frontDataUrl = await toPng(frontCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2 });
+            const frontDataUrl = await toPng(frontCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2, skipFonts: true, cacheBust: true });
             const frontBlob = await (await fetch(frontDataUrl)).blob();
             const fdFront = new FormData();
             fdFront.append("file", frontBlob, `design_front_${cpId}.png`);
@@ -580,7 +580,7 @@ export default function CustomOrder() {
             frontImgUrl = frontRes.data?.data?.url || "";
           }
           if (backCardRef.current) {
-            const backDataUrl = await toPng(backCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2 });
+            const backDataUrl = await toPng(backCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2, skipFonts: true, cacheBust: true });
             const backBlob = await (await fetch(backDataUrl)).blob();
             const fdBack = new FormData();
             fdBack.append("file", backBlob, `design_back_${cpId}.png`);

@@ -103,6 +103,17 @@ public class ReviewController {
                 reviewService.getMyReviewsForOrder(authUtil.currentUserId(), orderId)));
     }
 
+    /** Lấy tất cả đánh giá của tôi (cho trang quản lý) */
+    @GetMapping("/api/reviews/my")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<Page<ProductReviewResponse>>> myAllReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(
+                reviewService.getMyAllReviews(authUtil.currentUserId(), pageable)));
+    }
+
     @PostMapping("/api/reviews/factories")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<FactoryReview>> addFactoryReview(
@@ -156,5 +167,41 @@ public class ReviewController {
     public ResponseEntity<ApiResponse<ProductReviewResponse>> reportReview(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Đã báo cáo đánh giá",
                 reviewService.reportProductReview(authUtil.currentUserId(), id)));
+    }
+
+    // ==================== ADMIN ====================
+
+    @GetMapping("/api/admin/reviews")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Page<ProductReviewResponse>>> getAllReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(reviewService.getAllProductReviews(pageable)));
+    }
+
+    @DeleteMapping("/api/admin/reviews/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> adminDeleteReview(@PathVariable Long id) {
+        reviewService.adminDeleteReview(id);
+        return ResponseEntity.ok(ApiResponse.ok("Đã xóa đánh giá", null));
+    }
+
+    @GetMapping("/api/admin/reviews/reported")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Page<ProductReviewResponse>>> getReportedReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(reviewService.getReportedReviews(pageable)));
+    }
+
+    @PatchMapping("/api/admin/reviews/{id}/resolve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<?>> resolveReportedReview(
+            @PathVariable Long id, @RequestParam String action) {
+        var result = reviewService.resolveReportedReview(id, action);
+        String msg = "DELETE".equalsIgnoreCase(action) ? "Đã xóa đánh giá vi phạm" : "Đã bỏ báo cáo";
+        return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
 }

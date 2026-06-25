@@ -32,28 +32,6 @@ interface Product {
 // HELPER
 // ========================
 
-const getUserRole = (): string | null => {
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.role || payload.roles?.[0] || null;
-  } catch {
-    return null;
-  }
-};
-
-const getUserId = (): number | null => {
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.userId || payload.id || null;
-  } catch {
-    return null;
-  }
-};
-
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -76,9 +54,6 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const productId = Number(id);
 
-  const userRole = getUserRole();
-  const currentUserId = getUserId();
-
   // ---- Product state ----
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,22 +62,11 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // ---- Review state ----
+  // ---- Review state (read-only display) ----
   const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [reviewPage, setReviewPage] = useState(0);
   const [totalReviewPages, setTotalReviewPages] = useState(0);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-
-  // Review form
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
-
-  // Edit review
-  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
-  const [editRating, setEditRating] = useState(5);
-  const [editComment, setEditComment] = useState("");
 
   // ========================
   // FETCH PRODUCT
@@ -201,88 +165,6 @@ export default function ProductDetail() {
       alert(err.response?.data?.message || err.message || "Lỗi khi thêm sản phẩm vào giỏ hàng!");
     } finally {
       setAddingToCart(false);
-    }
-  };
-
-  // ========================
-  // REVIEW HANDLERS
-  // ========================
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reviewComment.trim()) return;
-
-    try {
-      setSubmittingReview(true);
-      const res = await reviewService.addProductReview({
-        productId,
-        rating: reviewRating,
-        comment: reviewComment.trim(),
-      });
-      if (res.success) {
-        setReviewComment("");
-        setReviewRating(5);
-        setShowReviewForm(false);
-        // Refresh reviews + product (to update avg rating)
-        await fetchReviews(0);
-        const productRes = await productService.getProductById(productId);
-        if (productRes.success) {
-          setProduct(prev => prev ? { ...prev, rating: productRes.data.rating, reviewCount: productRes.data.reviewCount } : prev);
-        }
-      } else {
-        alert(res.message || "Lỗi khi gửi đánh giá");
-      }
-    } catch (err: any) {
-      console.error("Lỗi gửi đánh giá:", err);
-      alert(err.response?.data?.message || "Vui lòng đăng nhập với vai trò khách hàng để đánh giá");
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
-  const handleEditReview = (review: ReviewData) => {
-    setEditingReviewId(review.id);
-    setEditRating(review.rating);
-    setEditComment(review.comment);
-  };
-
-  const handleUpdateReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingReviewId || !editComment.trim()) return;
-    try {
-      setSubmittingReview(true);
-      const res = await reviewService.updateProductReview(editingReviewId, {
-        rating: editRating,
-        comment: editComment.trim(),
-      });
-      if (res.success) {
-        setEditingReviewId(null);
-        await fetchReviews(reviewPage);
-        const productRes = await productService.getProductById(productId);
-        if (productRes.success) {
-          setProduct(prev => prev ? { ...prev, rating: productRes.data.rating, reviewCount: productRes.data.reviewCount } : prev);
-        }
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Lỗi cập nhật đánh giá");
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
-  const handleDeleteReview = async (reviewId: number) => {
-    if (!window.confirm("Bạn có chắc muốn xóa đánh giá này?")) return;
-    try {
-      const res = await reviewService.deleteProductReview(reviewId);
-      if (res.success) {
-        await fetchReviews(reviewPage);
-        const productRes = await productService.getProductById(productId);
-        if (productRes.success) {
-          setProduct(prev => prev ? { ...prev, rating: productRes.data.rating, reviewCount: productRes.data.reviewCount } : prev);
-        }
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Lỗi xóa đánh giá");
     }
   };
 
@@ -427,64 +309,11 @@ export default function ProductDetail() {
         <section className="review-section">
           <h2>ĐÁNH GIÁ ({product.reviewCount ?? reviews.length})</h2>
 
-          {/* --- Add Review Button (CUSTOMER only) --- */}
-          {userRole === "CUSTOMER" && !showReviewForm && (
-            <button
-              className="write-review-btn"
-              onClick={() => setShowReviewForm(true)}
-            >
-              ✏️ Viết đánh giá
-            </button>
-          )}
-
-          {/* --- Review Form --- */}
-          {showReviewForm && userRole === "CUSTOMER" && (
-            <form className="review-form" onSubmit={handleSubmitReview}>
-              <h3>Viết đánh giá của bạn</h3>
-
-              <div className="star-picker">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={`star ${star <= reviewRating ? "active" : ""}`}
-                    onClick={() => setReviewRating(star)}
-                  >
-                    {star <= reviewRating ? "⭐" : "☆"}
-                  </span>
-                ))}
-              </div>
-
-              <textarea
-                placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                rows={4}
-                required
-              />
-
-              <div className="review-form-actions">
-                <button type="submit" disabled={submittingReview || !reviewComment.trim()}>
-                  {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
-                </button>
-                <button type="button" className="cancel-btn" onClick={() => { setShowReviewForm(false); setReviewComment(""); setReviewRating(5); }}>
-                  Hủy
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* --- Not logged in --- */}
-          {!userRole && (
-            <p className="review-login-hint">
-              <a href="/">Đăng nhập</a> với vai trò khách hàng để viết đánh giá.
-            </p>
-          )}
-
           {/* --- Reviews List --- */}
           {reviewsLoading ? (
             <p className="review-loading">Đang tải đánh giá...</p>
           ) : reviews.length === 0 ? (
-            <p className="no-reviews">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+            <p className="no-reviews">Chưa có đánh giá nào cho sản phẩm này.</p>
           ) : (
             <>
               <div className="review-list">
@@ -503,56 +332,15 @@ export default function ProductDetail() {
                         <small>{formatDate(review.createdAt)}</small>
                       </div>
 
-                      {/* Edit mode */}
-                      {editingReviewId === review.id ? (
-                        <form className="review-edit-form" onSubmit={handleUpdateReview}>
-                          <div className="star-picker small">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <span
-                                key={star}
-                                className={`star ${star <= editRating ? "active" : ""}`}
-                                onClick={() => setEditRating(star)}
-                              >
-                                {star <= editRating ? "⭐" : "☆"}
-                              </span>
-                            ))}
-                          </div>
-                          <textarea
-                            value={editComment}
-                            onChange={(e) => setEditComment(e.target.value)}
-                            rows={3}
-                            required
-                          />
-                          <div className="review-edit-actions">
-                            <button type="submit" disabled={submittingReview}>
-                              {submittingReview ? "Đang lưu..." : "Lưu"}
-                            </button>
-                            <button type="button" className="cancel-btn" onClick={() => setEditingReviewId(null)}>
-                              Hủy
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <>
-                          <p className="review-comment">{review.comment}</p>
+                      <p className="review-comment">{review.comment}</p>
 
-                          {/* Factory reply */}
-                          {review.reply && (
-                            <div className="review-reply">
-                              <strong>Phản hồi từ xưởng:</strong>
-                              <p>{review.reply}</p>
-                              {review.repliedAt && <small>{formatDate(review.repliedAt)}</small>}
-                            </div>
-                          )}
-
-                          {/* Owner actions */}
-                          {currentUserId === review.customerId && (
-                            <div className="review-owner-actions">
-                              <button onClick={() => handleEditReview(review)}>✏️ Sửa</button>
-                              <button onClick={() => handleDeleteReview(review.id)}>🗑️ Xóa</button>
-                            </div>
-                          )}
-                        </>
+                      {/* Factory reply */}
+                      {review.reply && (
+                        <div className="review-reply">
+                          <strong>Phản hồi từ xưởng:</strong>
+                          <p>{review.reply}</p>
+                          {review.repliedAt && <small>{formatDate(review.repliedAt)}</small>}
+                        </div>
                       )}
                     </div>
                   </div>
