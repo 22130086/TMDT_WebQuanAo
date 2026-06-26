@@ -29,11 +29,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = parseJwt(req);
         if (token != null && jwtUtil.validateToken(token)) {
             String email = jwtUtil.getEmailFromToken(token);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+                // User bị xóa khỏi DB nhưng token vẫn còn hạn → bỏ qua, request sẽ thành anonymous
+            }
         }
         chain.doFilter(req, res);
     }

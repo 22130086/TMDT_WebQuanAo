@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +24,9 @@ public class FactoryProfileService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final NotificationService notificationService;
+    private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+    private final ProductReviewRepository productReviewRepository;
 
     @Transactional
     public FactoryProfileResponse createOrUpdateResponse(Long userId, FactoryProfileRequest req) {
@@ -198,6 +202,13 @@ public class FactoryProfileService {
     }
 
     public FactoryProfileResponse toResponse(FactoryProfile profile) {
+        int totalProducts = productRepository.countByFactoryId(profile.getId());
+        int totalOrders = orderRepository.countByFactoryId(profile.getId());
+        Double avg = productReviewRepository.avgRatingByFactoryId(profile.getId());
+        long count = productReviewRepository.countByFactoryId(profile.getId());
+        double ratingAvg = avg != null
+                ? BigDecimal.valueOf(avg).setScale(1, RoundingMode.HALF_UP).doubleValue()
+                : 0.0;
         return FactoryProfileResponse.builder()
                 .id(profile.getId())
                 .userId(profile.getUser() != null ? profile.getUser().getId() : null)
@@ -210,8 +221,10 @@ public class FactoryProfileService {
                 .minQuantity(profile.getMinQuantity())
                 .maxQuantity(profile.getMaxQuantity())
                 .leadTimeDays(profile.getLeadTimeDays())
-                .ratingAvg(profile.getRatingAvg())
-                .totalRatings(profile.getTotalRatings())
+                .ratingAvg(BigDecimal.valueOf(ratingAvg))
+                .totalRatings((int) count)
+                .totalProducts(totalProducts)
+                .totalOrders(totalOrders)
                 .verifiedStatus(profile.getVerifiedStatus() != null ? profile.getVerifiedStatus().name() : null)
                 .verifiedAt(profile.getVerifiedAt())
                 .createdAt(profile.getCreatedAt())

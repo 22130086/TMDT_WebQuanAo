@@ -32,4 +32,10 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, Lo
     // Reported reviews for admin
     Page<ProductReview> findByIsReportedTrue(Pageable pageable);
     long countByIsReportedTrue();
+
+    @Query("SELECT AVG(r.rating) FROM ProductReview r WHERE r.product.factory.id = :factoryId")
+    Double avgRatingByFactoryId(@Param("factoryId") Long factoryId);
+
+    @Query("SELECT COUNT(r) FROM ProductReview r WHERE r.product.factory.id = :factoryId")
+    long countByFactoryId(@Param("factoryId") Long factoryId);
 }

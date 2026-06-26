@@ -26,4 +26,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @EntityGraph(attributePaths = {"customer", "factory", "quotation", "quotation.post", "quotation.post.customProduct"})
     @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findByIdWithItems(@Param("id") Long id);
+    int countByFactoryId(Long factoryId);
 }
