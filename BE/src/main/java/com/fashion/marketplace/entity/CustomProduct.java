@@ -31,6 +31,9 @@ public class CustomProduct {
     @Column(name = "design_file_url", columnDefinition = "TEXT")
     private String designFileUrl;
 
+    @Column(name = "design_file_url_back", columnDefinition = "TEXT")
+    private String designFileUrlBack;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status = Status.DRAFT;

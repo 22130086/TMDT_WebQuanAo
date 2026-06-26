@@ -18,11 +18,15 @@ export interface CustomProductDesignJsonResponse {
 export interface CustomProductCreateRequest {
   name: string;
   description?: string;
+  designFileUrl?: string;
+  designFileUrlBack?: string;
 }
 
 export interface CustomProductDesignJsonRequest {
   jsonBase64: string;
   fileName?: string;
+  designFileUrl?: string;
+  designFileUrlBack?: string;
 }
 
 export async function createCustomProduct(

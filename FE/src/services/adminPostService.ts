@@ -8,9 +8,14 @@ export interface OutsourcingPostData {
   budgetMin?: number;
   budgetMax?: number;
   deadline?: string;
-  status: 'OPEN' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED';
-  customer?: { id: number; fullName: string; email: string };
-  category?: { id: number; name: string };
+  status: 'PENDING' | 'OPEN' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED';
+  customerId?: number;
+  customerName?: string;
+  categoryId?: number;
+  categoryName?: string;
+  customProductId?: number;
+  designFileUrl?: string;
+  designFileUrlBack?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -29,6 +34,11 @@ class AdminPostService {
   static async getById(id: number) {
     const res = await http.get<ApiResponse<OutsourcingPostData>>(`/admin/outsourcing-posts/${id}`);
     return res.data.data;
+  }
+
+  static async approve(id: number) {
+    const res = await http.patch<ApiResponse<OutsourcingPostData>>(`/admin/outsourcing-posts/${id}/approve`);
+    return res.data;
   }
 
   static async close(id: number, reason?: string) {

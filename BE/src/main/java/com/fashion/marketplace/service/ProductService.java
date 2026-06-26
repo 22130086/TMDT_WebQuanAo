@@ -21,6 +21,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final FactoryProfileRepository factoryProfileRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductReviewRepository productReviewRepository;
 
     // ---- Factory: quản lý sản phẩm mẫu sẵn ----
 
@@ -75,9 +76,15 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse  hide(Long userId, Long productId) {
+    public ProductResponse hide(Long userId, Long productId) {
         Product product = getOwnedProduct(userId, productId);
         product.setStatus(Product.ProductStatus.HIDDEN);
+        return toResponse(productRepository.save(product));
+    }
+
+    public ProductResponse unhide(Long userId, Long productId) {
+        Product product = getOwnedProduct(userId, productId);
+        product.setStatus(Product.ProductStatus.ACTIVE);
         return toResponse(productRepository.save(product));
     }
 
@@ -97,6 +104,9 @@ public class ProductService {
     }
 
     private ProductResponse toResponse(Product p) {
+        Double avgRating = productReviewRepository.avgRatingByProductId(p.getId());
+        long reviewCount = productReviewRepository.countByProductId(p.getId());
+
         return ProductResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
@@ -112,6 +122,8 @@ public class ProductService {
                         .map(img -> img.getImageUrl())
                         .toList())
                 .createdAt(p.getCreatedAt())
+                .rating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : null)
+                .reviewCount(reviewCount)
                 .build();
     }
 

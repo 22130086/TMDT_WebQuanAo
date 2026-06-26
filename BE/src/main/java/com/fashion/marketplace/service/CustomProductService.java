@@ -42,7 +42,8 @@ public class CustomProductService {
                 .name(req.getName())
                 .description(req.getDescription())
                 .status(CustomProduct.Status.DRAFT)
-                .designFileUrl(null)
+                .designFileUrl(req.getDesignFileUrl())
+                .designFileUrlBack(req.getDesignFileUrlBack())
                 .build();
 
         return toResponse(customProductRepository.save(cp));
@@ -83,6 +84,13 @@ public class CustomProductService {
             String designUrl = "/files/custom-products-json/" + filePath.getFileName();
 
             cp.setDesignFileUrl(designUrl);
+            // Nếu client gửi kèm ảnh chụp mặt trước / mặt sau thì lưu luôn
+            if (req.getDesignFileUrl() != null && !req.getDesignFileUrl().isBlank()) {
+                cp.setDesignFileUrl(req.getDesignFileUrl());
+            }
+            if (req.getDesignFileUrlBack() != null && !req.getDesignFileUrlBack().isBlank()) {
+                cp.setDesignFileUrlBack(req.getDesignFileUrlBack());
+            }
             cp.setUpdatedAt(LocalDateTime.now());
             customProductRepository.save(cp);
 
@@ -101,6 +109,7 @@ public class CustomProductService {
                 .name(cp.getName())
                 .description(cp.getDescription())
                 .designFileUrl(cp.getDesignFileUrl())
+                .designFileUrlBack(cp.getDesignFileUrlBack())
                 .status(cp.getStatus())
                 .createdAt(cp.getCreatedAt())
                 .updatedAt(cp.getUpdatedAt())

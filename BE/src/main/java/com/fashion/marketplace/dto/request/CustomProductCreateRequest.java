@@ -13,5 +13,11 @@ public class CustomProductCreateRequest {
     private String name;
 
     private String description;
+
+    // URL của file thiết kế có sẵn (ảnh) khi khách upload thay vì tự thiết kế
+    private String designFileUrl;
+
+    // URL ảnh mặt sau khi upload file có sẵn
+    private String designFileUrlBack;
 }
 

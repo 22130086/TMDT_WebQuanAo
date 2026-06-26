@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { toPng } from "html-to-image";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import http from "../services/http";
@@ -52,7 +54,7 @@ type DesignPayload = {
 
 const colors = [
   "#ffffff",
-  "#191c1e", // Mã màu đen trong Grid của bạn
+  "#191c1e",
   "#ba1a1a",
   "#2563eb",
   "#888888",
@@ -61,26 +63,24 @@ const colors = [
   "#fff30c",
 ];
 
-// 2. ĐỊNH NGHĨA TYPE VÀ ĐỐI TƯỢNG MAP MÀU SẮC THEO 2 MẶT
 type ShirtViews = {
   front: string;
   back: string;
 };
 
 const shirtImages: Record<string, ShirtViews> = {
-  "#ffffff": { front: shirtWhiteFront, back: shirtWhiteBack },     // Trắng
-  "#191c1e": { front: shirtBlackFront, back: shirtBlackBack },     // Đen
-  "#ba1a1a": { front: shirtRedFront, back: shirtRedBack },         // Đỏ
-  "#888888": { front: shirtGrayFront, back: shirtGrayBack },       // Xám (Gray)
-  "#2563eb": { front: shirtBlueFront, back: shirtBlueBack },       // Xanh dương (Blue)
-  "#f97316": { front: shirtOrangeFront, back: shirtOrangeBack },   // Cam (Orange)
-  "#fff30c": { front: shirtYellowFront, back: shirtYellowBack },   // Vàng (Yellow)
-  "#29ae22": { front: shirtGreenFront, back: shirtGreenBack },     // Xanh lá (Green)
+  "#ffffff": { front: shirtWhiteFront, back: shirtWhiteBack },
+  "#191c1e": { front: shirtBlackFront, back: shirtBlackBack },
+  "#ba1a1a": { front: shirtRedFront, back: shirtRedBack },
+  "#888888": { front: shirtGrayFront, back: shirtGrayBack },
+  "#2563eb": { front: shirtBlueFront, back: shirtBlueBack },
+  "#f97316": { front: shirtOrangeFront, back: shirtOrangeBack },
+  "#fff30c": { front: shirtYellowFront, back: shirtYellowBack },
+  "#29ae22": { front: shirtGreenFront, back: shirtGreenBack },
 };
 
-// 3. SỬA HÀM LẤY ẢNH: NHẬN VÀO CẢ MÀU VÀ MẶT ĐỂ TRẢ VỀ ĐÚNG ẢNH
 const getShirtImage = (color: string, side: DesignSide): string => {
-  const shirt = shirtImages[color] || shirtImages["#ffffff"]; // Nếu màu lạ chưa có ảnh mockup riêng, mặc định lấy áo trắng làm nền để phủ overlay màu lên
+  const shirt = shirtImages[color] || shirtImages["#ffffff"];
   return shirt[side];
 };
 
@@ -149,10 +149,11 @@ function base64FromString(value: string) {
 }
 
 export default function CustomOrder() {
+  const navigate = useNavigate();
   const [customProductId, setCustomProductId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(
-    "Bạn có thể tạo thiết kế, chọn màu áo, thêm logo và văn bản, rồi lưu lại để chỉnh sửa sau."
+    "Bạn có thể tạo thiết kế, chọn màu áo, thêm logo và văn bản, rồi đăng bài yêu cầu in."
   );
   const [side, setSide] = useState<DesignSide>("front");
   const [frontDesign, setFrontDesign] = useState<ShirtDesign>(defaultDesign);
@@ -161,6 +162,29 @@ export default function CustomOrder() {
   const [logoColor, setLogoColor] = useState("#111827");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [colorPickerValue, setColorPickerValue] = useState("#111827");
+
+  // ---- Mode & Upload states ----
+  type PageMode = "design" | "upload";
+  const [mode, setMode] = useState<PageMode>("design");
+  const [uploadFrontFile, setUploadFrontFile] = useState<File | null>(null);
+  const [uploadFrontPreviewUrl, setUploadFrontPreviewUrl] = useState<string | null>(null);
+  const [uploadBackFile, setUploadBackFile] = useState<File | null>(null);
+  const [uploadBackPreviewUrl, setUploadBackPreviewUrl] = useState<string | null>(null);
+
+  // ---- Post form states ----
+  const [postTitle, setPostTitle] = useState("");
+  const [postDescription, setPostDescription] = useState("");
+  const [postQuantity, setPostQuantity] = useState(50);
+  const [postBudgetMin, setPostBudgetMin] = useState("");
+  const [postBudgetMax, setPostBudgetMax] = useState("");
+  const [postDeadline, setPostDeadline] = useState("");
+  const [postSize, setPostSize] = useState("M");
+  const [postMaterial, setPostMaterial] = useState("Cotton 100%");
+  const [postNotes, setPostNotes] = useState("");
+
+  // Refs để chụp ảnh thiết kế
+  const frontCardRef = useRef<HTMLDivElement>(null);
+  const backCardRef = useRef<HTMLDivElement>(null);
 
   const activeDesign = side === "front" ? frontDesign : backDesign;
   const dragState = useRef<{
@@ -490,54 +514,167 @@ export default function CustomOrder() {
     }
   };
 
-  const handleCreateDesign = async (productName = "Thiết kế áo của tôi"): Promise<number | null> => {
-    setLoading(true);
-    try {
-      const response = await createCustomProduct({
-        name: productName,
-        description: "Thiết kế áo custom tại FE",
-      });
-      const id = response.data.id;
-      setCustomProductId(id);
-      localStorage.setItem("customProductDraftId", String(id));
-      setMessage("Tạo thiết kế mới thành công. Bạn có thể bắt đầu thiết kế.");
-      return id;
-    } catch (error) {
-      setMessage(`Tạo thiết kế mới thất bại. ${(error as Error)?.message || ""}`);
-      return null;
-    } finally {
-      setLoading(false);
+  // ---- Upload mode handlers ----
+  const handleFrontFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
+      return;
     }
+    setUploadFrontFile(file);
+    setUploadFrontPreviewUrl(URL.createObjectURL(file));
+    setMessage("Đã tải ảnh mặt trước. Tiếp tục chọn ảnh mặt sau nếu cần.");
   };
 
-  const handleSaveDesign = async () => {
-    let id = customProductId;
-    if (!id) {
-      id = await handleCreateDesign();
-      if (!id) return;
+  const handleBackFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Vui lòng chọn file ảnh (PNG, JPG, JPEG, WebP).");
+      return;
     }
+    setUploadBackFile(file);
+    setUploadBackPreviewUrl(URL.createObjectURL(file));
+    setMessage("Đã tải ảnh mặt sau. Nhấn Đăng bài ngay để hoàn tất.");
+  };
 
-    const payload: DesignPayload = {
-      front: frontDesign,
-      back: backDesign,
-    };
+  // ===== ĐĂNG BÀI NGAY =====
+  const handleSubmitPost = async () => {
+    if (!postTitle.trim()) { setMessage("Vui lòng nhập tiêu đề bài đăng."); return; }
+    if (!postQuantity || postQuantity < 1) { setMessage("Vui lòng nhập số lượng hợp lệ."); return; }
 
-    const json = JSON.stringify(payload);
-    const base64 = base64FromString(json);
+    setLoading(true);
+    setMessage("Đang tạo bài đăng...");
 
-    setLoading(true)
     try {
-      await uploadDesignJson(id, {
-        jsonBase64: base64,
-        fileName: `custom_design_${id}.json`,
-      });
-      setCustomProductId(id);
-      localStorage.setItem("customProductDraftId", String(id));
-      setMessage("Thiết kế đã được lưu thành công.");
+      let cpId: number | null = null;
+
+      if (mode === "design") {
+        // ---- Tự thiết kế: lưu JSON design ----
+        if (!customProductId) {
+          const cpRes = await createCustomProduct({
+            name: postTitle.trim(),
+            description: `Size: ${postSize} | Chất liệu: ${postMaterial}`,
+          });
+          cpId = cpRes.data.id;
+          setCustomProductId(cpId);
+        } else {
+          cpId = customProductId;
+        }
+
+        const payload: DesignPayload = { front: frontDesign, back: backDesign };
+        const json = JSON.stringify(payload);
+        const base64 = base64FromString(json);
+
+        // Chụp ảnh màn hình mặt trước & mặt sau
+        let frontImgUrl = "", backImgUrl = "";
+        try {
+          if (frontCardRef.current) {
+            const frontDataUrl = await toPng(frontCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2, skipFonts: true, cacheBust: true });
+            const frontBlob = await (await fetch(frontDataUrl)).blob();
+            const fdFront = new FormData();
+            fdFront.append("file", frontBlob, `design_front_${cpId}.png`);
+            fdFront.append("type", "products");
+            const frontRes = await http.post("/upload", fdFront, { headers: { "Content-Type": "multipart/form-data" } });
+            frontImgUrl = frontRes.data?.data?.url || "";
+          }
+          if (backCardRef.current) {
+            const backDataUrl = await toPng(backCardRef.current, { backgroundColor: "#EFF6FF", pixelRatio: 2, skipFonts: true, cacheBust: true });
+            const backBlob = await (await fetch(backDataUrl)).blob();
+            const fdBack = new FormData();
+            fdBack.append("file", backBlob, `design_back_${cpId}.png`);
+            fdBack.append("type", "products");
+            const backRes = await http.post("/upload", fdBack, { headers: { "Content-Type": "multipart/form-data" } });
+            backImgUrl = backRes.data?.data?.url || "";
+          }
+        } catch (imgErr) {
+          console.error("Lỗi chụp ảnh thiết kế:", imgErr);
+        }
+
+        await uploadDesignJson(cpId, {
+          jsonBase64: base64,
+          fileName: `custom_design_${cpId}.json`,
+          designFileUrl: frontImgUrl || undefined,
+          designFileUrlBack: backImgUrl || undefined,
+        });
+
+        const fullDesc = [
+          postDescription,
+          "",
+          `🎨 Thiết kế: Mặt trước (màu ${frontDesign.color}, ${frontDesign.items.length} thành phần) | Mặt sau (màu ${backDesign.color}, ${backDesign.items.length} thành phần)`,
+          `📐 Size: ${postSize} | 🧵 Chất liệu: ${postMaterial}`,
+          postNotes ? `📝 Ghi chú: ${postNotes}` : "",
+        ].filter(Boolean).join("\n");
+
+        const postPayload: any = {
+          title: postTitle.trim(),
+          description: fullDesc,
+          quantity: postQuantity,
+          customProductId: cpId,
+        };
+        if (postBudgetMin) postPayload.budgetMin = parseFloat(postBudgetMin);
+        if (postBudgetMax) postPayload.budgetMax = parseFloat(postBudgetMax);
+        if (postDeadline) postPayload.deadline = postDeadline;
+        await http.post("/posts", postPayload);
+
+      } else {
+        // ---- Tải mẫu sẵn: upload ảnh ----
+        if (!uploadFrontFile && !uploadBackFile) {
+          setMessage("Vui lòng chọn ít nhất một ảnh thiết kế."); setLoading(false); return;
+        }
+
+        let frontUrl = "", backUrl = "";
+        if (uploadFrontFile) {
+          const fd = new FormData(); fd.append("file", uploadFrontFile); fd.append("type", "products");
+          const res = await http.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+          frontUrl = res.data?.data?.url || "";
+        }
+        if (uploadBackFile) {
+          const fd = new FormData(); fd.append("file", uploadBackFile); fd.append("type", "products");
+          const res = await http.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+          backUrl = res.data?.data?.url || "";
+        }
+
+        const cpRes = await createCustomProduct({
+          name: postTitle.trim(),
+          description: `Size: ${postSize} | Chất liệu: ${postMaterial} | Ghi chú: ${postNotes || "Không có"}`,
+          designFileUrl: frontUrl || undefined,
+          designFileUrlBack: backUrl || undefined,
+        } as any);
+        cpId = cpRes.data.id;
+        setCustomProductId(cpId);
+
+        const fullDesc = [
+          postDescription,
+          "",
+          `📐 Size: ${postSize} | 🧵 Chất liệu: ${postMaterial}`,
+          postNotes ? `📝 Ghi chú: ${postNotes}` : "",
+          frontUrl ? `🖼️ Mặt trước: đã đính kèm` : "",
+          backUrl ? `🖼️ Mặt sau: đã đính kèm` : "",
+        ].filter(Boolean).join("\n");
+
+        const postPayload: any = {
+          title: postTitle.trim(),
+          description: fullDesc,
+          quantity: postQuantity,
+          customProductId: cpId,
+        };
+        if (postBudgetMin) postPayload.budgetMin = parseFloat(postBudgetMin);
+        if (postBudgetMax) postPayload.budgetMax = parseFloat(postBudgetMax);
+        if (postDeadline) postPayload.deadline = postDeadline;
+        await http.post("/posts", postPayload);
+      }
+
+      localStorage.setItem("customProductDraftId", String(cpId));
+      setMessage("🎉 Đăng bài thành công! Bài đăng đang chờ Admin duyệt. Sau khi duyệt, xưởng sẽ gửi báo giá cho bạn.");
+
+      // Reset form
+      setPostTitle(""); setPostDescription(""); setPostQuantity(50);
+      setPostBudgetMin(""); setPostBudgetMax(""); setPostDeadline("");
+      setPostSize("M"); setPostMaterial("Cotton 100%"); setPostNotes("");
     } catch (error) {
-      setMessage(
-        `Lưu thiết kế thất bại. Vui lòng thử lại. ${(error as Error)?.message || ""}`
-      );
+      setMessage(`Lỗi: ${(error as Error)?.message || "Vui lòng thử lại."}`);
     } finally {
       setLoading(false);
     }
@@ -547,6 +684,22 @@ export default function CustomOrder() {
     setCustomProductId(null);
     setFrontDesign(defaultDesign);
     setBackDesign(defaultDesign);
+    setSelectedItemId(null);
+    setPostTitle("");
+    setPostDescription("");
+    setPostQuantity(50);
+    setPostBudgetMin("");
+    setPostBudgetMax("");
+    setPostDeadline("");
+    setPostSize("M");
+    setPostMaterial("Cotton 100%");
+    setPostNotes("");
+    setUploadFrontFile(null);
+    setUploadBackFile(null);
+    if (uploadFrontPreviewUrl) URL.revokeObjectURL(uploadFrontPreviewUrl);
+    if (uploadBackPreviewUrl) URL.revokeObjectURL(uploadBackPreviewUrl);
+    setUploadFrontPreviewUrl(null);
+    setUploadBackPreviewUrl(null);
     setMessage("Đã xóa thiết kế hiện tại. Hãy tạo thiết kế mới.");
     localStorage.removeItem("customProductDraftId");
   };
@@ -556,15 +709,39 @@ export default function CustomOrder() {
       <Header />
 
       <div className="custom-order-page">
+        {/* ---- TOP BAR ---- */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button onClick={() => navigate("/my-posts")}
+            style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: 14, padding: "10px 20px", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
+            📋 Bài đăng của tôi
+          </button>
+        </div>
+
+        {/* ---- MODE SELECTOR ---- */}
+        <div className="mode-selector">
+          <button
+            className={`mode-btn ${mode === "design" ? "mode-active" : ""}`}
+            onClick={() => { setMode("design"); setMessage("Tự thiết kế áo của bạn, sau đó điền thông tin và đăng bài yêu cầu in."); }}
+          >
+            <span className="mode-icon">🎨</span>
+            <span>Tự thiết kế</span>
+          </button>
+          <button
+            className={`mode-btn ${mode === "upload" ? "mode-active" : ""}`}
+            onClick={() => { setMode("upload"); setMessage("Tải ảnh mặt trước + mặt sau, điền thông tin và đăng bài."); }}
+          >
+            <span className="mode-icon">📤</span>
+            <span>Tải mẫu sẵn</span>
+          </button>
+        </div>
 
         <section className="custom-card shirt-customizer-page">
           <div className="workspace-header">
             <span className="text-label-sm font-label uppercase tracking-widest text-secondary">
-              Mẫu thiết kế
+              {mode === "design" ? "Mẫu thiết kế" : "Xem trước thiết kế"}
             </span>
-
             <h2 className="text-headline-sm font-headline font-bold text-on-surface uppercase">
-              Thiết kế áo của bạn
+              {mode === "design" ? "Thiết kế & Đăng bài" : "Tải mẫu & Đăng bài"}
             </h2>
           </div>
           <div className="design-notice customizer-notice">
@@ -572,99 +749,129 @@ export default function CustomOrder() {
           </div>
 
           <div className="customizer-layout">
+            {/* ===== WORKSPACE ===== */}
             <section className="workspace">
-              <div className="view-toggle">
-                <button
-                  className={side === "front" ? "active" : ""}
-                  onClick={() => setSide("front")}
-                >
-                  Mặt trước
-                </button>
-                <button
-                  className={side === "back" ? "active" : ""}
-                  onClick={() => setSide("back")}
-                >
-                  Mặt sau
-                </button>
-              </div>
-
-              <div className="apply-both-row">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={applyToBoth}
-                    onChange={(e) => setApplyToBoth(e.target.checked)}
-                  />
-                  Áp dụng lên cả hai mặt
-                </label>
-              </div>
+              {mode === "design" ? (
+                <>
+                  <div className="view-toggle">
+                    <button
+                      className={side === "front" ? "active" : ""}
+                      onClick={() => setSide("front")}
+                    >
+                      Mặt trước
+                    </button>
+                    <button
+                      className={side === "back" ? "active" : ""}
+                      onClick={() => setSide("back")}
+                    >
+                      Mặt sau
+                    </button>
+                  </div>
+                  <div className="apply-both-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={applyToBoth}
+                        onChange={(e) => setApplyToBoth(e.target.checked)}
+                      />
+                      Áp dụng lên cả hai mặt
+                    </label>
+                  </div>
+                </>
+              ) : null}
 
               <div className="shirt-preview-grid">
                 {/* MẶT TRƯỚC */}
-                <div className={`shirt-preview ${side === "front" ? "active-preview" : "inactive-preview"}`}>
+                <div className={`shirt-preview ${mode === "design" ? (side === "front" ? "active-preview" : "inactive-preview") : "active-preview"}`}>
                   <div
+                    ref={frontCardRef}
                     className="shirt-card"
-                    onPointerMove={side === "front" ? handlePointerMove : undefined}
-                    onPointerUp={side === "front" ? endDrag : undefined}
-                    onPointerLeave={side === "front" ? endDrag : undefined}
+                    onPointerMove={mode === "design" && side === "front" ? handlePointerMove : undefined}
+                    onPointerUp={mode === "design" && side === "front" ? endDrag : undefined}
+                    onPointerLeave={mode === "design" && side === "front" ? endDrag : undefined}
                   >
                     <div className="shirt-base">
-                      {/* 4. TRUYỀN THÊM THAM SỐ "front" ĐỂ LẤY ĐÚNG ẢNH MẶT TRƯỚC */}
-                      <img
-                        className="shirt-image"
-                        src={getShirtImage(frontDesign.color, "front")}
-                        alt="áo trước"
-                      />
-                      {/* Tự động ẩn overlay màu nếu màu đó đã có file ảnh thật (tránh lỗi đè màu lên áo đen) */}
-                      <div
-                        className="shirt-color-overlay"
-                        style={{ backgroundColor: shirtImages[frontDesign.color] ? "transparent" : frontDesign.color }}
-                      />
+                      {mode === "upload" && uploadFrontPreviewUrl ? (
+                        <img className="shirt-image" src={uploadFrontPreviewUrl} alt="thiết kế mặt trước" style={{ objectFit: "contain" }} />
+                      ) : (
+                        <>
+                          <img
+                            className="shirt-image"
+                            src={getShirtImage(frontDesign.color, "front")}
+                            alt="áo trước"
+                          />
+                          <div
+                            className="shirt-color-overlay"
+                            style={{ backgroundColor: shirtImages[frontDesign.color] ? "transparent" : frontDesign.color }}
+                          />
+                        </>
+                      )}
                     </div>
-                    {renderDesignItems(frontDesign, side === "front")}
+                    {mode === "design" && renderDesignItems(frontDesign, side === "front")}
                   </div>
                   <div className="shirt-footer">
                     <span>Mặt trước</span>
+                    {mode === "upload" && (
+                      <label className="upload-inline-btn">
+                        {uploadFrontFile ? "✓ Đã chọn" : "📷 Tải ảnh"}
+                        <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFrontFileSelect} style={{ display: "none" }} />
+                      </label>
+                    )}
                   </div>
                 </div>
 
                 {/* MẶT SAU */}
-                <div className={`shirt-preview ${side === "back" ? "active-preview" : "inactive-preview"}`}>
+                <div className={`shirt-preview ${mode === "design" ? (side === "back" ? "active-preview" : "inactive-preview") : "active-preview"}`}>
                   <div
+                    ref={backCardRef}
                     className="shirt-card"
-                    onPointerMove={side === "back" ? handlePointerMove : undefined}
-                    onPointerUp={side === "back" ? endDrag : undefined}
-                    onPointerLeave={side === "back" ? endDrag : undefined}
+                    onPointerMove={mode === "design" && side === "back" ? handlePointerMove : undefined}
+                    onPointerUp={mode === "design" && side === "back" ? endDrag : undefined}
+                    onPointerLeave={mode === "design" && side === "back" ? endDrag : undefined}
                   >
                     <div className="shirt-base">
-                      {/* 5. TRUYỀN THÊM THAM SỐ "back" ĐỂ LẤY ĐÚNG ẢNH MẶT SAU */}
-                      <img
-                        className="shirt-image"
-                        src={getShirtImage(backDesign.color, "back")}
-                        alt="áo sau"
-                      />
-                      {/* Tự động ẩn overlay màu nếu màu đó đã có file ảnh thật */}
-                      <div
-                        className="shirt-color-overlay"
-                        style={{ backgroundColor: shirtImages[backDesign.color] ? "transparent" : backDesign.color }}
-                      />
+                      {mode === "upload" && uploadBackPreviewUrl ? (
+                        <img className="shirt-image" src={uploadBackPreviewUrl} alt="thiết kế mặt sau" style={{ objectFit: "contain" }} />
+                      ) : (
+                        <>
+                          <img
+                            className="shirt-image"
+                            src={getShirtImage(backDesign.color, "back")}
+                            alt="áo sau"
+                          />
+                          <div
+                            className="shirt-color-overlay"
+                            style={{ backgroundColor: shirtImages[backDesign.color] ? "transparent" : backDesign.color }}
+                          />
+                        </>
+                      )}
                     </div>
-                    {renderDesignItems(backDesign, side === "back")}
+                    {mode === "design" && renderDesignItems(backDesign, side === "back")}
                   </div>
                   <div className="shirt-footer">
                     <span>Mặt sau</span>
+                    {mode === "upload" && (
+                      <label className="upload-inline-btn">
+                        {uploadBackFile ? "✓ Đã chọn" : "📷 Tải ảnh"}
+                        <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleBackFileSelect} style={{ display: "none" }} />
+                      </label>
+                    )}
                   </div>
                 </div>
               </div>
             </section>
 
+            {/* ===== SIDEBAR ===== */}
             <aside className="design-sidebar">
               <div className="sidebar-header">
-                <h3>Công cụ thiết kế</h3>
-                <p>Tùy chỉnh sản phẩm của bạn</p>
+                <h3>{mode === "design" ? "Công cụ thiết kế" : "Tải mẫu thiết kế"}</h3>
+                <p>{mode === "design" ? "Tùy chỉnh sản phẩm của bạn" : "Chọn ảnh mặt trước & mặt sau"}</p>
               </div>
 
               <div className="sidebar-content">
+                {mode === "design" ? (
+                  <>
+                {/* ---- CHỌN MÀU ÁO ---- */}
                 <div className="sidebar-section">
                   <h4>Chọn màu áo</h4>
                   <div className="color-grid">
@@ -679,6 +886,7 @@ export default function CustomOrder() {
                   </div>
                 </div>
 
+                {/* ---- THƯ VIỆN LOGO ---- */}
                 <div className="sidebar-section">
                   <div className="section-header">
                     <h4>Thư viện Logo</h4>
@@ -748,6 +956,7 @@ export default function CustomOrder() {
                   </div>
                 </div>
 
+                {/* ---- NỘI DUNG TÙY CHỈNH (TEXT) ---- */}
                 <div className="sidebar-section">
                   <div className="section-header">
                     <h4>Nội dung tùy chỉnh</h4>
@@ -759,22 +968,21 @@ export default function CustomOrder() {
                     <div className="item-list">
                       {textItems.map((item, index) => (
                         <div key={item.id} className="item-chip-row">
-                            <button
-                              type="button"
-                              className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
-                              onClick={() => setSelectedItemId(item.id)}
-                            >
-                              Text {index + 1}: {item.content || "Mục văn bản mới"}
-                              <button
-                              type="button"
-                              className="item-remove-btn"
-                              onClick={() => removeDesignItemById(item.id)}
-                              aria-label={`Xóa Text ${index + 1}`}
-                            >
-                              ×
-                            </button>
+                          <button
+                            type="button"
+                            className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
+                            onClick={() => setSelectedItemId(item.id)}
+                          >
+                            Text {index + 1}: {item.content || "Mục văn bản mới"}
                           </button>
-                          
+                          <button
+                            type="button"
+                            className="item-remove-btn"
+                            onClick={() => removeDesignItemById(item.id)}
+                            aria-label={`Xóa Text ${index + 1}`}
+                          >
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -850,14 +1058,49 @@ export default function CustomOrder() {
                     đảm bảo độ bền và sắc nét.
                   </div>
                 </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="sidebar-section">
+                      <h4>File đã chọn</h4>
+                      {(uploadFrontFile || uploadBackFile) ? (
+                        <div className="upload-files-summary">
+                          {uploadFrontFile && <div className="upload-file-row"><img src={uploadFrontPreviewUrl!} alt="front" className="upload-preview-thumb-small" /><div><span className="upload-file-label">Mặt trước:</span><span className="upload-file-name-sm">{uploadFrontFile.name}</span></div></div>}
+                          {uploadBackFile && <div className="upload-file-row"><img src={uploadBackPreviewUrl!} alt="back" className="upload-preview-thumb-small" /><div><span className="upload-file-label">Mặt sau:</span><span className="upload-file-name-sm">{uploadBackFile.name}</span></div></div>}
+                        </div>
+                      ) : <div className="info-box">Chưa chọn file. Nhấn "📷 Tải ảnh" dưới mỗi mặt áo.</div>}
+                    </div>
+                  </>
+                )}
+
+                {/* ===== FORM ĐĂNG BÀI (chung) ===== */}
+                <div className="sidebar-section"><h4>📝 Tiêu đề bài đăng *</h4><input type="text" placeholder="VD: Đặt in áo thun cổ tròn" value={postTitle} onChange={e => setPostTitle(e.target.value)} className="text-input" /></div>
+                <div className="sidebar-section"><h4>📄 Mô tả yêu cầu</h4><textarea placeholder="Mô tả chi tiết yêu cầu in ấn..." value={postDescription} onChange={e => setPostDescription(e.target.value)} className="text-input post-textarea" rows={3} /></div>
+                <div className="sidebar-section"><h4>🔢 Số lượng *</h4><input type="number" min={1} value={postQuantity} onChange={e => setPostQuantity(Number(e.target.value))} className="text-input" /></div>
+
+                {mode === "design" && (
+                <div className="sidebar-row-2">
+                  <div className="sidebar-section"><h4>📐 Size</h4><select value={postSize} onChange={e => setPostSize(e.target.value)} className="text-input">{["XS","S","M","L","XL","XXL","3XL"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+                  <div className="sidebar-section"><h4>🧵 Chất liệu</h4><select value={postMaterial} onChange={e => setPostMaterial(e.target.value)} className="text-input">{["Cotton 100%","Cotton 65/35","Polyester","Vải thun lạnh","Vải cá sấu","Khác"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                </div>
+                )}
+
+                <div className="sidebar-row-2">
+                  <div className="sidebar-section"><h4>💰 NS tối thiểu</h4><input type="number" placeholder="VNĐ" value={postBudgetMin} onChange={e => setPostBudgetMin(e.target.value)} className="text-input" /></div>
+                  <div className="sidebar-section"><h4>💰 NS tối đa</h4><input type="number" placeholder="VNĐ" value={postBudgetMax} onChange={e => setPostBudgetMax(e.target.value)} className="text-input" /></div>
+                </div>
+                <div className="sidebar-section"><h4>📅 Hạn chót</h4><input type="date" value={postDeadline} onChange={e => setPostDeadline(e.target.value)} className="text-input" /></div>
+                <div className="sidebar-section"><h4>📝 Ghi chú</h4><textarea
+                  placeholder={mode === "upload" ? "VD: 20 áo size M, 20 áo size L, 10 áo size XL - Chất liệu: Cotton 100%. Yêu cầu in sắc nét, không phai màu." : "Yêu cầu đặc biệt..."}
+                  value={postNotes} onChange={e => setPostNotes(e.target.value)} className="text-input post-textarea" rows={4} /></div>
               </div>
 
               <div className="sidebar-footer">
-                <button className="save-btn" onClick={handleSaveDesign} disabled={loading}>
-                  {loading ? "Đang lưu..." : "Lưu thiết kế"}
+                <button className="save-btn" onClick={handleSubmitPost} disabled={loading}>
+                  {loading ? "Đang đăng bài..." : "🚀 Đăng bài ngay"}
                 </button>
                 <button className="clear-btn" onClick={handleClearDraft} disabled={loading}>
-                  Xóa thiết kế
+                  Xóa tất cả
                 </button>
                 {customProductId ? (
                   <div className="draft-id">Draft ID: {customProductId}</div>

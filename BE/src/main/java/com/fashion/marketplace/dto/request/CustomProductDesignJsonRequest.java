@@ -15,5 +15,11 @@ public class CustomProductDesignJsonRequest {
 
     // Optional original filename
     private String fileName;
+
+    // Ảnh chụp mặt trước (base64 hoặc URL)
+    private String designFileUrl;
+
+    // Ảnh chụp mặt sau (base64 hoặc URL)
+    private String designFileUrlBack;
 }
 

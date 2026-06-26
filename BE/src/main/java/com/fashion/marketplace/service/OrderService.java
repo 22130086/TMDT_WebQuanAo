@@ -37,25 +37,35 @@ public class OrderService {
     // 🌟 HÀM CHUYỂN ĐỔI CHUNG (MAPPER) TỪ ENTITY SANG DTO AN TOÀN
     private OrderResponse convertToResponse(Order order) {
         List<OrderResponse.OrderItemResponse> itemResponses = order.getItems().stream()
-                .map(item -> OrderResponse.OrderItemResponse.builder()
+                .map(item -> {
+                    String firstImage = null;
+                    if (item.getProduct() != null && item.getProduct().getImages() != null
+                            && !item.getProduct().getImages().isEmpty()) {
+                        firstImage = item.getProduct().getImages().get(0).getImageUrl();
+                    }
+                    return OrderResponse.OrderItemResponse.builder()
                         .id(item.getId())
                         .productId(item.getProduct() != null ? item.getProduct().getId() : null)
                         .productName(item.getProductName())
+                        .productImage(firstImage)
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
-                        .build())
+                        .build();
+                })
                 .collect(Collectors.toList());
 
         return OrderResponse.builder()
                 .id(order.getId())
-                .customerId(order.getCustomer().getId())
-                .customerEmail(order.getCustomer().getEmail()) // Giả định User entity có trường email
-                .customerName(order.getCustomer().getFullName()) // Giả định User entity có trường fullName/name
-                .factoryId(order.getFactory().getId())
-                .orderType(order.getOrderType().name())
+                .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
+                .customerEmail(order.getCustomer() != null ? order.getCustomer().getEmail() : null)
+                .customerName(order.getCustomer() != null ? order.getCustomer().getFullName() : null)
+                .factoryId(order.getFactory() != null ? order.getFactory().getId() : null)
+                .factoryName(order.getFactory() != null ? order.getFactory().getFactoryName() : null)
+                .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
                 .totalAmount(order.getTotalAmount())
                 .discountAmount(order.getDiscountAmount())
                 .finalAmount(order.getFinalAmount())
+                .depositAmount(order.getDepositAmount())
                 .status(order.getStatus().name())
                 .receiverName(order.getReceiverName())
                 .receiverPhone(order.getReceiverPhone())
@@ -65,7 +75,22 @@ public class OrderService {
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .createdAt(order.getCreatedAt())
                 .items(itemResponses)
+                .designFileUrl(getDesignUrl(order, true))
+                .designFileUrlBack(getDesignUrl(order, false))
                 .build();
+    }
+
+    private String getDesignUrl(Order order, boolean isFront) {
+        try {
+            if (order.getQuotation() != null
+                    && order.getQuotation().getPost() != null
+                    && order.getQuotation().getPost().getCustomProduct() != null) {
+                return isFront
+                        ? order.getQuotation().getPost().getCustomProduct().getDesignFileUrl()
+                        : order.getQuotation().getPost().getCustomProduct().getDesignFileUrlBack();
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     @Transactional
@@ -170,16 +195,19 @@ public class OrderService {
     }
 
     // 🌟 Chuyển đổi Page<Order> sang Page<OrderResponse> bằng hàm .map()
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getByCustomer(Long customerId, Pageable pageable) {
         return orderRepository.findByCustomerId(customerId, pageable).map(this::convertToResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getReadyMadeByFactory(Long userId, Pageable pageable) {
         FactoryProfile f = factoryProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
         return orderRepository.findByFactoryIdAndOrderType(f.getId(), Order.OrderType.READY_MADE, pageable).map(this::convertToResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getOutsourcingByFactory(Long userId, Pageable pageable) {
         FactoryProfile f = factoryProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
@@ -256,13 +284,11 @@ public class OrderService {
 
         return convertToResponse(saved);
     }
-    // Thay đổi kiểu trả về từ Order -> OrderResponse và gọi hàm convert
     @Transactional(readOnly = true)
     public OrderResponse getById(Long orderId) {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
-        
-        return convertToResponse(order); // Tái sử dụng hàm map DTO của bạn!
+        return convertToResponse(order);
     }
 
     private BigDecimal applyDiscount(DiscountCode code, BigDecimal total) {

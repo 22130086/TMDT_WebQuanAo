@@ -1,5 +1,6 @@
 package com.fashion.marketplace.service;
 
+import com.fashion.marketplace.dto.request.AcceptQuotationRequest;
 import com.fashion.marketplace.dto.request.QuotationRequest;
 import com.fashion.marketplace.dto.response.QuotationResponse;
 import com.fashion.marketplace.entity.*;
@@ -21,6 +22,8 @@ public class QuotationService {
     private final FactoryProfileRepository factoryProfileRepository;
     private final OutsourcingPostRepository outsourcingPostRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
+    private final VNPayService vnPayService;
     private final NotificationService notificationService;
 
     @Transactional
@@ -94,22 +97,105 @@ public class QuotationService {
     }
 
     @Transactional
-    public QuotationResponse accept(Long customerId, Long quotationId) {
+    public QuotationResponse accept(Long customerId, Long quotationId, AcceptQuotationRequest req) {
         Quotation q = quotationRepository.findById(quotationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Báo giá không tồn tại"));
         if (!q.getCustomer().getId().equals(customerId))
             throw new AccessDeniedException("Không có quyền thao tác");
         if (q.getStatus() != Quotation.QuotationStatus.PENDING)
             throw new IllegalStateException("Báo giá không ở trạng thái chờ");
+        if (q.getPost().getStatus() != OutsourcingPost.PostStatus.OPEN)
+            throw new IllegalStateException("Bài đăng không còn nhận báo giá");
 
-        q.setStatus(Quotation.QuotationStatus.ACCEPTED);
-        Quotation saved = quotationRepository.save(q);
+        BigDecimal deposit = q.getTotalPrice()
+                .multiply(BigDecimal.valueOf(30))
+                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
 
-        notificationService.push(q.getFactory().getUser().getId(),
-                "Báo giá được chấp nhận",
-                "Khách hàng đã chấp nhận báo giá #" + quotationId,
-                "QUOTATION", quotationId);
-        return toResponse(saved);
+        Order order = Order.builder()
+                .customer(q.getCustomer())
+                .factory(q.getFactory())
+                .quotation(q)
+                .orderType(Order.OrderType.OUTSOURCING)
+                .totalAmount(q.getTotalPrice())
+                .discountAmount(BigDecimal.ZERO)
+                .finalAmount(q.getTotalPrice())
+                .depositAmount(deposit)
+                .status(Order.OrderStatus.PENDING)
+                .paymentStatus(Order.PaymentStatus.UNPAID)
+                .receiverName(req != null ? req.getReceiverName() : null)
+                .receiverPhone(req != null ? req.getReceiverPhone() : null)
+                .shippingAddress(req != null ? req.getShippingAddress() : null)
+                .note(req != null ? req.getNote() : null)
+                .build();
+        orderRepository.save(order);
+
+        // Tạo link VNPay
+        String paymentUrl = null;
+        try {
+            paymentUrl = vnPayService.createPaymentUrl(
+                    deposit.longValue(), order.getId().toString());
+        } catch (Exception ignored) {}
+
+        QuotationResponse resp = toResponse(q);
+        resp.setOrderId(order.getId());
+        if (paymentUrl != null) resp.setNote(paymentUrl);
+        return resp;
+    }
+
+    // Gọi từ VNPay callback khi thanh toán thành công
+    @Transactional
+    public void confirmOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+
+        order.setPaymentStatus(Order.PaymentStatus.DEPOSIT_PAID);
+        order.setStatus(Order.OrderStatus.CONFIRMED);
+        order.setDepositPaidAt(java.time.LocalDateTime.now());
+        orderRepository.save(order);
+
+        Quotation q = order.getQuotation();
+        if (q != null) {
+            // Accept quotation này
+            q.setStatus(Quotation.QuotationStatus.ACCEPTED);
+            quotationRepository.save(q);
+
+            // Reject tất cả quotation PENDING khác cùng post
+            quotationRepository.findByPostIdAndStatus(
+                    q.getPost().getId(), Quotation.QuotationStatus.PENDING).forEach(other -> {
+                if (!other.getId().equals(q.getId())) {
+                    other.setStatus(Quotation.QuotationStatus.REJECTED);
+                    quotationRepository.save(other);
+                }
+            });
+
+            // Post → IN_PROGRESS
+            OutsourcingPost post = q.getPost();
+            if (post != null && post.getStatus() == OutsourcingPost.PostStatus.OPEN) {
+                post.setStatus(OutsourcingPost.PostStatus.IN_PROGRESS);
+                outsourcingPostRepository.save(post);
+            }
+
+            // Thông báo
+            notificationService.push(q.getFactory().getUser().getId(),
+                    "Báo giá được chấp nhận",
+                    "Khách hàng đã chấp nhận và thanh toán cọc báo giá #" + q.getId(),
+                    "QUOTATION", q.getId());
+            notificationService.push(q.getCustomer().getId(),
+                    "Thanh toán thành công",
+                    "Bạn đã thanh toán cọc " + String.format("%,.0f", order.getDepositAmount())
+                            + " VNĐ. Đơn hàng #" + orderId + " đã được xác nhận.",
+                    "ORDER", orderId);
+        }
+    }
+
+    // Gọi từ VNPay callback khi thanh toán thất bại
+    @Transactional
+    public void cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+        // Chỉ hủy order, quotation và post giữ nguyên
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        orderRepository.save(order);
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.fashion.marketplace.controller;
 
+import com.fashion.marketplace.dto.request.AcceptQuotationRequest;
 import com.fashion.marketplace.dto.request.QuotationRequest;
 import com.fashion.marketplace.dto.response.QuotationResponse;
 import com.fashion.marketplace.exception.ApiResponse;
@@ -86,9 +87,11 @@ public class QuotationController {
 
     @PatchMapping("/api/quotations/{id}/accept")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<QuotationResponse>> accept(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Đã chấp nhận báo giá",
-                quotationService.accept(authUtil.currentUserId(), id)));
+    public ResponseEntity<ApiResponse<QuotationResponse>> accept(
+            @PathVariable Long id,
+            @RequestBody(required = false) AcceptQuotationRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã tạo đơn hàng",
+                quotationService.accept(authUtil.currentUserId(), id, req)));
     }
 
     @PatchMapping("/api/quotations/{id}/reject")

@@ -26,6 +26,9 @@ public class QuotationResponse {
     private Long customerId;
     private String customerName;
 
+    // Order created after accept
+    private Long orderId;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

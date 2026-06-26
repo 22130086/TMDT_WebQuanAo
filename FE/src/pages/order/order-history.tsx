@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import http from "../../services/http"; // Thay thế bằng đường dẫn tới axios/http instance của bạn
+import http from "../../services/http";
+import { getImageUrl } from "../../services/http";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import "../../styles/order-history.css"; // Đường dẫn tới file CSS bạn gửi
+import "../../styles/order-history.css";
 
 // Khai báo Interface dữ liệu theo cấu trúc thực tế từ Backend
 interface OrderItem {
   id: number;
+  productId?: number;
   quantity: number;
   unitPrice: number;
   productName?: string;
@@ -20,16 +22,18 @@ interface Order {
   totalAmount: number;
   discountAmount: number;
   finalAmount: number;
+  depositAmount: number;
   paymentMethod: "VNPAY" | "MOMO" | "BANK_TRANSFER" | "COD";
-  paymentStatus: "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID"; // 🌟 Bổ sung PaymentStatus từ Backend
+  paymentStatus: "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID";
   receiverName: string;
   receiverPhone: string;
   shippingAddress: string;
   note: string;
-  // 🌟 Đầy đủ 9 trạng thái chuẩn từ Backend
   status: "PENDING" | "CONFIRMED" | "IN_PRODUCTION" | "READY_TO_SHIP" | "SHIPPING" | "DELIVERED" | "COMPLETED" | "CANCELLED" | "DISPUTED";
   createdAt?: string;
   items: OrderItem[];
+  designFileUrl?: string;
+  factoryName?: string;
 }
 
 export default function OrderHistory() {
@@ -209,8 +213,30 @@ export default function OrderHistory() {
                 </p>
               </div>
 
-              {/* KHỐI GIỮA: DANH SÁCH CHI TIẾT SẢN PHẨM */}
+              {/* KHỐI GIỮA: DANH SÁCH SẢN PHẨM / ẢNH THIẾT KẾ */}
               <div className="order-middle" style={{ flex: 1.3, display: "flex", flexDirection: "column", gap: "10px" }}>
+                {order.orderType === "OUTSOURCING" ? (
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    {order.designFileUrl ? (
+                      <img src={getImageUrl(order.designFileUrl)} alt="Thiết kế"
+                        style={{ width: 80, height: 90, objectFit: "contain", borderRadius: 10, border: "1px solid #e5e7eb", background: "#f9fafb" }} />
+                    ) : (
+                      <div style={{ width: 80, height: 90, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>👕</div>
+                    )}
+                    <div>
+                      <strong style={{ fontSize: 14 }}>{order.factoryName || "Đơn gia công"}</strong>
+                      <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+                        {formatVND(order.totalAmount)} / đơn
+                      </p>
+                      {order.depositAmount > 0 && (
+                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#f59e0b" }}>
+                          Đã cọc: {formatVND(order.depositAmount)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                <>
                 <h4 style={{ margin: "0 0 8px 0", color: "#4b5563", borderBottom: "1px solid #f3f4f6", paddingBottom: "4px" }}>
                   Sản phẩm ({order.items?.length || 0})
                 </h4>
@@ -224,7 +250,7 @@ export default function OrderHistory() {
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <img 
-                          src={item.productImage || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=150"} 
+                          src={getImageUrl(item.productImage) || "https://placehold.co/45x45?text=No+Img"} 
                           alt={item.productName || "Product"} 
                           style={{ width: "45px", height: "45px", borderRadius: "6px", objectFit: "cover", border: "1px solid #e5e7eb" }}
                         />
@@ -249,9 +275,11 @@ export default function OrderHistory() {
                     </div>
                   ))}
                 </div>
+                </>
+              )}
               </div>
 
-              {/* KHỐI PHẢI: GIÁ TIỀN, TRẠNG THÁI VÀ THANH TOÁN */}
+              {/* KHỐI PHẢI */}
               <div className="order-right" style={{ flex: 0.5, minWidth: "200px", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px" }}>
                 <div style={{ textAlign: "right" }}>
                   <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>Tổng tiền thanh toán</p>

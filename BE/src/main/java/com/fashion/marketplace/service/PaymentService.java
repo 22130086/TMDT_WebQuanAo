@@ -4,6 +4,7 @@ import com.fashion.marketplace.dto.request.PaymentRequest;
 import com.fashion.marketplace.entity.Order;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.OrderRepository;
+import com.fashion.marketplace.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class PaymentService {
     private final VNPayService vnPayService;
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
+    private final QuotationService quotationService;
 
     public String createPaymentUrl(HttpServletRequest request, PaymentRequest paymentRequest) throws Exception {
         String ipAddr = request.getRemoteAddr();
@@ -40,33 +42,43 @@ public class PaymentService {
         return (String) response.get("vnpay_url");
     }
 
+    public Map<String, Object> createPaymentUrlInternal(Long amount, String ipAddr, String orderCode) throws Exception {
+        return vnPayService.createPaymentRequest((double) amount, ipAddr, orderCode);
+    }
+
+    @Transactional
     public String processVNPayCallback(Map<String, String> allRequestParams) {
-        // Kiểm tra chữ ký bảo mật hợp lệ chống gian lận tiền bạc
         if (!vnPayService.verifyCallback(allRequestParams)) {
             return "INVALID_SIGNATURE";
         }
 
         String responseCode = allRequestParams.get("vnp_ResponseCode");
         String orderCode = allRequestParams.get("vnp_TxnRef");
-        String amount = allRequestParams.get("vnp_Amount");
 
-        if ("00".equals(responseCode)) {
-            System.out.println("--- GIAO DỊCH THÀNH CÔNG ---");
-            System.out.println("Đơn hàng mã: " + orderCode);
-            System.out.println("Số tiền: " + (Double.parseDouble(amount) / 100) + " VND");
-
-            // Cập nhật payment_status của order thành FULLY_PAID
-            try {
+        try {
+            if (orderCode.startsWith("REM_")) {
+                Long orderId = Long.parseLong(orderCode.substring(4));
+                if ("00".equals(responseCode)) {
+                    updateOrderPaymentStatus(orderId);
+                    return "SUCCESS";
+                } else {
+                    return "ROLLBACK";
+                }
+            } else {
                 Long orderId = Long.parseLong(orderCode);
-                updateOrderPaymentStatus(orderId);
-            } catch (NumberFormatException e) {
-                System.err.println("Lỗi parse Order ID từ VNPAY callback: " + e.getMessage());
-            }
 
-            return "SUCCESS";
-        } else {
-            System.out.println("Giao dịch thất bại/Hủy. Mã phản hồi lỗi: " + responseCode);
-            return "FAILED_OR_CANCELED";
+                if ("00".equals(responseCode)) {
+                    // Thanh toán thành công → accept quotation, reject others, post IN_PROGRESS
+                    quotationService.confirmOrder(orderId);
+                    return "SUCCESS";
+                } else {
+                    // Thất bại → chỉ hủy order, quotation & post giữ nguyên
+                    quotationService.cancelOrder(orderId);
+                    return "ROLLBACK";
+                }
+            }
+        } catch (Exception e) {
+            return "ERROR: " + e.getMessage();
         }
     }
 

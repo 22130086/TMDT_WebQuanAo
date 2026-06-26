@@ -4,7 +4,6 @@ import type { Complaint, ComplaintStats } from '../../services/complaintService'
 import '../../styles/admin-table.css';
 
 const statusLabels: Record<string, string> = { OPEN: 'Chờ xử lý', PROCESSING: 'Đang xử lý', RESOLVED: 'Đã giải quyết', CLOSED: 'Đã đóng' };
-const statusBadge: Record<string, string> = { OPEN: 'warning', PROCESSING: 'info', RESOLVED: 'success', CLOSED: 'neutral' };
 
 const ComplaintsManagement: React.FC = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -13,21 +12,23 @@ const ComplaintsManagement: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Complaint | null>(null);
   const [showDetail, setShowDetail] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showResolve, setShowResolve] = useState(false);
+  const [resolution, setResolution] = useState('');
+  const [resolveStatus, setResolveStatus] = useState('RESOLVED');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showMsg = (type: 'success' | 'error', text: string) => { setMessage({ type, text }); setTimeout(() => setMessage(null), 4000); };
 
   const fetchComplaints = useCallback(async (p: number) => {
     setLoading(true);
     try {
-      const d = search
-        ? await ComplaintService.searchComplaints(search, p, 10)
-        : await ComplaintService.getAllComplaints(p, 10);
+      const d = search ? await ComplaintService.searchComplaints(search, p, 10) : await ComplaintService.getAllComplaints(p, 10);
       if (d?.content) { setComplaints(d.content); setTotalPages(d.totalPages || 1); }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   }, [search]);
 
   const fetchStats = useCallback(async () => {
@@ -37,112 +38,125 @@ const ComplaintsManagement: React.FC = () => {
   useEffect(() => { fetchComplaints(page); }, [page, fetchComplaints]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  const handleSearch = () => { setPage(0); fetchComplaints(0); };
-  const clearDate = () => { setFromDate(''); setToDate(''); };
+  const openResolve = (c: Complaint) => { setSelected(c); setResolution(''); setResolveStatus('RESOLVED'); setShowResolve(true); };
+  const openDetail = (c: Complaint) => { setSelected(c); setShowDetail(true); };
 
-  const filtered = complaints.filter(c => {
-    const matchStatus = !statusFilter || c.status === statusFilter;
-    const matchDate = (!fromDate || (c.createdAt && c.createdAt >= fromDate)) && (!toDate || (c.createdAt && c.createdAt <= toDate + 'T23:59:59'));
-    return matchStatus && matchDate;
-  });
+  const handleResolve = async () => {
+    if (!selected || !resolution.trim()) return; setSaving(true);
+    try {
+      await ComplaintService.resolveComplaint(selected.id, { resolution: resolution.trim(), status: resolveStatus });
+      showMsg('success', 'Đã giải quyết khiếu nại'); setShowResolve(false); fetchComplaints(page); fetchStats();
+    } catch (e: any) { showMsg('error', e?.response?.data?.message || 'Thất bại'); } finally { setSaving(false); }
+  };
+
+  const handleUpdateStatus = async (id: number, status: string) => {
+    try { await ComplaintService.updateStatus(id, status); showMsg('success', 'Cập nhật trạng thái'); fetchComplaints(page); fetchStats(); }
+    catch (e: any) { showMsg('error', e?.response?.data?.message || 'Thất bại'); }
+  };
+
+  const filtered = complaints.filter(c => !statusFilter || c.status === statusFilter);
 
   return (
     <div className="at-container">
+      {message && <div className={`wallet-toast ${message.type}`}>{message.text}</div>}
       {loading && <div className="at-loading">Đang tải...</div>}
 
       <div className="at-stats">
-        <div className="at-stat primary"><p className="label">Tổng khiếu nại</p><h3 className="number">{stats.totalComplaints}</h3></div>
-        <div className="at-stat warning"><p className="label">Đang chờ</p><h3 className="number">{stats.openComplaints}</h3></div>
+        <div className="at-stat primary"><p className="label">Tổng</p><h3 className="number">{stats.totalComplaints}</h3></div>
+        <div className="at-stat warning"><p className="label">Chờ</p><h3 className="number">{stats.openComplaints}</h3></div>
         <div className="at-stat info"><p className="label">Đang xử lý</p><h3 className="number">{stats.processingComplaints}</h3></div>
-        <div className="at-stat success"><p className="label">Đã giải quyết</p><h3 className="number">{stats.resolvedComplaints}</h3></div>
+        <div className="at-stat success"><p className="label">Đã giải quyết</p><h3 className="number">{stats.resolvedComplaints + stats.closedComplaints}</h3></div>
       </div>
 
-      <div className="at-section">
-        <div className="at-header">
-          <h3>Danh sách khiếu nại</h3>
-          <div className="at-toolbar">
-            <div className="at-search">
-              <span className="material-symbols-outlined">search</span>
-              <input placeholder="Tìm kiếm..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-            </div>
-            <select className="at-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">Tất cả trạng thái</option>
-              <option value="OPEN">Chờ xử lý</option>
-              <option value="PROCESSING">Đang xử lý</option>
-              <option value="RESOLVED">Đã giải quyết</option>
-              <option value="CLOSED">Đã đóng</option>
-            </select>
-            <div className="at-date-filter">
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} title="Từ ngày" />
-              <span className="sep">→</span>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} title="Đến ngày" />
-              {(fromDate || toDate) && <button className="at-date-clear" onClick={clearDate}><span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>close</span></button>}
+      <div className={`at-main ${showDetail && selected ? 'has-detail' : ''}`}>
+        <section className="at-section">
+          <div className="at-header">
+            <h3>Danh sách khiếu nại</h3>
+            <div className="at-toolbar">
+              <div className="at-search"><span className="material-symbols-outlined">search</span>
+                <input placeholder="Tìm kiếm..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && (setPage(0), fetchComplaints(0))} />
+              </div>
+              <select className="at-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                <option value="">Tất cả</option><option value="OPEN">Chờ</option><option value="PROCESSING">Đang xử lý</option><option value="RESOLVED">Đã giải quyết</option><option value="CLOSED">Đã đóng</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        <div className="at-table-wrap">
-          <table className="at-table">
-            <thead><tr>
-              <th>Mã ĐH / Khách</th><th>Lý do</th><th>Ngày gửi</th><th>Trạng thái</th><th className="center">Xem</th>
-            </tr></thead>
-            <tbody>
-              {filtered.length === 0 && !loading && <tr><td colSpan={5} className="at-empty">Không có khiếu nại nào</td></tr>}
-              {filtered.map(c => (
-                <tr key={c.id}>
-                  <td>
-                    <span className="at-id">#ORD-{c.orderId}</span>
-                    <span className="at-sub" style={{ marginLeft: '0.5rem' }}>bởi User #{c.raisedById}</span>
-                  </td>
-                  <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.reason}</td>
-                  <td className="at-date">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
-                  <td><span className={`at-badge ${statusBadge[c.status] || 'neutral'}`}>{statusLabels[c.status] || c.status}</span></td>
-                  <td className="center">
-                    <button className="at-btn outline icon-only" onClick={() => { setSelected(c); setShowDetail(true); }} title="Xem chi tiết">
-                      <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>visibility</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="at-pagination">
-          <span className="info">Hiển thị {filtered.length} / {stats.totalComplaints} khiếu nại</span>
-          <div className="ctrls">
-            <button className="at-page-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}><span className="material-symbols-outlined">chevron_left</span></button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
-              <button key={i} className={`at-page-num ${i === page ? 'active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>
-            ))}
-            <button className="at-page-btn" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><span className="material-symbols-outlined">chevron_right</span></button>
+          <div className="wallet-table-wrap">
+            <table className="wallet-table">
+              <thead><tr><th>#</th><th>ĐH</th><th>Lý do</th><th>Trạng thái</th><th>Kết quả</th><th>Ngày</th><th>Thao tác</th></tr></thead>
+              <tbody>
+                {filtered.length === 0 && !loading && <tr><td colSpan={7} className="wallet-empty">Không có khiếu nại</td></tr>}
+                {filtered.map((c, idx) => (
+                  <tr key={c.id}>
+                    <td>{page * 10 + idx + 1}</td>
+                    <td>#{c.orderId}</td>
+                    <td className="tx-note">{c.reason?.slice(0, 60)}{(c.reason?.length ?? 0) > 60 ? '...' : ''}</td>
+                    <td>
+                      <select className="at-select" value={c.status} onChange={e => handleUpdateStatus(c.id, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px' }}>
+                        <option value="OPEN">Chờ</option><option value="PROCESSING">Đang XL</option><option value="RESOLVED">Đã GQ</option><option value="CLOSED">Đóng</option>
+                      </select>
+                    </td>
+                    <td className="tx-note">{c.resolution || '-'}</td>
+                    <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                    <td>
+                      <div className="wallet-action-btns">
+                        <button className="wallet-btn-sm primary" onClick={() => openDetail(c)}><span className="material-symbols-outlined">visibility</span></button>
+                        {(c.status === 'OPEN' || c.status === 'PROCESSING') && (
+                          <button className="wallet-btn-sm" onClick={() => openResolve(c)} style={{ background: '#ecfdf5', color: '#065f46' }}><span className="material-symbols-outlined">check_circle</span></button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+          {totalPages > 1 && (
+            <div className="wallet-pagination">
+              <button disabled={page === 0} onClick={() => setPage(page - 1)}><span className="material-symbols-outlined">chevron_left</span></button>
+              <span>Trang {page + 1} / {totalPages}</span>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}><span className="material-symbols-outlined">chevron_right</span></button>
+            </div>
+          )}
+        </section>
+
+        {showDetail && selected && (
+          <aside className="wallet-detail-panel">
+            <div className="wallet-detail-header"><h4>Khiếu nại #{selected.id}</h4>
+              <button className="wallet-close-btn" onClick={() => { setShowDetail(false); setSelected(null); }}><span className="material-symbols-outlined">close</span></button>
+            </div>
+            <div className="wallet-detail-info">
+              <div className="wallet-detail-row"><span>Đơn hàng:</span> #{selected.orderId}</div>
+              <div className="wallet-detail-row"><span>Trạng thái:</span> {statusLabels[selected.status]}</div>
+              <div className="wallet-detail-row"><span>Lý do:</span> {selected.reason}</div>
+              {selected.resolution && <div className="wallet-detail-row"><span>Kết quả:</span> {selected.resolution}</div>}
+              <div className="wallet-detail-row"><span>Ngày tạo:</span> {selected.createdAt ? new Date(selected.createdAt).toLocaleString('vi-VN') : '-'}</div>
+            </div>
+            {(selected.status === 'OPEN' || selected.status === 'PROCESSING') && (
+              <button className="wallet-btn-submit" onClick={() => { setShowDetail(false); openResolve(selected); }} style={{ width: '100%', marginTop: 12 }}><span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span> Giải quyết</button>
+            )}
+          </aside>
+        )}
       </div>
 
-      {/* Detail Modal */}
-      {showDetail && selected && (
-        <div className="at-modal-overlay" onClick={() => setShowDetail(false)}>
-          <div className="at-modal" onClick={e => e.stopPropagation()}>
-            <div className="at-modal-header">
-              <h3>Chi tiết khiếu nại #ORD-{selected.orderId}</h3>
-              <button className="at-modal-close" onClick={() => setShowDetail(false)}><span className="material-symbols-outlined">close</span></button>
+      {showResolve && selected && (
+        <div className="wallet-modal-overlay" onClick={() => setShowResolve(false)}>
+          <div className="wallet-modal" onClick={e => e.stopPropagation()}>
+            <h3>Giải quyết khiếu nại #{selected.id}</h3>
+            <p className="wallet-modal-sub">Lý do: {selected.reason}</p>
+            <div className="wallet-form-group"><label>Phương án giải quyết</label>
+              <textarea rows={4} value={resolution} onChange={e => setResolution(e.target.value)} placeholder="Nhập phương án..."
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', resize: 'vertical' }} />
             </div>
-            <div className="at-modal-body">
-              <div className="at-summary">
-                <div className="at-summary-row"><span>Trạng thái</span><span className={`at-badge ${statusBadge[selected.status] || 'neutral'}`}>{statusLabels[selected.status]}</span></div>
-                <div className="at-summary-row"><span>Người gửi</span><strong>User #{selected.raisedById}</strong></div>
-                <div className="at-summary-row"><span>Ngày gửi</span><strong>{selected.createdAt ? new Date(selected.createdAt).toLocaleString('vi-VN') : '-'}</strong></div>
-                {selected.resolution && <div className="at-summary-row"><span>Kết quả</span><strong>{selected.resolution}</strong></div>}
-              </div>
-              <div className="at-form-group">
-                <label>Lý do khiếu nại</label>
-                <textarea rows={3} value={selected.reason} readOnly disabled style={{ background: '#f8fafc' }} />
-              </div>
-              {selected.evidenceUrl && <p style={{ fontSize: '0.8125rem', color: '#3b82f6' }}>📎 <a href={selected.evidenceUrl} target="_blank" rel="noreferrer">Xem bằng chứng</a></p>}
+            <div className="wallet-form-group"><label>Trạng thái</label>
+              <select className="at-select" value={resolveStatus} onChange={e => setResolveStatus(e.target.value)} style={{ width: '100%', padding: '10px' }}>
+                <option value="RESOLVED">Đã giải quyết</option><option value="CLOSED">Đã đóng</option><option value="PROCESSING">Đang xử lý</option>
+              </select>
             </div>
-            <div className="at-modal-footer">
-              <button className="at-btn outline" onClick={() => setShowDetail(false)}>Đóng</button>
+            <div className="wallet-modal-actions">
+              <button className="wallet-btn-cancel" onClick={() => setShowResolve(false)}>Hủy</button>
+              <button className="wallet-btn-submit" onClick={handleResolve} disabled={saving}>{saving ? 'Đang xử lý...' : 'Xác nhận'}</button>
             </div>
           </div>
         </div>

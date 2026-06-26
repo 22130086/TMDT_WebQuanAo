@@ -1,9 +1,11 @@
 import http from './http';
+import { getImageUrl } from './http';
 
 export interface OrderItem {
   id: number;
   productId: number;
   productName: string;
+  productImage?: string;
   quantity: number;
   unitPrice: number;
 }
@@ -14,6 +16,7 @@ export interface AdminOrder {
   customerEmail?: string;
   customerName?: string;
   factoryId?: number;
+  factoryName?: string;
   orderType?: string;
   totalAmount: number;
   discountAmount?: number;

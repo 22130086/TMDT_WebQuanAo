@@ -10,7 +10,7 @@ interface Post {
     budgetMax: number;
     createdAt: string;
     deadline: string;
-    status: "OPEN" | "IN_PROGRESS" | "CLOSED" | "CANCELLED";
+    status: "PENDING" | "OPEN" | "IN_PROGRESS" | "CLOSED" | "CANCELLED";
     imageUrl?: string;
 }
 

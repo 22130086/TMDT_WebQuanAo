@@ -1,6 +1,7 @@
 package com.fashion.marketplace.controller;
 
 import com.fashion.marketplace.dto.response.OrderResponse;
+import com.fashion.marketplace.dto.response.OutsourcingPostResponse;
 import com.fashion.marketplace.dto.response.QuotationResponse;
 import com.fashion.marketplace.dto.response.WithdrawalResponse;
 import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
@@ -8,12 +9,14 @@ import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ApiResponse;
 import com.fashion.marketplace.service.AdminService;
 import com.fashion.marketplace.service.AdminService.*;
+import com.fashion.marketplace.service.WalletService;
 import com.fashion.marketplace.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -39,6 +42,13 @@ import java.util.Map;
  *   PATCH /api/admin/withdrawals/{id}/reject    → Từ chối yêu cầu
  *   PATCH /api/admin/withdrawals/{id}/transferred → Đánh dấu đã chuyển tiền
  *
+ * ── QUẢN LÝ VÍ TIỀN (ADMIN) ────────────────────────────────
+ *   GET   /api/admin/wallets                    → Danh sách tất cả ví
+ *   GET   /api/admin/wallets/{userId}           → Chi tiết ví của user
+ *   GET   /api/admin/wallets/{userId}/transactions → Giao dịch của ví
+ *   POST  /api/admin/wallets/{userId}/adjust    → Điều chỉnh số dư
+ *   GET   /api/admin/transactions               → Tất cả giao dịch ví
+ *
  * ── QUẢN LÝ MÃ GIẢM GIÁ ────────────────────────────────────
  *   GET    /api/admin/discount-codes            → Danh sách mã giảm giá
  *   POST   /api/admin/discount-codes            → Thêm mã giảm giá
@@ -61,6 +71,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final WalletService walletService;
     private final AuthUtil authUtil;
 
     // ==================== USERS ====================
@@ -136,6 +147,55 @@ public class AdminController {
             @RequestBody(required = false) TransferRequest transferReq) {
         return ResponseEntity.ok(ApiResponse.ok("Đã chuyển tiền thành công",
                 adminService.markTransferred(authUtil.currentUserId(), id, transferReq)));
+    }
+
+    // ==================== WALLETS (ADMIN) ====================
+
+    @GetMapping("/api/admin/wallets")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Page<Wallet>>> allWallets(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(ApiResponse.ok(walletService.getAllWallets(search, pageable)));
+    }
+
+    @GetMapping("/api/admin/wallets/{userId}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Wallet>> walletDetail(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(walletService.getWalletByUserId(userId)));
+    }
+
+    @GetMapping("/api/admin/wallets/{userId}/transactions")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Page<WalletTransaction>>> walletTransactions(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(walletService.getTransactions(userId, pageable)));
+    }
+
+    @PostMapping("/api/admin/wallets/{userId}/adjust")
+    @Transactional
+    public ResponseEntity<ApiResponse<Wallet>> adjustBalance(
+            @PathVariable Long userId,
+            @RequestBody WalletService.AdjustBalanceDTO req) {
+        if (req.getAmount() == null || req.getAmount().compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Số tiền điều chỉnh không hợp lệ"));
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Điều chỉnh số dư thành công",
+                walletService.adjustBalance(authUtil.currentUserId(), userId, req.getAmount(), req.getNote())));
+    }
+
+    @GetMapping("/api/admin/transactions")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Page<WalletTransaction>>> allTransactions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(walletService.getAllTransactions(pageable)));
     }
 
     // ==================== DISCOUNT CODES ====================
@@ -251,7 +311,7 @@ public class AdminController {
     // ==================== OUTSOURCING POSTS ====================
 
     @GetMapping("/api/admin/outsourcing-posts")
-    public ResponseEntity<ApiResponse<Page<OutsourcingPost>>> allOutsourcingPosts(
+    public ResponseEntity<ApiResponse<Page<OutsourcingPostResponse>>> allOutsourcingPosts(
             @RequestParam(required = false) OutsourcingPost.PostStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -260,8 +320,14 @@ public class AdminController {
     }
 
     @GetMapping("/api/admin/outsourcing-posts/{id}")
-    public ResponseEntity<ApiResponse<OutsourcingPost>> outsourcingPostDetail(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<OutsourcingPostResponse>> outsourcingPostDetail(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getOutsourcingPostDetail(id)));
+    }
+
+    @PatchMapping("/api/admin/outsourcing-posts/{id}/approve")
+    public ResponseEntity<ApiResponse<OutsourcingPostResponse>> approveOutsourcingPost(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã duyệt bài đăng",
+                adminService.approveOutsourcingPost(id)));
     }
 
     @PatchMapping("/api/admin/outsourcing-posts/{id}/close")

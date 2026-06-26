@@ -14,4 +14,6 @@ public class OutsourcingPostRequest {
     private BigDecimal budgetMax;
     private LocalDate deadline;
     private Long categoryId;
+    // ID của CustomProduct (thiết kế áo) đính kèm
+    private Long customProductId;
 }

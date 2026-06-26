@@ -104,6 +104,13 @@ public class ProductController {
                 productService.hide(authUtil.currentUserId(), id)));
     }
 
+    @PatchMapping("/api/factory/products/{id}/unhide")
+    @PreAuthorize("hasRole('FACTORY')")
+    public ResponseEntity<ApiResponse<ProductResponse>> unhide(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã hiện sản phẩm",
+                productService.unhide(authUtil.currentUserId(), id)));
+    }
+
     // ==================== ADMIN ====================
 
     @GetMapping("/api/admin/products/pending")

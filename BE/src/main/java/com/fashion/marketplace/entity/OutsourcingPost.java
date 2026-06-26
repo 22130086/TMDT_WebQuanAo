@@ -38,8 +38,13 @@ public class OutsourcingPost {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "custom_product_id")
+    private CustomProduct customProduct;
+
     @Enumerated(EnumType.STRING)
-    private PostStatus status = PostStatus.OPEN;
+    @Column(columnDefinition = "VARCHAR(50)")
+    private PostStatus status = PostStatus.PENDING;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -47,5 +52,5 @@ public class OutsourcingPost {
     @PrePersist public void onCreate() { createdAt = updatedAt = LocalDateTime.now(); }
     @PreUpdate  public void onUpdate() { updatedAt = LocalDateTime.now(); }
 
-    public enum PostStatus { OPEN, IN_PROGRESS, CLOSED, CANCELLED }
+    public enum PostStatus { PENDING, OPEN, IN_PROGRESS, CLOSED, CANCELLED }
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fashion.marketplace.dto.response.OrderResponse;
+import com.fashion.marketplace.dto.response.OutsourcingPostResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -245,6 +246,7 @@ public class AdminService {
 
     // ---- 6. Quản lý đơn hàng (Admin) ----
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable).map(this::toOrderResponse);
     }
@@ -331,6 +333,7 @@ public class AdminService {
                 .customerEmail(order.getCustomer() != null ? order.getCustomer().getEmail() : null)
                 .customerName(order.getCustomer() != null ? order.getCustomer().getFullName() : null)
                 .factoryId(order.getFactory() != null ? order.getFactory().getId() : null)
+                .factoryName(order.getFactory() != null ? order.getFactory().getFactoryName() : null)
                 .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
                 .totalAmount(order.getTotalAmount())
                 .discountAmount(order.getDiscountAmount())
@@ -343,12 +346,17 @@ public class AdminService {
                 .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .createdAt(order.getCreatedAt())
-                .items(order.getItems() != null ? order.getItems().stream().map(i ->
-                        OrderResponse.OrderItemResponse.builder()
+                .items(order.getItems() != null ? order.getItems().stream().map(i -> {
+                        String img = null;
+                        if (i.getProduct() != null && i.getProduct().getImages() != null
+                                && !i.getProduct().getImages().isEmpty()) {
+                            img = i.getProduct().getImages().get(0).getImageUrl();
+                        }
+                        return OrderResponse.OrderItemResponse.builder()
                                 .id(i.getId()).productId(i.getProduct() != null ? i.getProduct().getId() : null)
-                                .productName(i.getProductName()).quantity(i.getQuantity())
-                                .unitPrice(i.getUnitPrice()).build()
-                ).collect(Collectors.toList()) : null)
+                                .productName(i.getProductName()).productImage(img)
+                                .quantity(i.getQuantity()).unitPrice(i.getUnitPrice()).build();
+                }).collect(Collectors.toList()) : null)
                 .build();
     }
 
@@ -491,16 +499,39 @@ public class AdminService {
 
     // ---- 10. Quản lý Bài đăng tìm xưởng (Admin) ----
 
-    public Page<OutsourcingPost> getAllOutsourcingPosts(OutsourcingPost.PostStatus status, Pageable pageable) {
+    public Page<OutsourcingPostResponse> getAllOutsourcingPosts(OutsourcingPost.PostStatus status, Pageable pageable) {
+        Page<OutsourcingPost> page;
         if (status != null) {
-            return outsourcingPostRepository.findByStatus(status, pageable);
+            page = outsourcingPostRepository.findByStatus(status, pageable);
+        } else {
+            page = outsourcingPostRepository.findAll(pageable);
         }
-        return outsourcingPostRepository.findAll(pageable);
+        return page.map(this::toPostResponse);
     }
 
-    public OutsourcingPost getOutsourcingPostDetail(Long id) {
-        return outsourcingPostRepository.findById(id)
+    public OutsourcingPostResponse getOutsourcingPostDetail(Long id) {
+        OutsourcingPost post = outsourcingPostRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+        return toPostResponse(post);
+    }
+
+    @Transactional
+    public OutsourcingPostResponse approveOutsourcingPost(Long postId) {
+        OutsourcingPost post = outsourcingPostRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+        if (post.getStatus() != OutsourcingPost.PostStatus.PENDING) {
+            throw new IllegalStateException("Chỉ có thể duyệt bài đăng đang chờ duyệt");
+        }
+        post.setStatus(OutsourcingPost.PostStatus.OPEN);
+
+        // Thông báo cho khách hàng
+        if (post.getCustomer() != null) {
+            notificationService.push(post.getCustomer().getId(),
+                    "Bài đăng đã được duyệt",
+                    "Bài đăng \"" + post.getTitle() + "\" đã được Admin duyệt. Xưởng sẽ sớm gửi báo giá cho bạn.",
+                    "POST", postId);
+        }
+        return toPostResponse(outsourcingPostRepository.save(post));
     }
 
     @Transactional
@@ -536,6 +567,29 @@ public class AdminService {
                     "POST", postId);
         }
         outsourcingPostRepository.delete(post);
+    }
+
+    private OutsourcingPostResponse toPostResponse(OutsourcingPost p) {
+        CustomProduct cp = p.getCustomProduct();
+        return OutsourcingPostResponse.builder()
+                .id(p.getId())
+                .title(p.getTitle())
+                .description(p.getDescription())
+                .quantity(p.getQuantity())
+                .budgetMin(p.getBudgetMin())
+                .budgetMax(p.getBudgetMax())
+                .deadline(p.getDeadline())
+                .status(p.getStatus() != null ? p.getStatus().name() : null)
+                .categoryId(p.getCategory() != null ? p.getCategory().getId() : null)
+                .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
+                .customerId(p.getCustomer().getId())
+                .customerName(p.getCustomer().getFullName())
+                .customProductId(cp != null ? cp.getId() : null)
+                .designFileUrl(cp != null ? cp.getDesignFileUrl() : null)
+                .designFileUrlBack(cp != null ? cp.getDesignFileUrlBack() : null)
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getUpdatedAt())
+                .build();
     }
 
     // ---- Inner DTOs ----

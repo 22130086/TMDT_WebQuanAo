@@ -77,7 +77,7 @@ class ComplaintService {
   }
 
   static async updateStatus(complaintId: number, status: string) {
-    const res = await http.patch<ApiResponse<Complaint>>(`/complaints/${complaintId}/status`, { params: { status } });
+    const res = await http.patch<ApiResponse<Complaint>>(`/complaints/${complaintId}/status`, { status });
     return res.data.data;
   }
 

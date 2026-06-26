@@ -2,12 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AdminPostService, { type OutsourcingPostData } from '../../services/adminPostService';
 import '../../styles/admin-table.css';
 
+const BACKEND_HOST = import.meta.env.VITE_API_BASE_URL
+  ? new URL(import.meta.env.VITE_API_BASE_URL).origin
+  : 'http://localhost:8080';
+
+const imgUrl = (path: string | undefined) => path ? `${BACKEND_HOST}${path}` : '';
+
 const statusLabels: Record<string, string> = {
-  OPEN: 'Đang mở', IN_PROGRESS: 'Đang thực hiện', CLOSED: 'Đã đóng', CANCELLED: 'Đã hủy'
+  PENDING: 'Chờ duyệt', OPEN: 'Đang mở', IN_PROGRESS: 'Đang thực hiện', CLOSED: 'Đã đóng', CANCELLED: 'Đã hủy'
 };
 
 const statusColors: Record<string, string> = {
-  OPEN: 'success', IN_PROGRESS: 'info', CLOSED: 'secondary', CANCELLED: 'danger'
+  PENDING: 'warning', OPEN: 'success', IN_PROGRESS: 'info', CLOSED: 'secondary', CANCELLED: 'danger'
 };
 
 const PostManagement: React.FC = () => {
@@ -43,7 +49,7 @@ const PostManagement: React.FC = () => {
     ? data.filter(d =>
         (d.title || '').toLowerCase().includes(search.toLowerCase()) ||
         String(d.id).includes(search) ||
-        (d.customer?.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
+        (d.customerName || '').toLowerCase().includes(search.toLowerCase()) ||
         (d.description || '').toLowerCase().includes(search.toLowerCase())
       )
     : data;
@@ -53,6 +59,12 @@ const PostManagement: React.FC = () => {
     if (reason === null) return;
     await AdminPostService.close(id, reason || undefined);
     fetchData(page, filter);
+  };
+
+  const handleApprove = async (id: number) => {
+    await AdminPostService.approve(id);
+    fetchData(page, filter);
+    setSelected(null);
   };
 
   const handleDelete = async (id: number) => {
@@ -86,6 +98,7 @@ const PostManagement: React.FC = () => {
               </div>
               <select className="at-select" value={filter} onChange={e => { setFilter(e.target.value); setPage(0); }}>
                 <option value="">Tất cả trạng thái</option>
+                <option value="PENDING">Chờ duyệt</option>
                 <option value="OPEN">Đang mở</option>
                 <option value="IN_PROGRESS">Đang thực hiện</option>
                 <option value="CLOSED">Đã đóng</option>
@@ -119,7 +132,7 @@ const PostManagement: React.FC = () => {
                         {d.title}
                       </span>
                     </td>
-                    <td><span className="at-name">{d.customer?.fullName || 'N/A'}</span></td>
+                    <td><span className="at-name">{d.customerName || 'N/A'}</span></td>
                     <td className="right">{d.quantity}</td>
                     <td>
                       <span className="at-sub">
@@ -134,6 +147,11 @@ const PostManagement: React.FC = () => {
                     <td className="at-date">{d.createdAt ? new Date(d.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
                     <td>
                       <div className="at-actions">
+                        {d.status === 'PENDING' && (
+                          <button className="at-btn success icon-only" title="Duyệt bài" onClick={e => { e.stopPropagation(); handleApprove(d.id); }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>check</span>
+                          </button>
+                        )}
                         {d.status === 'OPEN' && (
                           <button
                             className="at-btn warning icon-only"
@@ -186,12 +204,12 @@ const PostManagement: React.FC = () => {
               <span className="material-symbols-outlined" style={{ color: '#0037b0', fontSize: '2rem' }}>post_add</span>
             </div>
             <div className="at-detail-row"><span>Mã bài</span><strong>#BD-{selected.id}</strong></div>
-            <div className="at-detail-row"><span>Khách hàng</span><strong>{selected.customer?.fullName || 'N/A'}</strong></div>
-            <div className="at-detail-row"><span>Email</span><strong>{selected.customer?.email || 'N/A'}</strong></div>
+            <div className="at-detail-row"><span>Khách hàng</span><strong>{selected.customerName || 'N/A'}</strong></div>
+            <div className="at-detail-row"><span>Mã KH</span><strong>#{selected.customerId || 'N/A'}</strong></div>
             <div className="at-detail-row"><span>Số lượng</span><strong>{selected.quantity}</strong></div>
             <div className="at-detail-row"><span>Ngân sách</span><strong>{formatMoney(selected.budgetMin)} - {formatMoney(selected.budgetMax)}</strong></div>
             {selected.deadline && <div className="at-detail-row"><span>Hạn chót</span><strong>{new Date(selected.deadline).toLocaleDateString('vi-VN')}</strong></div>}
-            {selected.category && <div className="at-detail-row"><span>Danh mục</span><strong>{selected.category.name}</strong></div>}
+            {selected.categoryName && <div className="at-detail-row"><span>Danh mục</span><strong>{selected.categoryName}</strong></div>}
             <div className="at-detail-row">
               <span>Trạng thái</span>
               <span className={`at-badge ${statusColors[selected.status] || 'info'}`}>{statusLabels[selected.status] || selected.status}</span>
@@ -204,7 +222,33 @@ const PostManagement: React.FC = () => {
               </div>
             )}
 
+            {/* Ảnh thiết kế */}
+            {(selected.designFileUrl || selected.designFileUrlBack) && (
+              <div className="at-detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                <span>Ảnh thiết kế</span>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  {selected.designFileUrl && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, marginBottom: 4 }}>Mặt trước</div>
+                      <img src={imgUrl(selected.designFileUrl)} alt="Mặt trước" style={{ maxWidth: 200, maxHeight: 200, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                  {selected.designFileUrlBack && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, marginBottom: 4 }}>Mặt sau</div>
+                      <img src={imgUrl(selected.designFileUrlBack)} alt="Mặt sau" style={{ maxWidth: 200, maxHeight: 200, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="at-detail-actions">
+              {selected.status === 'PENDING' && (
+                <button className="at-btn success" onClick={() => handleApprove(selected.id)}>
+                  <span className="material-symbols-outlined">check</span> Duyệt bài
+                </button>
+              )}
               {selected.status === 'OPEN' && (
                 <button className="at-btn warning" onClick={() => handleClose(selected.id)}>
                   <span className="material-symbols-outlined">lock</span> Đóng bài đăng

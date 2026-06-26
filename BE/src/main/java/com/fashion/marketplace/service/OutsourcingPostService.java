@@ -11,15 +11,19 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class OutsourcingPostService {
 
     private final OutsourcingPostRepository postRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final CustomProductRepository customProductRepository;
 
-    @Transactional
     public OutsourcingPostResponse create(Long customerId, OutsourcingPostRequest req) {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
@@ -32,16 +36,18 @@ public class OutsourcingPostService {
                 .budgetMin(req.getBudgetMin())
                 .budgetMax(req.getBudgetMax())
                 .deadline(req.getDeadline())
-                .status(OutsourcingPost.PostStatus.OPEN)
+                .status(OutsourcingPost.PostStatus.PENDING)
                 .build();
 
         if (req.getCategoryId() != null) {
             post.setCategory(categoryRepository.findById(req.getCategoryId()).orElse(null));
         }
+        if (req.getCustomProductId() != null) {
+            post.setCustomProduct(customProductRepository.findById(req.getCustomProductId()).orElse(null));
+        }
         return toResponse(postRepository.save(post));
     }
 
-    @Transactional
     public OutsourcingPostResponse update(Long customerId, Long postId, OutsourcingPostRequest req) {
         OutsourcingPost post = getOwned(customerId, postId);
         if (post.getStatus() != OutsourcingPost.PostStatus.OPEN) {
@@ -64,14 +70,20 @@ public class OutsourcingPostService {
 
     @Transactional(readOnly = true)
     public Page<OutsourcingPostResponse> getByCustomer(Long customerId, Pageable pageable) {
-        return postRepository.findByCustomerId(customerId, pageable)
-                .map(this::toResponse);
+        Page<OutsourcingPost> page = postRepository.findByCustomerId(customerId, pageable);
+        List<OutsourcingPostResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return new PageImpl<>(content, pageable, page.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     public Page<OutsourcingPostResponse> searchOpen(String keyword, Long categoryId, Pageable pageable) {
-        return postRepository.searchOpen(keyword, categoryId, pageable)
-                .map(this::toResponse);
+        Page<OutsourcingPost> page = postRepository.searchOpen(keyword, categoryId, pageable);
+        List<OutsourcingPostResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return new PageImpl<>(content, pageable, page.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -96,11 +108,16 @@ public class OutsourcingPostService {
                 postStatus = OutsourcingPost.PostStatus.valueOf(status);
             } catch (IllegalArgumentException ignored) {}
         }
-        return postRepository.search(keyword, categoryId, postStatus, pageable)
-                .map(this::toResponse);
+        Page<OutsourcingPost> page = postRepository.search(keyword, categoryId, postStatus, pageable);
+        List<OutsourcingPostResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return new PageImpl<>(content, pageable, page.getTotalElements());
     }
 
     public OutsourcingPostResponse toResponse(OutsourcingPost p) {
+        CustomProduct cp = p.getCustomProduct();
+        User customer = p.getCustomer();
         return OutsourcingPostResponse.builder()
                 .id(p.getId())
                 .title(p.getTitle())
@@ -112,8 +129,11 @@ public class OutsourcingPostService {
                 .status(p.getStatus() != null ? p.getStatus().name() : null)
                 .categoryId(p.getCategory() != null ? p.getCategory().getId() : null)
                 .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
-                .customerId(p.getCustomer().getId())
-                .customerName(p.getCustomer().getFullName())
+                .customerId(customer != null ? customer.getId() : null)
+                .customerName(customer != null ? customer.getFullName() : null)
+                .customProductId(cp != null ? cp.getId() : null)
+                .designFileUrl(cp != null ? cp.getDesignFileUrl() : null)
+                .designFileUrlBack(cp != null ? cp.getDesignFileUrlBack() : null)
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();

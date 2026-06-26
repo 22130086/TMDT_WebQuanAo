@@ -16,6 +16,12 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import FactoryRoute from "./components/FactoryRoute";
 import CustomOrder from "./pages/CustomOrder";
+import MyPosts from "./pages/UserPages/MyPosts";
+import PostQuotesDetail from "./pages/UserPages/PostQuotesDetail";
+import CustomerProfile from "./pages/UserPages/CustomerProfile";
+import CustomerDisputes from "./pages/UserPages/CustomerDisputes";
+import CustomerComplaints from "./pages/UserPages/CustomerComplaints";
+import CustomerReviews from "./pages/UserPages/CustomerReviews";
 import FactoryProfile from "./pages/FactoryProfile";
 
 import "./styles/product-detail.css";
@@ -25,12 +31,14 @@ import "./styles/register.css";
 import "./styles/home.css";
 import "./styles/factory.css";
 import "./styles/order_checkout.css";
+import "./styles/customer-profile.css";
 import Cart from "./pages/cart/cart";
 import OrderCheckout from "./pages/cart/order_checkout";
 import AdminLayout from "./components/AdminLayout";
 import ComplaintsManagement from "./pages/AdminPages/ComplaintsManagement";
 import DisputesManagement from "./pages/AdminPages/DisputesManagement";
 import WithdrawalsManagement from "./pages/AdminPages/WithdrawalsManagement";
+import WalletManagement from "./pages/AdminPages/WalletManagement";
 import VNPayTransfer from "./pages/AdminPages/VNPayTransfer";
 import OrderManagement from "./pages/AdminPages/OrderManagement";
 import Reports from "./pages/AdminPages/Reports";
@@ -39,6 +47,7 @@ import FactoryApproval from "./pages/AdminPages/FactoryApproval";
 import ProductManagement from "./pages/AdminPages/ProductManagement";
 import QuotationManagement from "./pages/AdminPages/QuotationManagement";
 import PostManagement from "./pages/AdminPages/PostManagement";
+import ReviewManagement from "./pages/AdminPages/ReviewManagement";
 
 function App() {
   return (
@@ -101,6 +110,16 @@ function App() {
           }
         />
         <Route path="/payment-result" element={<PaymentResult />} />
+
+        {/* CUSTOMER POSTS */}
+        <Route path="/my-posts" element={<ProtectedRoute><MyPosts /></ProtectedRoute>} />
+        <Route path="/my-posts/:id" element={<ProtectedRoute><PostQuotesDetail /></ProtectedRoute>} />
+
+        {/* CUSTOMER PROFILE */}
+        <Route path="/customer-profile" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
+        <Route path="/my-disputes" element={<ProtectedRoute><CustomerDisputes /></ProtectedRoute>} />
+        <Route path="/my-complaints" element={<ProtectedRoute><CustomerComplaints /></ProtectedRoute>} />
+        <Route path="/my-reviews" element={<ProtectedRoute><CustomerReviews /></ProtectedRoute>} />
 
         {/* ADMIN */}
         <Route
@@ -219,6 +238,26 @@ function App() {
             <AdminRoute>
               <AdminLayout title="Quản lý Bài đăng tìm xưởng">
                 <PostManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/wallets"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Ví tiền">
+                <WalletManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reviews"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Đánh giá">
+                <ReviewManagement />
               </AdminLayout>
             </AdminRoute>
           }

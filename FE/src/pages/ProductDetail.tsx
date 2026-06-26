@@ -1,33 +1,19 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 import { productService } from "../services/productService";
 import { addToCart } from "../services/cartService";
+import { getImageUrl } from "../services/http";
+import { reviewService, type ReviewData } from "../services/reviewService";
 
 import "../styles/product-detail.css";
 
-const FALLBACK_IMAGE =
-  "https://placehold.co/600x600?text=No+Image";
-
-interface Review {
-  id: number;
-  author: string;
-  avatar: string;
-  rating: number;
-  content: string;
-  date: string;
-}
-
-interface RelatedProduct {
-  id: number;
-  name: string;
-  price: number;
-  sold: string;
-  image: string;
-}
+// ========================
+// TYPES
+// ========================
 
 interface Product {
   id: number;
@@ -35,141 +21,195 @@ interface Product {
   description: string;
   price: number;
   imageUrls: string[];
-
   rating?: number;
   reviewCount?: number;
   soldCount?: string;
-
   factoryName?: string;
   onlineStatus?: string;
-
-  reviews?: Review[];
-
-  relatedProducts?: RelatedProduct[];
 }
+
+// ========================
+// HELPER
+// ========================
+
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const renderStars = (rating: number): string => "⭐".repeat(rating);
+
+// ========================
+// COMPONENT
+// ========================
 
 export default function ProductDetail() {
 
   const { id } = useParams();
+  const navigate = useNavigate();
+  const productId = Number(id);
 
-  const [product, setProduct] =
-    useState<Product | null>(null);
+  // ---- Product state ----
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedImage, setSelectedImage] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
 
-  const [loading, setLoading] =
-    useState(true);
+  // ---- Review state (read-only display) ----
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [reviewPage, setReviewPage] = useState(0);
+  const [totalReviewPages, setTotalReviewPages] = useState(0);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
-  const [selectedImage, setSelectedImage] =
-    useState(FALLBACK_IMAGE);
-
-  const [quantity, setQuantity] =
-    useState(1);
-
-  const [addingToCart, setAddingToCart] =
-    useState(false);
+  // ========================
+  // FETCH PRODUCT
+  // ========================
 
   useEffect(() => {
-
     async function fetchProduct() {
-
       try {
-
         setLoading(true);
-
+        setError("");
         if (!id) return;
 
-        const response =
-          await productService.getProductById(Number(id));
+        const response = await productService.getProductById(Number(id));
 
         if (response.success) {
-
           const data = response.data;
-
           setProduct({
             ...data,
-
-            rating: 4.9,
-            reviewCount: 128,
             soldCount: "1.2k",
-
-            factoryName:
-              data.factoryName || "Azure Industrial",
-
-            onlineStatus:
-              "Online 2 giờ trước",
-
-            reviews: [
-              {
-                id: 1,
-                author: "Nguyễn Văn A",
-                avatar: "https://i.pravatar.cc/50?img=1",
-                rating: 5,
-                content:
-                  "Chất lượng rất tốt, đường may đẹp.",
-                date: "12/05/2024",
-              },
-            ],
-
-            relatedProducts: [],
+            factoryName: data.factoryName || "Azure Industrial",
+            onlineStatus: "Online 2 giờ trước",
           });
 
-          if (
-            data.imageUrls &&
-            data.imageUrls.length > 0
-          ) {
-            setSelectedImage(data.imageUrls[0]);
+          if (data.imageUrls && data.imageUrls.length > 0) {
+            setSelectedImage(getImageUrl(data.imageUrls[0]));
           }
-
+        } else {
+          setError(response.message || "Không thể tải sản phẩm");
         }
-
-      } catch (error) {
-
-        console.error(error);
-
+      } catch (err: any) {
+        console.error("Lỗi tải sản phẩm:", err);
+        setError(
+          err.response?.data?.message ||
+          "Không thể kết nối đến máy chủ. Vui lòng thử lại sau."
+        );
       } finally {
-
         setLoading(false);
-
       }
     }
-
     fetchProduct();
-
   }, [id]);
+
+  // ========================
+  // FETCH REVIEWS
+  // ========================
+
+  const fetchReviews = async (page = 0) => {
+    if (!productId) return;
+    try {
+      setReviewsLoading(true);
+      const res = await reviewService.getProductReviews(productId, page, 5);
+      if (res.success) {
+        setReviews(res.data.content);
+        setReviewPage(res.data.number);
+        setTotalReviewPages(res.data.totalPages);
+      }
+    } catch (err) {
+      console.error("Lỗi tải đánh giá:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (productId) fetchReviews(0);
+  }, [productId]);
+
+  // ========================
+  // CART HANDLERS
+  // ========================
 
   const handleAddToCart = async () => {
     if (!product) return;
     try {
       setAddingToCart(true);
       await addToCart(product.id, quantity);
-      
       window.dispatchEvent(new Event("cart-updated"));
-    } catch (error: any) {
-      console.error("Lỗi khi thêm sản phẩm vào giỏ hàng:", error);
-      alert(
-        error.response?.data?.message ||
-        error.message ||
-        "Lỗi khi thêm sản phẩm vào giỏ hàng!"
-      );
+      alert("Đã thêm sản phẩm vào giỏ hàng!");
+    } catch (err: any) {
+      console.error("Lỗi khi thêm sản phẩm vào giỏ hàng:", err);
+      alert(err.response?.data?.message || err.message || "Lỗi khi thêm sản phẩm vào giỏ hàng!");
     } finally {
       setAddingToCart(false);
     }
   };
 
+  const handleBuyNow = async () => {
+    if (!product) return;
+    try {
+      setAddingToCart(true);
+      await addToCart(product.id, quantity);
+      window.dispatchEvent(new Event("cart-updated"));
+      navigate("/cart");
+    } catch (err: any) {
+      console.error("Lỗi khi mua ngay:", err);
+      alert(err.response?.data?.message || err.message || "Lỗi khi thêm sản phẩm vào giỏ hàng!");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  // ========================
+  // RENDER: Loading / Error
+  // ========================
+
   if (loading) {
     return (
-      <h2 className="loading-text">
-        Đang tải sản phẩm...
-      </h2>
+      <>
+        <Header />
+        <h2 className="loading-text">Đang tải sản phẩm...</h2>
+      </>
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
-      <h2 className="error-text">
-        Không tìm thấy sản phẩm
-      </h2>
+      <>
+        <Header />
+        <div className="error-text" style={{ textAlign: "center", padding: "48px" }}>
+          <h2>{error || "Không tìm thấy sản phẩm"}</h2>
+          <button
+            onClick={() => navigate("/products")}
+            style={{
+              marginTop: "16px",
+              padding: "10px 24px",
+              background: "#ee4d2d",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+          >
+            Quay lại danh sách sản phẩm
+          </button>
+        </div>
+      </>
     );
   }
+
+  // ========================
+  // RENDER: Main
+  // ========================
 
   return (
     <>
@@ -177,71 +217,50 @@ export default function ProductDetail() {
 
       <div className="product-detail-page">
 
-        {/* DETAIL */}
+        {/* ============ DETAIL WRAPPER ============ */}
 
         <div className="detail-wrapper">
 
-          {/* LEFT */}
-
+          {/* LEFT - Gallery */}
           <div className="detail-left">
-
             <img
-              src={selectedImage}
+              src={selectedImage || getImageUrl(product.imageUrls?.[0])}
               alt={product.name}
               className="main-image"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://placehold.co/600x600?text=No+Image";
+              }}
             />
 
             <div className="thumbnail-list">
-
               {product.imageUrls?.map((img, idx) => (
-
                 <img
                   key={idx}
-                  src={img}
+                  src={getImageUrl(img)}
                   alt="thumb"
-                  className={`thumb ${
-                    selectedImage === img
-                      ? "active-thumb"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setSelectedImage(img)
-                  }
+                  className={`thumb ${selectedImage === getImageUrl(img) ? "active-thumb" : ""}`}
+                  onClick={() => setSelectedImage(getImageUrl(img))}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://placehold.co/80x80?text=No+Image";
+                  }}
                 />
-
               ))}
-
             </div>
-
           </div>
 
-          {/* RIGHT */}
-
+          {/* RIGHT - Info */}
           <div className="detail-right">
-
-            <h1 className="product-title">
-              {product.name}
-            </h1>
+            <h1 className="product-title">{product.name}</h1>
 
             <div className="rating-row">
-
-              <span className="rating-score">
-                {product.rating}
-              </span>
-
-              <span className="review-count">
-                {product.reviewCount} đánh giá
-              </span>
-
-              <span className="sold-count">
-                {product.soldCount} đã bán
-              </span>
-
+              <span className="rating-score">{product.rating ?? "Chưa có"}</span>
+              <span className="stars">{product.rating ? renderStars(Math.round(product.rating)) : ""}</span>
+              <span className="review-count">{product.reviewCount ?? 0} đánh giá</span>
+              <span className="sold-count">{product.soldCount} đã bán</span>
             </div>
 
             <div className="price-box">
-              {Number(product.price)
-                .toLocaleString("vi-VN")}đ
+              {Number(product.price).toLocaleString("vi-VN")}đ
             </div>
 
             <div className="shipping-box">
@@ -249,144 +268,108 @@ export default function ProductDetail() {
             </div>
 
             <div className="quantity-box">
-
               <span>Số lượng:</span>
-
-              <button
-                onClick={() =>
-                  setQuantity(
-                    quantity > 1
-                      ? quantity - 1
-                      : 1
-                  )
-                }
-              >
-                -
-              </button>
-
+              <button onClick={() => setQuantity(quantity > 1 ? quantity - 1 : 1)}>-</button>
               <span>{quantity}</span>
-
-              <button
-                onClick={() =>
-                  setQuantity(quantity + 1)
-                }
-              >
-                +
-              </button>
-
+              <button onClick={() => setQuantity(quantity + 1)}>+</button>
             </div>
 
             <div className="action-buttons">
-
-              <button
-                className="add-cart-btn"
-                onClick={handleAddToCart}
-                disabled={addingToCart}
-              >
+              <button className="add-cart-btn" onClick={handleAddToCart} disabled={addingToCart}>
                 {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
               </button>
-
-              <button
-                className="buy-btn"
-                onClick={handleAddToCart}
-                disabled={addingToCart}
-              >
+              <button className="buy-btn" onClick={handleBuyNow} disabled={addingToCart}>
                 Mua ngay
               </button>
-
             </div>
-
           </div>
-
         </div>
 
-        {/* FACTORY */}
+        {/* ============ FACTORY ============ */}
 
         <section className="factory-section">
-
           <div className="factory-left">
-
-            <img
-              src="https://i.pravatar.cc/100?img=7"
-              alt="factory"
-            />
-
+            <img src="https://i.pravatar.cc/100?img=7" alt="factory" />
             <div>
-
-              <h3>
-                {product.factoryName}
-              </h3>
-
-              <p>
-                {product.onlineStatus}
-              </p>
-
+              <h3>{product.factoryName}</h3>
+              <p>{product.onlineStatus}</p>
             </div>
-
           </div>
-
         </section>
 
-        {/* DESCRIPTION */}
+        {/* ============ DESCRIPTION ============ */}
 
         <section className="description-section">
-
-          <h2>
-            CHI TIẾT SẢN PHẨM
-          </h2>
-
-          <p>
-            {product.description}
-          </p>
-
+          <h2>CHI TIẾT SẢN PHẨM</h2>
+          <p>{product.description}</p>
         </section>
 
-        {/* REVIEWS */}
+        {/* ============ REVIEWS ============ */}
 
         <section className="review-section">
+          <h2>ĐÁNH GIÁ ({product.reviewCount ?? reviews.length})</h2>
 
-          <h2>
-            ĐÁNH GIÁ
-          </h2>
+          {/* --- Reviews List --- */}
+          {reviewsLoading ? (
+            <p className="review-loading">Đang tải đánh giá...</p>
+          ) : reviews.length === 0 ? (
+            <p className="no-reviews">Chưa có đánh giá nào cho sản phẩm này.</p>
+          ) : (
+            <>
+              <div className="review-list">
+                {reviews.map((review) => (
+                  <div className="review-item" key={review.id}>
+                    <img
+                      src={review.customerAvatar || "https://i.pravatar.cc/50?img=3"}
+                      alt={review.customerName}
+                      className="review-avatar"
+                    />
 
-          {product.reviews?.map((review) => (
+                    <div className="review-body">
+                      <div className="review-header">
+                        <h4>{review.customerName}</h4>
+                        <span className="review-stars">{renderStars(review.rating)}</span>
+                        <small>{formatDate(review.createdAt)}</small>
+                      </div>
 
-            <div
-              className="review-item"
-              key={review.id}
-            >
+                      <p className="review-comment">{review.comment}</p>
 
-              <img
-                src={review.avatar}
-                alt={review.author}
-              />
-
-              <div>
-
-                <h4>
-                  {review.author}
-                </h4>
-
-                <p>
-                  {"⭐".repeat(review.rating)}
-                </p>
-
-                <p>
-                  {review.content}
-                </p>
-
-                <small>
-                  {review.date}
-                </small>
-
+                      {/* Factory reply */}
+                      {review.reply && (
+                        <div className="review-reply">
+                          <strong>Phản hồi từ xưởng:</strong>
+                          <p>{review.reply}</p>
+                          {review.repliedAt && <small>{formatDate(review.repliedAt)}</small>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
 
-            </div>
-
-          ))}
-
+              {/* Pagination */}
+              {totalReviewPages > 1 && (
+                <div className="review-pagination">
+                  <button
+                    disabled={reviewPage === 0}
+                    onClick={() => fetchReviews(reviewPage - 1)}
+                  >
+                    ← Trước
+                  </button>
+                  <span>
+                    Trang {reviewPage + 1} / {totalReviewPages}
+                  </span>
+                  <button
+                    disabled={reviewPage >= totalReviewPages - 1}
+                    onClick={() => fetchReviews(reviewPage + 1)}
+                  >
+                    Sau →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </section>
-
       </div>
 
       <Footer />
