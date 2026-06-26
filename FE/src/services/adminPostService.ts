@@ -54,6 +54,27 @@ class AdminPostService {
     const res = await http.delete<ApiResponse<null>>(`/admin/outsourcing-posts/${id}`, { params });
     return res.data;
   }
+
+  static async update(id: number, data: PostUpdateRequest) {
+    const res = await http.put<ApiResponse<OutsourcingPostData>>(`/admin/outsourcing-posts/${id}`, data);
+    return res.data;
+  }
+
+  static async create(customerId: number, data: PostUpdateRequest) {
+    const res = await http.post<ApiResponse<OutsourcingPostData>>(`/admin/outsourcing-posts`, data, { params: { customerId } });
+    return res.data;
+  }
+}
+
+export interface PostUpdateRequest {
+  title: string;
+  description?: string;
+  quantity: number;
+  budgetMin?: number;
+  budgetMax?: number;
+  deadline?: string;
+  categoryId?: number;
+  customProductId?: number;
 }
 
 export default AdminPostService;

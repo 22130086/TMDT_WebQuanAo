@@ -50,8 +50,8 @@ public class OutsourcingPostService {
 
     public OutsourcingPostResponse update(Long customerId, Long postId, OutsourcingPostRequest req) {
         OutsourcingPost post = getOwned(customerId, postId);
-        if (post.getStatus() != OutsourcingPost.PostStatus.OPEN) {
-            throw new IllegalStateException("Chỉ có thể sửa bài đăng đang mở");
+        if (post.getStatus() != OutsourcingPost.PostStatus.PENDING) {
+            throw new IllegalStateException("Chỉ có thể sửa bài đăng đang chờ duyệt");
         }
         post.setTitle(req.getTitle());
         post.setDescription(req.getDescription());
@@ -65,6 +65,9 @@ public class OutsourcingPostService {
     @Transactional
     public void delete(Long customerId, Long postId) {
         OutsourcingPost post = getOwned(customerId, postId);
+        if (post.getStatus() != OutsourcingPost.PostStatus.PENDING) {
+            throw new IllegalStateException("Chỉ có thể xóa bài đăng đang chờ duyệt");
+        }
         postRepository.delete(post);
     }
 
