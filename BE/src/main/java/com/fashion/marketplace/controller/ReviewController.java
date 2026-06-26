@@ -205,4 +205,14 @@ public class ReviewController {
         String msg = "DELETE".equalsIgnoreCase(action) ? "Đã xóa đánh giá vi phạm" : "Đã bỏ báo cáo";
         return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
+
+    @GetMapping("/api/reviews/factories/{factoryId}/products")
+    public ResponseEntity<ApiResponse<Page<ProductReviewResponse>>> factoryProductReviews(
+            @PathVariable Long factoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(
+                reviewService.getProductReviewsByFactory(factoryId, pageable)));
+    }
 }

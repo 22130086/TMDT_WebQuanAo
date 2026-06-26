@@ -34,6 +34,8 @@ public class FactoryProfileResponse {
     private LocalDateTime createdAt;
     private List<String> imageUrls;
     private List<CertificateItem> certificates;
+    private Integer totalProducts;
+    private Integer totalOrders;
 
     @Data @NoArgsConstructor @AllArgsConstructor @Builder
     public static class CertificateItem {

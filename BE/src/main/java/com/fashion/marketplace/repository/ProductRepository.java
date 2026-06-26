@@ -26,4 +26,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:keyword,'%'))) " +
            "ORDER BY p.createdAt DESC")
     Page<Product> searchAdmin(@Param("keyword") String keyword, Pageable pageable);
+
+    int countByFactoryId(Long factoryId);
 }
