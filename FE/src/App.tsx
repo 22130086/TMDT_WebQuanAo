@@ -48,6 +48,8 @@ import ProductManagement from "./pages/AdminPages/ProductManagement";
 import QuotationManagement from "./pages/AdminPages/QuotationManagement";
 import PostManagement from "./pages/AdminPages/PostManagement";
 import ReviewManagement from "./pages/AdminPages/ReviewManagement";
+import CategoryManagement from "./pages/AdminPages/CategoryManagement";
+import AttributeManagement from "./pages/AdminPages/AttributeManagement";
 
 function App() {
   return (
@@ -258,6 +260,46 @@ function App() {
             <AdminRoute>
               <AdminLayout title="Quản lý Đánh giá">
                 <ReviewManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/categories"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Danh mục">
+                <CategoryManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/attributes"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Thuộc tính Sản phẩm">
+                <AttributeManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/categories"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Danh mục">
+                <CategoryManagement />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/attributes"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Quản lý Thuộc tính Sản phẩm">
+                <AttributeManagement />
               </AdminLayout>
             </AdminRoute>
           }
