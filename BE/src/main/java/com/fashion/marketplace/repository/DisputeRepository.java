@@ -1,6 +1,9 @@
 package com.fashion.marketplace.repository;
 
 import com.fashion.marketplace.entity.Dispute;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +21,8 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
     Page<Dispute> findByStatus(Dispute.DisputeStatus status, Pageable pageable);
 
     Long countByStatus(Dispute.DisputeStatus status);
+
+    List<Dispute> findByOrderIdAndStatus(Long orderId, Dispute.DisputeStatus status);
 
     @Query("SELECT d FROM Dispute d WHERE " +
            "d.description LIKE %:keyword% OR d.verdict LIKE %:keyword% OR " +

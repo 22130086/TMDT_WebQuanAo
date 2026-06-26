@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import http from "../../services/http.ts"; // Đường dẫn file axios của bạn
 import { deleteCartItem } from "../../services/cartService"; // 🌟 Import hàm xóa item giỏ hàng từ service của bạn
+import { customerService } from "../../services/customerService";
 import "../../styles/order_checkout.css";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
@@ -24,6 +25,24 @@ const OrderCheckout = () => {
   const [note, setNote] = useState("");
 
   // HÀM ĐẶT HÀNG GỌI API BACKEND
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const response = await customerService.getProfile();
+        if (response?.success && response.data) {
+          const profile = response.data;
+          setReceiverName(profile.fullName || "");
+          setReceiverPhone(profile.phone || "");
+          setShippingAddress(profile.address || "");
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải hồ sơ người dùng:", error);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
   const handlePlaceOrder = async () => {
     if (checkoutItems.length === 0) {
       alert("Không có sản phẩm nào để thanh toán!");

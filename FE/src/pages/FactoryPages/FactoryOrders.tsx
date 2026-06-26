@@ -69,6 +69,18 @@ export default function FactoryOrders() {
     viewDetail(orderId);
   };
 
+  const deleteOrder = async (orderId: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đơn hàng này không? (Số lượng tồn kho sẽ được hoàn lại)")) return;
+    try {
+      await http.delete(`/factory/orders/${orderId}`);
+      alert("Đã xóa đơn hàng");
+      fetchOrders();
+      if (selected?.id === orderId) setSelected(null);
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Không thể xóa đơn hàng");
+    }
+  };
+
   const formatVND = (n: number) => n?.toLocaleString("vi-VN") + "đ";
   const formatDate = (d?: string) => d ? new Date(d).toLocaleString("vi-VN") : "—";
 
@@ -107,6 +119,10 @@ export default function FactoryOrders() {
                     {o.status === "PENDING" && (
                       <button className="at-btn info" onClick={e => { e.stopPropagation(); confirmOrder(o.id); }}
                         style={{ fontSize: 12, padding: "4px 10px" }}>✓ Xác nhận</button>
+                    )}
+                    {o.status === "PENDING" && o.paymentStatus === "UNPAID" && (
+                      <button className="at-btn" onClick={e => { e.stopPropagation(); deleteOrder(o.id); }}
+                        style={{ fontSize: 12, padding: "4px 10px", background: "#ef4444", color: "white", border: "none", borderRadius: "6px", marginLeft: "6px" }}>Xóa</button>
                     )}
                   </td>
                 </tr>

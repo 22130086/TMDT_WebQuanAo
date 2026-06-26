@@ -21,6 +21,7 @@ public class User {
     private String fullName;
     private String phone;
     private String avatarUrl;
+    private String address;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

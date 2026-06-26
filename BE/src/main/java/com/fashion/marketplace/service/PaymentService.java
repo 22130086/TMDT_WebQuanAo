@@ -1,6 +1,9 @@
 package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.request.PaymentRequest;
+import com.fashion.marketplace.entity.Order;
+import com.fashion.marketplace.exception.ResourceNotFoundException;
+import com.fashion.marketplace.repository.OrderRepository;
 import com.fashion.marketplace.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,7 @@ public class PaymentService {
 
     private final VNPayService vnPayService;
     private final OrderRepository orderRepository;
+    private final NotificationService notificationService;
     private final QuotationService quotationService;
 
     public String createPaymentUrl(HttpServletRequest request, PaymentRequest paymentRequest) throws Exception {
@@ -38,6 +42,10 @@ public class PaymentService {
         return (String) response.get("vnpay_url");
     }
 
+    public Map<String, Object> createPaymentUrlInternal(Long amount, String ipAddr, String orderCode) throws Exception {
+        return vnPayService.createPaymentRequest((double) amount, ipAddr, orderCode);
+    }
+
     @Transactional
     public String processVNPayCallback(Map<String, String> allRequestParams) {
         if (!vnPayService.verifyCallback(allRequestParams)) {
@@ -48,19 +56,43 @@ public class PaymentService {
         String orderCode = allRequestParams.get("vnp_TxnRef");
 
         try {
-            Long orderId = Long.parseLong(orderCode);
-
-            if ("00".equals(responseCode)) {
-                // Thanh toán thành công → accept quotation, reject others, post IN_PROGRESS
-                quotationService.confirmOrder(orderId);
-                return "SUCCESS";
+            if (orderCode.startsWith("REM_")) {
+                Long orderId = Long.parseLong(orderCode.substring(4));
+                if ("00".equals(responseCode)) {
+                    updateOrderPaymentStatus(orderId);
+                    return "SUCCESS";
+                } else {
+                    return "ROLLBACK";
+                }
             } else {
-                // Thất bại → chỉ hủy order, quotation & post giữ nguyên
-                quotationService.cancelOrder(orderId);
-                return "ROLLBACK";
+                Long orderId = Long.parseLong(orderCode);
+
+                if ("00".equals(responseCode)) {
+                    // Thanh toán thành công → accept quotation, reject others, post IN_PROGRESS
+                    quotationService.confirmOrder(orderId);
+                    return "SUCCESS";
+                } else {
+                    // Thất bại → chỉ hủy order, quotation & post giữ nguyên
+                    quotationService.cancelOrder(orderId);
+                    return "ROLLBACK";
+                }
             }
         } catch (Exception e) {
             return "ERROR: " + e.getMessage();
         }
+    }
+
+    @Transactional
+    private void updateOrderPaymentStatus(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+        
+        order.setPaymentStatus(Order.PaymentStatus.FULLY_PAID);
+        orderRepository.save(order);
+        
+        notificationService.push(order.getCustomer().getId(),
+                "Thanh toán thành công", 
+                "Thanh toán cho đơn hàng #" + orderId + " đã thành công.",
+                "ORDER", orderId);
     }
 }
