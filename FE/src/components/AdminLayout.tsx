@@ -80,6 +80,14 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
             <span className="material-symbols-outlined">post_add</span>
             Bài đăng
           </Link>
+          <Link to="/admin/categories" className={isActive('/admin/categories')}>
+            <span className="material-symbols-outlined">category</span>
+            Danh mục
+          </Link>
+          <Link to="/admin/attributes" className={isActive('/admin/attributes')}>
+            <span className="material-symbols-outlined">palette</span>
+            Thuộc tính SP
+          </Link>
         </nav>
       </aside>
 
