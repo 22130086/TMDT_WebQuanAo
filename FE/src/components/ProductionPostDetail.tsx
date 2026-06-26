@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import "../styles/production-post-detail.css";
 import { useSearchParams } from "react-router-dom";
 
+const BASE_IMG = "http://localhost:8080";
+
 interface Post {
     id: number;
     title: string;
@@ -15,6 +17,8 @@ interface Post {
     categoryName: string;
     customerId: number;
     customerName: string;
+    designFileUrl?: string;
+    designFileUrlBack?: string;
 }
 
 const STATUS_CONFIG = {
@@ -223,6 +227,55 @@ export default function ProductionPostDetail({ onNavigate }: Props) {
                         </div>
                         <p className="ppd-desc">{post.description || "Không có mô tả."}</p>
                     </div>
+
+                    {(post.designFileUrl || post.designFileUrlBack) && (
+                        <div className="ppd-card">
+                            <div className="ppd-card-title">
+                                <div className="ppd-card-icon">
+                                    <span className="material-symbols-outlined">image</span>
+                                </div>
+                                Hình ảnh thiết kế
+                            </div>
+                            <div className="ppd-design-images">
+                                {post.designFileUrl && (
+                                    <div className="ppd-design-img-wrapper">
+                                        <img
+                                            src={BASE_IMG + post.designFileUrl}
+                                            alt="Thiết kế mặt trước"
+                                            className="ppd-design-img"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                (e.target as HTMLImageElement).parentElement!.querySelector('.ppd-img-fallback')!.classList.remove('ppd-hidden');
+                                            }}
+                                        />
+                                        <div className="ppd-img-fallback ppd-hidden">
+                                            <span className="material-symbols-outlined">broken_image</span>
+                                            <span>Không tải được ảnh</span>
+                                        </div>
+                                        <span className="ppd-design-label">Mặt trước</span>
+                                    </div>
+                                )}
+                                {post.designFileUrlBack && (
+                                    <div className="ppd-design-img-wrapper">
+                                        <img
+                                            src={BASE_IMG + post.designFileUrlBack}
+                                            alt="Thiết kế mặt sau"
+                                            className="ppd-design-img"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                (e.target as HTMLImageElement).parentElement!.querySelector('.ppd-img-fallback')!.classList.remove('ppd-hidden');
+                                            }}
+                                        />
+                                        <div className="ppd-img-fallback ppd-hidden">
+                                            <span className="material-symbols-outlined">broken_image</span>
+                                            <span>Không tải được ảnh</span>
+                                        </div>
+                                        <span className="ppd-design-label">Mặt sau</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar */}
