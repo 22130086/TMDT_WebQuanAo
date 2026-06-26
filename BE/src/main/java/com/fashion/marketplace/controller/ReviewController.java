@@ -1,5 +1,6 @@
 package com.fashion.marketplace.controller;
 
+import com.fashion.marketplace.dto.response.FactoryReviewResponse;
 import com.fashion.marketplace.dto.response.ProductReviewResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ApiResponse;
@@ -61,12 +62,12 @@ public class ReviewController {
     }
 
     @GetMapping("/api/reviews/factories/{factoryId}")
-    public ResponseEntity<ApiResponse<Page<FactoryReview>>> factoryReviews(
+    public ResponseEntity<ApiResponse<Page<FactoryReviewResponse>>> factoryReviews(
             @PathVariable Long factoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(ApiResponse.ok(reviewService.getFactoryReviews(factoryId, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(reviewService.getFactoryReviewsResponse(factoryId, pageable)));
     }
 
     // ==================== CUSTOMER ====================
