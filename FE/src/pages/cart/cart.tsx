@@ -189,7 +189,14 @@ const handleProceedToCheckout = () => {
 
                     <div className="cart-content">
                       <div className="cart-item-top">
-                        <h3>{item.productName}</h3>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <h3>{item.productName}</h3>
+                          {item.attributes && (
+                            <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 500 }}>
+                              {item.attributes}
+                            </span>
+                          )}
+                        </div>
                         <span className="price">
                           {item.price.toLocaleString("vi-VN")}đ
                         </span>

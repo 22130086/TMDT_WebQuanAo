@@ -25,5 +25,6 @@ public class OrderRequest {
         private Long productId;
         @Min(1) private Integer quantity;
         @NotNull private BigDecimal unitPrice;
+        private String attributes;
     }
 }
