@@ -1,5 +1,6 @@
 package com.fashion.marketplace.service;
 
+import com.fashion.marketplace.dto.response.FactoryReviewResponse;
 import com.fashion.marketplace.dto.response.ProductReviewResponse;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
@@ -252,6 +253,26 @@ public class ReviewService {
             review.setIsReported(false);
             return toResponse(productReviewRepository.save(review));
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FactoryReviewResponse> getFactoryReviewsResponse(Long factoryId, Pageable pageable) {
+        return factoryReviewRepository.findByFactoryId(factoryId, pageable)
+                .map(this::toFactoryReviewResponse);
+    }
+
+    private FactoryReviewResponse toFactoryReviewResponse(FactoryReview r) {
+        User customer = r.getCustomer();
+        return FactoryReviewResponse.builder()
+                .id(r.getId())
+                .rating(r.getRating())
+                .comment(r.getComment())
+                .customerName(customer.getFullName() != null ? customer.getFullName() : customer.getEmail())
+                .customerAvatar(customer.getAvatarUrl())
+                .reply(r.getReply())
+                .repliedAt(r.getRepliedAt())
+                .createdAt(r.getCreatedAt())
+                .build();
     }
 
     // ---- Inner DTOs ----

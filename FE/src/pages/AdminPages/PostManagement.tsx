@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AdminPostService, { type OutsourcingPostData } from '../../services/adminPostService';
+import AdminPostService, { type OutsourcingPostData, type PostUpdateRequest } from '../../services/adminPostService';
 import '../../styles/admin-table.css';
 
 const BACKEND_HOST = import.meta.env.VITE_API_BASE_URL
@@ -25,6 +25,9 @@ const PostManagement: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<OutsourcingPostData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editData, setEditData] = useState<PostUpdateRequest>({ title: '', quantity: 1 });
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const pageSize = 10;
 
@@ -73,6 +76,39 @@ const PostManagement: React.FC = () => {
     await AdminPostService.delete(id, reason || undefined);
     setSelected(null);
     fetchData(page, filter);
+  };
+
+  const handleOpenEdit = (item: OutsourcingPostData) => {
+    setEditingId(item.id);
+    setEditData({
+      title: item.title,
+      description: item.description || '',
+      quantity: item.quantity,
+      budgetMin: item.budgetMin,
+      budgetMax: item.budgetMax,
+      deadline: item.deadline || '',
+      categoryId: item.categoryId,
+      customProductId: item.customProductId,
+    });
+    setShowEditForm(true);
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editData.title.trim() || !editingId) return;
+    try {
+      await AdminPostService.update(editingId, {
+        ...editData,
+        deadline: editData.deadline || undefined,
+      });
+      setShowEditForm(false);
+      setEditingId(null);
+      setSelected(null);
+      fetchData(page, filter);
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi cập nhật bài đăng');
+    }
   };
 
   const handleRowClick = async (item: OutsourcingPostData) => {
@@ -148,9 +184,14 @@ const PostManagement: React.FC = () => {
                     <td>
                       <div className="at-actions">
                         {d.status === 'PENDING' && (
-                          <button className="at-btn success icon-only" title="Duyệt bài" onClick={e => { e.stopPropagation(); handleApprove(d.id); }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>check</span>
-                          </button>
+                          <>
+                            <button className="at-btn success icon-only" title="Duyệt bài" onClick={e => { e.stopPropagation(); handleApprove(d.id); }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>check</span>
+                            </button>
+                            <button className="at-btn info icon-only" title="Sửa bài" onClick={e => { e.stopPropagation(); handleOpenEdit(d); }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>edit</span>
+                            </button>
+                          </>
                         )}
                         {d.status === 'OPEN' && (
                           <button
@@ -245,9 +286,14 @@ const PostManagement: React.FC = () => {
 
             <div className="at-detail-actions">
               {selected.status === 'PENDING' && (
-                <button className="at-btn success" onClick={() => handleApprove(selected.id)}>
-                  <span className="material-symbols-outlined">check</span> Duyệt bài
-                </button>
+                <>
+                  <button className="at-btn success" onClick={() => handleApprove(selected.id)}>
+                    <span className="material-symbols-outlined">check</span> Duyệt bài
+                  </button>
+                  <button className="at-btn info" onClick={() => handleOpenEdit(selected)}>
+                    <span className="material-symbols-outlined">edit</span> Sửa bài đăng
+                  </button>
+                </>
               )}
               {selected.status === 'OPEN' && (
                 <button className="at-btn warning" onClick={() => handleClose(selected.id)}>
@@ -261,6 +307,54 @@ const PostManagement: React.FC = () => {
           </aside>
         )}
       </div>
+
+      {/* EDIT MODAL */}
+      {showEditForm && editingId && (
+        <div className="at-modal-overlay" onClick={() => { setShowEditForm(false); setEditingId(null); }}>
+          <div className="at-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="at-modal-header">
+              <h3>Sửa bài đăng #{editingId}</h3>
+              <button className="at-modal-close" onClick={() => { setShowEditForm(false); setEditingId(null); }}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleUpdateSubmit}>
+              <div className="at-modal-body">
+                <div className="at-form-group">
+                  <label>Tiêu đề <span className="req">*</span></label>
+                  <input type="text" value={editData.title} onChange={e => setEditData({ ...editData, title: e.target.value })} />
+                </div>
+                <div className="at-form-group">
+                  <label>Mô tả</label>
+                  <textarea rows={3} value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} />
+                </div>
+                <div className="at-form-group">
+                  <label>Số lượng <span className="req">*</span></label>
+                  <input type="number" min={1} value={editData.quantity} onChange={e => setEditData({ ...editData, quantity: Number(e.target.value) })} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="at-form-group">
+                    <label>Ngân sách tối thiểu</label>
+                    <input type="number" value={editData.budgetMin || ''} onChange={e => setEditData({ ...editData, budgetMin: e.target.value ? Number(e.target.value) : undefined })} />
+                  </div>
+                  <div className="at-form-group">
+                    <label>Ngân sách tối đa</label>
+                    <input type="number" value={editData.budgetMax || ''} onChange={e => setEditData({ ...editData, budgetMax: e.target.value ? Number(e.target.value) : undefined })} />
+                  </div>
+                </div>
+                <div className="at-form-group">
+                  <label>Hạn chót</label>
+                  <input type="date" value={editData.deadline || ''} onChange={e => setEditData({ ...editData, deadline: e.target.value })} />
+                </div>
+              </div>
+              <div className="at-modal-footer">
+                <button type="button" className="at-btn outline" onClick={() => { setShowEditForm(false); setEditingId(null); }}>Hủy</button>
+                <button type="submit" className="at-btn primary">Cập nhật</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

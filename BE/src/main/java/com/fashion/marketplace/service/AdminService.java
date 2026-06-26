@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fashion.marketplace.dto.response.OrderResponse;
 import com.fashion.marketplace.dto.response.OutsourcingPostResponse;
+import com.fashion.marketplace.dto.request.OutsourcingPostRequest;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +41,8 @@ public class AdminService {
     private final OrderRepository orderRepository;
     private final QuotationRepository quotationRepository;
     private final OutsourcingPostRepository outsourcingPostRepository;
+    private final CategoryRepository categoryRepository;
+    private final CustomProductRepository customProductRepository;
     private final NotificationService notificationService;
 
     // ---- 4. Quản lý người dùng ----
@@ -567,6 +570,51 @@ public class AdminService {
                     "POST", postId);
         }
         outsourcingPostRepository.delete(post);
+    }
+
+    @Transactional
+    public OutsourcingPostResponse updateOutsourcingPost(Long postId, OutsourcingPostRequest req) {
+        OutsourcingPost post = outsourcingPostRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bài đăng không tồn tại"));
+        if (post.getStatus() != OutsourcingPost.PostStatus.PENDING) {
+            throw new IllegalStateException("Chỉ có thể sửa bài đăng đang chờ duyệt");
+        }
+        post.setTitle(req.getTitle());
+        post.setDescription(req.getDescription());
+        post.setQuantity(req.getQuantity());
+        post.setBudgetMin(req.getBudgetMin());
+        post.setBudgetMax(req.getBudgetMax());
+        post.setDeadline(req.getDeadline());
+        if (req.getCategoryId() != null) {
+            post.setCategory(categoryRepository.findById(req.getCategoryId()).orElse(null));
+        }
+        if (req.getCustomProductId() != null) {
+            post.setCustomProduct(customProductRepository.findById(req.getCustomProductId()).orElse(null));
+        }
+        return toPostResponse(outsourcingPostRepository.save(post));
+    }
+
+    @Transactional
+    public OutsourcingPostResponse createOutsourcingPost(Long customerId, OutsourcingPostRequest req) {
+        User customer = userRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
+        OutsourcingPost post = OutsourcingPost.builder()
+                .customer(customer)
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .quantity(req.getQuantity())
+                .budgetMin(req.getBudgetMin())
+                .budgetMax(req.getBudgetMax())
+                .deadline(req.getDeadline())
+                .status(OutsourcingPost.PostStatus.PENDING)
+                .build();
+        if (req.getCategoryId() != null) {
+            post.setCategory(categoryRepository.findById(req.getCategoryId()).orElse(null));
+        }
+        if (req.getCustomProductId() != null) {
+            post.setCustomProduct(customProductRepository.findById(req.getCustomProductId()).orElse(null));
+        }
+        return toPostResponse(outsourcingPostRepository.save(post));
     }
 
     private OutsourcingPostResponse toPostResponse(OutsourcingPost p) {

@@ -2,6 +2,8 @@ package com.fashion.marketplace.controller;
 
 import com.fashion.marketplace.dto.response.OrderResponse;
 import com.fashion.marketplace.dto.response.OutsourcingPostResponse;
+import com.fashion.marketplace.dto.request.OutsourcingPostRequest;
+import jakarta.validation.Valid;
 import com.fashion.marketplace.dto.response.QuotationResponse;
 import com.fashion.marketplace.dto.response.WithdrawalResponse;
 import com.fashion.marketplace.dto.response.WithdrawalStatsResponse;
@@ -344,5 +346,23 @@ public class AdminController {
             @RequestParam(required = false, defaultValue = "Vi phạm quy định") String reason) {
         adminService.deleteOutsourcingPost(authUtil.currentUserId(), id, reason);
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa bài đăng", null));
+    }
+
+    @PutMapping("/api/admin/outsourcing-posts/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<OutsourcingPostResponse>> updateOutsourcingPost(
+            @PathVariable Long id,
+            @Valid @RequestBody OutsourcingPostRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật bài đăng",
+                adminService.updateOutsourcingPost(id, req)));
+    }
+
+    @PostMapping("/api/admin/outsourcing-posts")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<OutsourcingPostResponse>> createOutsourcingPost(
+            @RequestParam Long customerId,
+            @Valid @RequestBody OutsourcingPostRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok("Đã tạo bài đăng",
+                adminService.createOutsourcingPost(customerId, req)));
     }
 }
