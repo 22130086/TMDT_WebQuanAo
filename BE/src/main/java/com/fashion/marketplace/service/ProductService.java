@@ -98,8 +98,8 @@ public class ProductService {
 
     // ---- Public ----
     @Transactional(readOnly = true)
-    public Page<ProductResponse> searchActive(String keyword, Long categoryId, Pageable pageable) {
-        return productRepository.searchActive(keyword, categoryId, pageable)
+    public Page<ProductResponse> searchActive(String keyword, Long categoryId, Long factoryId, Pageable pageable) {
+        return productRepository.searchActive(keyword, categoryId, factoryId, pageable)
                 .map(this::toResponse);  // convert entity → DTO
     }
 

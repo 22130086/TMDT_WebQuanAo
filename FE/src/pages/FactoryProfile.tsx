@@ -146,20 +146,31 @@ export default function FactoryProfile() {
         {products.length > 0 && (
           <section style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Sản phẩm của xưởng</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+            <div className="product-grid">
               {products.map((p: any) => (
                 <Link key={p.id} to={`/products/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                  <div className="product-card">
                     {p.imageUrls?.[0] ? (
-                      <img src={getImageUrl(p.imageUrls[0])} alt={p.name} style={{ width: "100%", height: 180, objectFit: "cover" }} />
+                      <img src={getImageUrl(p.imageUrls[0])} alt={p.name} />
                     ) : (
-                      <div style={{ width: "100%", height: 180, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: "100%", height: 200, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 40, color: "#94a3b8" }}>image</span>
                       </div>
                     )}
-                    <div style={{ padding: 12 }}>
-                      <h4 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>{p.name}</h4>
-                      <span style={{ fontWeight: 700, color: "#dc2626" }}>{formatMoney(p.price)}</span>
+                    <div className="product-info">
+                      <p className="product-category">
+                        {factory.factoryName || "Áo thun thời trang"}
+                      </p>
+                      <h3 style={{ fontSize: 16, marginBottom: 8, color: '#111827' }}>{p.name}</h3>
+                      <div className="rating" style={{ marginBottom: 10 }}>
+                        <span className="material-symbols-outlined">star</span>
+                        <span>{p.rating ?? "4.8"}</span>
+                      </div>
+                      <div className="product-bottom">
+                        <span className="price">
+                          {formatMoney(p.price)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </Link>

@@ -6,7 +6,7 @@ import Footer from "../components/Footer";
 
 import { productService } from "../services/productService";
 import { addToCart } from "../services/cartService";
-import { getImageUrl } from "../services/http";
+import http, { getImageUrl } from "../services/http";
 import { reviewService, type ReviewData } from "../services/reviewService";
 
 import "../styles/product-detail.css";
@@ -24,8 +24,20 @@ interface Product {
   rating?: number;
   reviewCount?: number;
   soldCount?: string;
+  factoryId?: number;
   factoryName?: string;
   onlineStatus?: string;
+}
+
+interface AttributeValue {
+  id: number;
+  value: string;
+}
+
+interface ProductAttribute {
+  id: number;
+  name: string;
+  values: AttributeValue[];
 }
 
 // ========================
@@ -62,6 +74,10 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
 
+  // ---- Attributes state ----
+  const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
+
   // ---- Review state (read-only display) ----
   const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [reviewPage, setReviewPage] = useState(0);
@@ -73,6 +89,7 @@ export default function ProductDetail() {
   // ========================
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     async function fetchProduct() {
       try {
         setLoading(true);
@@ -86,7 +103,8 @@ export default function ProductDetail() {
           setProduct({
             ...data,
             soldCount: "1.2k",
-            factoryName: data.factoryName || "Azure Industrial",
+            factoryId: data.factoryId,
+            factoryName: data.factoryName || "Chưa có thông tin",
             onlineStatus: "Online 2 giờ trước",
           });
 
@@ -106,7 +124,20 @@ export default function ProductDetail() {
         setLoading(false);
       }
     }
+    
+    async function fetchAttributes() {
+      try {
+        const res = await http.get("/product-attributes");
+        if (res.data?.data) {
+          setAttributes(res.data.data);
+        }
+      } catch (err) {
+        console.error("Lỗi tải thuộc tính:", err);
+      }
+    }
+
     fetchProduct();
+    fetchAttributes();
   }, [id]);
 
   // ========================
@@ -138,11 +169,31 @@ export default function ProductDetail() {
   // CART HANDLERS
   // ========================
 
+  const getSelectedAttributesString = () => {
+    const parts = Object.entries(selectedAttributes)
+      .map(([key, val]) => `${key}: ${val}`);
+    return parts.length > 0 ? parts.join(", ") : undefined;
+  };
+
+  const validateAttributes = () => {
+    if (attributes.length > 0) {
+      const missing = attributes.filter(attr => !selectedAttributes[attr.name]);
+      if (missing.length > 0) {
+        alert(`Vui lòng chọn: ${missing.map(m => m.name).join(", ")}`);
+        return false;
+      }
+    }
+    return true;
+  }
+
   const handleAddToCart = async () => {
     if (!product) return;
+    if (!validateAttributes()) return;
+
     try {
       setAddingToCart(true);
-      await addToCart(product.id, quantity);
+      const attrsString = getSelectedAttributesString();
+      await addToCart(product.id, quantity, attrsString);
       window.dispatchEvent(new Event("cart-updated"));
       alert("Đã thêm sản phẩm vào giỏ hàng!");
     } catch (err: any) {
@@ -155,9 +206,12 @@ export default function ProductDetail() {
 
   const handleBuyNow = async () => {
     if (!product) return;
+    if (!validateAttributes()) return;
+
     try {
       setAddingToCart(true);
-      await addToCart(product.id, quantity);
+      const attrsString = getSelectedAttributesString();
+      await addToCart(product.id, quantity, attrsString);
       window.dispatchEvent(new Event("cart-updated"));
       navigate("/cart");
     } catch (err: any) {
@@ -274,6 +328,41 @@ export default function ProductDetail() {
               <button onClick={() => setQuantity(quantity + 1)}>+</button>
             </div>
 
+            {/* Attributes (Size, Color, etc.) */}
+            {attributes.length > 0 && (
+              <div className="attributes-box" style={{ marginBottom: "24px" }}>
+                {attributes.map((attr) => (
+                  <div key={attr.id} className="attribute-row" style={{ marginBottom: "16px" }}>
+                    <div style={{ marginBottom: "8px", fontWeight: 600, color: "#444" }}>
+                      {attr.name}:
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      {attr.values?.map((val) => {
+                        const isSelected = selectedAttributes[attr.name] === val.value;
+                        return (
+                          <button
+                            key={val.id}
+                            onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.name]: val.value }))}
+                            style={{
+                              padding: "8px 16px",
+                              background: isSelected ? "#ee4d2d" : "#fff",
+                              color: isSelected ? "#fff" : "#333",
+                              border: isSelected ? "1px solid #ee4d2d" : "1px solid #ccc",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              transition: "0.2s"
+                            }}
+                          >
+                            {val.value}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="action-buttons">
               <button className="add-cart-btn" onClick={handleAddToCart} disabled={addingToCart}>
                 {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
@@ -295,6 +384,14 @@ export default function ProductDetail() {
               <p>{product.onlineStatus}</p>
             </div>
           </div>
+          {product.factoryId && (
+            <button
+              className="view-factory-btn"
+              onClick={() => navigate(`/factory-profile/${product.factoryId}`)}
+            >
+              Xem Xưởng
+            </button>
+          )}
         </section>
 
         {/* ============ DESCRIPTION ============ */}

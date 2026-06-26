@@ -41,6 +41,7 @@ public class CartService {
                                 ? item.getProduct().getImages().get(0).getImageUrl() : null)
                         .price(item.getProduct().getPrice())
                         .quantity(item.getQuantity())
+                        .attributes(item.getAttributes())
                         .build()
         ).toList();
     }
@@ -76,7 +77,8 @@ public class CartService {
 
         // Kiểm tra trùng sản phẩm trong giỏ hàng
         for (CartItem item : cart.getItems()) {
-            if (item.getProduct().getId().equals(req.getProductId())) {
+            if (item.getProduct().getId().equals(req.getProductId()) && 
+                java.util.Objects.equals(item.getAttributes(), req.getAttributes())) {
                 item.setQuantity(item.getQuantity() + req.getQuantity());
                 cartItemRepository.save(item); // Lưu trực tiếp item
                 return;
@@ -89,6 +91,7 @@ public class CartService {
                 .product(product)
                 .quantity(req.getQuantity())
                 .unitPrice(product.getPrice()) 
+                .attributes(req.getAttributes())
                 .build();
 
         cartItemRepository.save(item);
