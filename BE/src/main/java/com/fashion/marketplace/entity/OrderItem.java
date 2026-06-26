@@ -30,4 +30,7 @@ public class OrderItem {
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice;
+
+    @Column(name = "attributes", columnDefinition = "TEXT")
+    private String attributes;
 }

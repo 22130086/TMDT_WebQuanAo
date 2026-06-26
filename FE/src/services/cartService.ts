@@ -9,6 +9,7 @@ export interface CartItem {
   image: string;
   price: number;
   quantity: number;
+  attributes?: string;
 }
 
 interface ApiResponse<T> {
@@ -29,16 +30,17 @@ export async function getCart() {
   return response.data;
 }
 
-// ADD TO CART
 export async function addToCart(
   productId: number,
-  quantity: number
+  quantity: number,
+  attributes?: string
 ) {
   const response = await http.post(
     API_URL,
     {
       productId,
       quantity,
+      attributes
     }
   );
 

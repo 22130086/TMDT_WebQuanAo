@@ -227,6 +227,24 @@ body {
   font-weight: 500;
 }
 
+.view-factory-btn {
+  padding: 8px 24px;
+  background: #fff0ec;
+  color: #ee4d2d;
+  border: 1px solid #ee4d2d;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.view-factory-btn:hover {
+  background: #ee4d2d;
+  color: white;
+}
+
 .factory-right {
   display: flex;
   gap: 48px;

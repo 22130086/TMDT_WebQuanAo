@@ -14,6 +14,7 @@ interface OrderItem {
   unitPrice: number;
   productName?: string;
   productImage?: string; 
+  attributes?: string;
 }
 
 interface Order {
@@ -261,6 +262,11 @@ export default function OrderHistory() {
                           <p style={{ margin: 0, fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
                             Số lượng: <strong style={{ color: "#111827" }}>{item.quantity}</strong>
                           </p>
+                          {item.attributes && (
+                            <span style={{ display: "block", fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
+                              {item.attributes}
+                            </span>
+                          )}
                         </div>
                       </div>
 

@@ -262,26 +262,26 @@
 }
 
 /* Table */
-table {
+.factory-page table {
   width: 100%;
   border-collapse: collapse;
 }
 
-th,
-td {
+.factory-page th,
+.factory-page td {
   padding: 16px 0;
   text-align: left;
 }
 
-thead {
+.factory-page thead {
   border-bottom: 1px solid #e2e8f0;
 }
 
-tbody tr {
+.factory-page tbody tr {
   border-bottom: 1px solid #f1f5f9;
 }
 
-td button {
+.factory-page td button {
   background: #dbeafe;
   color: #1d4ed8;
   border: none;
@@ -356,24 +356,24 @@ td button {
 }
 
 /* Review */
-.review-item {
+.factory-page .review-item {
   background: #f8fafc;
   padding: 20px;
   border-radius: 18px;
   margin-bottom: 16px;
 }
 
-.review-item .stars {
+.factory-page .review-item .stars {
   color: #fbbf24;
   margin-bottom: 10px;
 }
 
-.review-item p {
+.factory-page .review-item p {
   color: #475569;
   line-height: 1.6;
 }
 
-.review-item span {
+.factory-page .review-item span {
   display: block;
   margin-top: 12px;
   font-size: 12px;
