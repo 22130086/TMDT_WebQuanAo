@@ -75,21 +75,38 @@
 .order-card.delivered::before {
   content: "";
   width: 4px;
-  background: #d9dadc;
+  background: #10b981; /* Xanh lá cho hoàn thành */
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
 }
 
 .order-card.processing::before {
   content: "";
   width: 4px;
-  background: #0037b0;
+  background: #3b82f6; /* Xanh nước biển cho đang xử lý */
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.order-card.cancelled::before,
+.order-card.disputed::before {
+  content: "";
+  width: 4px;
+  background: #ef4444; /* Đỏ cho hủy hoặc khiếu nại */
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
 }
 
 .order-left {

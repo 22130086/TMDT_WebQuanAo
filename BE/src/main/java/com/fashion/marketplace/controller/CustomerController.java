@@ -40,6 +40,7 @@ public class CustomerController {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
+                .address(user.getAddress())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();
@@ -67,6 +68,7 @@ public class CustomerController {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
+                .address(user.getAddress())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();

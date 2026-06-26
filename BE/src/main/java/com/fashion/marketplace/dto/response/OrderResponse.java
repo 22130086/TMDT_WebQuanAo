@@ -22,6 +22,8 @@ public class OrderResponse {
     private BigDecimal finalAmount;
     private BigDecimal depositAmount;
     private String status;
+    private String issueType;
+    private String issueReason;
     private String receiverName;
     private String receiverPhone;
     private String shippingAddress;

@@ -6,6 +6,7 @@ export interface UserProfile {
   fullName: string;
   phone: string;
   avatarUrl: string | null;
+  address?: string;
   role: string;
   createdAt: string;
 }
@@ -22,6 +23,7 @@ export const customerService = {
     fullName?: string;
     phone?: string;
     avatarUrl?: string;
+    address?: string;
   }): Promise<{ success: boolean; data: UserProfile; message?: string }> => {
     const response = await http.put("/customer/profile", data);
     return response.data;

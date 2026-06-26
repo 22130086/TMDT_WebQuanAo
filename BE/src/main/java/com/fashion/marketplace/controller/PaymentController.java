@@ -32,12 +32,38 @@ public class PaymentController {
         }
     }
 
+    // API: Tạo link thanh toán phần còn lại
+    @PostMapping("/create-remaining")
+    public ResponseEntity<?> createRemainingPayment(
+            HttpServletRequest request,
+            @RequestBody PaymentRequest paymentRequest
+    ) {
+        try {
+            String ipAddr = request.getRemoteAddr();
+            if (ipAddr == null || ipAddr.isEmpty() || "0:0:0:0:0:0:0:1".equals(ipAddr)) {
+                ipAddr = "127.0.0.1";
+            }
+            java.util.Map<String, Object> response = paymentService.createPaymentUrlInternal(
+                    paymentRequest.getAmount(),
+                    ipAddr,
+                    "REM_" + paymentRequest.getOrderId()
+            );
+            return ResponseEntity.ok(Map.of("paymentUrl", (String) response.get("vnpay_url")));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Lỗi khởi tạo cổng giao dịch VNPay");
+        }
+    }
+
     // API 2: VNPay tự động gọi redirect về đường dẫn này sau khi user quẹt thẻ/quét QR thành công
     @GetMapping("/vnpay-return")
     public ResponseEntity<Void> vnpayCallback(@RequestParam Map<String, String> allRequestParams) {
         String status = paymentService.processVNPayCallback(allRequestParams);
 
         String orderId = allRequestParams.get("vnp_TxnRef");
+        if (orderId != null && orderId.startsWith("REM_")) {
+            orderId = orderId.substring(4);
+        }
         String amount = allRequestParams.get("vnp_Amount");
 
         // Gom toàn bộ về chung một Router nhận kết quả trên React

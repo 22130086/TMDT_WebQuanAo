@@ -2,6 +2,7 @@ package com.fashion.marketplace.repository;
 
 import com.fashion.marketplace.entity.Order;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.*;
@@ -22,6 +23,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @EntityGraph(attributePaths = {"customer", "factory", "factory.user", "items"})
     Page<Order> findByStatus(Order.OrderStatus status, Pageable pageable);
+
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "WHERE EXISTS (SELECT c FROM Complaint c WHERE c.order = o AND c.status = :status)")
+    List<Order> findOrdersWithComplaintsByStatus(@Param("status") com.fashion.marketplace.entity.Complaint.ComplaintStatus status);
+
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "WHERE EXISTS (SELECT d FROM Dispute d WHERE d.order = o AND d.status = :status)")
+    List<Order> findOrdersWithDisputesByStatus(@Param("status") com.fashion.marketplace.entity.Dispute.DisputeStatus status);
 
     @EntityGraph(attributePaths = {"customer", "factory", "quotation", "quotation.post", "quotation.post.customProduct"})
     @Query("SELECT o FROM Order o WHERE o.id = :id")

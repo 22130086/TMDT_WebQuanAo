@@ -2,7 +2,8 @@ package com.fashion.marketplace.service;
 
 import com.fashion.marketplace.dto.request.OrderRequest;
 import com.fashion.marketplace.dto.request.PaymentRequest;
-import com.fashion.marketplace.dto.response.OrderResponse; // 🌟 Import DTO mới
+import com.fashion.marketplace.dto.response.OrderResponse;
+import com.fashion.marketplace.dto.response.OrderResponseDTO;
 import com.fashion.marketplace.entity.*;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.*;
@@ -30,6 +31,8 @@ public class OrderService {
     private final NotificationService notificationService;
     private final ProductRepository productRepository; 
     private final WalletService walletService;
+    private final ComplaintRepository complaintRepository;
+    private final DisputeRepository disputeRepository;
 
     private final PaymentService paymentService;
     private final HttpServletRequest httpServletRequest;
@@ -54,6 +57,23 @@ public class OrderService {
                 })
                 .collect(Collectors.toList());
 
+        String issueType = null;
+        String issueReason = null;
+
+        if (order.getId() != null) {
+            var complaints = complaintRepository.findByOrderIdAndStatus(order.getId(), Complaint.ComplaintStatus.OPEN);
+            if (!complaints.isEmpty()) {
+                issueType = "COMPLAINT";
+                issueReason = complaints.get(0).getReason();
+            } else {
+                var disputes = disputeRepository.findByOrderIdAndStatus(order.getId(), Dispute.DisputeStatus.OPEN);
+                if (!disputes.isEmpty()) {
+                    issueType = "DISPUTE";
+                    issueReason = disputes.get(0).getDescription();
+                }
+            }
+        }
+
         return OrderResponse.builder()
                 .id(order.getId())
                 .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
@@ -67,6 +87,8 @@ public class OrderService {
                 .finalAmount(order.getFinalAmount())
                 .depositAmount(order.getDepositAmount())
                 .status(order.getStatus().name())
+                .issueType(issueType)
+                .issueReason(issueReason)
                 .receiverName(order.getReceiverName())
                 .receiverPhone(order.getReceiverPhone())
                 .shippingAddress(order.getShippingAddress())
@@ -91,6 +113,56 @@ public class OrderService {
             }
         } catch (Exception ignored) {}
         return null;
+    }
+
+    private OrderResponseDTO toOrderResponseDTO(Order order) {
+        String displayStatus = order.getStatus() != null ? order.getStatus().name() : null;
+
+        boolean hasOpenComplaint = order.getId() != null && orderRepository
+                .findOrdersWithComplaintsByStatus(com.fashion.marketplace.entity.Complaint.ComplaintStatus.OPEN).stream()
+                .anyMatch(o -> o.getId().equals(order.getId()));
+        if (hasOpenComplaint) {
+            displayStatus = "COMPLAINT";
+        } else {
+            boolean hasOpenDispute = order.getId() != null && orderRepository
+                    .findOrdersWithDisputesByStatus(com.fashion.marketplace.entity.Dispute.DisputeStatus.OPEN).stream()
+                    .anyMatch(o -> o.getId().equals(order.getId()));
+            if (hasOpenDispute) {
+                displayStatus = "DISPUTE";
+            }
+        }
+
+        return OrderResponseDTO.builder()
+                .id(order.getId())
+                .displayStatus(displayStatus)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getOrdersWithOpenComplaints() {
+        return orderRepository.findOrdersWithComplaintsByStatus(com.fashion.marketplace.entity.Complaint.ComplaintStatus.OPEN).stream()
+                .map(order -> OrderResponseDTO.builder()
+                        .id(order.getId())
+                        .displayStatus("COMPLAINT")
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getOrdersWithOpenDisputes() {
+        return orderRepository.findOrdersWithDisputesByStatus(com.fashion.marketplace.entity.Dispute.DisputeStatus.OPEN).stream()
+                .map(order -> OrderResponseDTO.builder()
+                        .id(order.getId())
+                        .displayStatus("DISPUTE")
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponseDTO getOrderWithDisplayStatus(Long orderId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+        return toOrderResponseDTO(order);
     }
 
     @Transactional
@@ -238,6 +310,37 @@ public class OrderService {
                 "ORDER", orderId);
         return convertToResponse(saved); // 🌟 Thay đổi ở đây
     }
+
+    @Transactional
+    public void deleteOrderFactory(Long userId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+
+        FactoryProfile f = factoryProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hồ sơ xưởng không tồn tại"));
+
+        if (!order.getFactory().getId().equals(f.getId())) {
+            throw new AccessDeniedException("Không có quyền xóa đơn này");
+        }
+        
+        if (order.getStatus() != Order.OrderStatus.PENDING || order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
+            throw new IllegalStateException("Chỉ có thể xóa đơn hàng chưa được xác nhận và chưa thanh toán");
+        }
+
+        // Hoàn lại số lượng tồn kho nếu là đơn hàng có sẵn
+        if (order.getOrderType() == Order.OrderType.READY_MADE) {
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                if (product != null) {
+                    product.setStock(product.getStock() + item.getQuantity());
+                    productRepository.save(product);
+                }
+            }
+        }
+
+        orderRepository.delete(order);
+    }
+
     @Transactional
     public OrderResponse updateStatusByCustomer(Long customerId, Long orderId) {
         // 1. Tìm đơn hàng
@@ -249,9 +352,9 @@ public class OrderService {
             throw new AccessDeniedException("Bạn không có quyền xác nhận đơn hàng này");
         }
 
-        // 3. Kiểm tra trạng thái hợp lệ (chỉ cho phép xác nhận khi đang giao hàng)
-        if (order.getStatus() != Order.OrderStatus.SHIPPING) {
-            throw new IllegalStateException("Đơn hàng phải ở trạng thái đang giao thì mới có thể xác nhận đã nhận");
+        // 3. Kiểm tra trạng thái hợp lệ (chỉ cho phép xác nhận khi đang giao hàng hoặc đã giao hàng)
+        if (order.getStatus() != Order.OrderStatus.SHIPPING && order.getStatus() != Order.OrderStatus.DELIVERED) {
+            throw new IllegalStateException("Đơn hàng phải ở trạng thái đang giao hoặc đã giao thì mới có thể xác nhận đã nhận");
         }
 
         // 4. Cập nhật trạng thái
@@ -284,6 +387,34 @@ public class OrderService {
 
         return convertToResponse(saved);
     }
+
+    @Transactional
+    public OrderResponse updateOrderShippingInfo(Long customerId, Long orderId, com.fashion.marketplace.dto.request.UpdateOrderAddressRequest req) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại"));
+
+        if (!order.getCustomer().getId().equals(customerId)) {
+            throw new AccessDeniedException("Bạn không có quyền cập nhật đơn này");
+        }
+
+        if (order.getStatus() != Order.OrderStatus.PENDING) {
+            throw new IllegalStateException("Chỉ có thể cập nhật địa chỉ khi đơn hàng đang chờ xác nhận");
+        }
+
+        order.setReceiverName(req.getReceiverName());
+        order.setReceiverPhone(req.getReceiverPhone());
+        order.setShippingAddress(req.getShippingAddress());
+
+        Order saved = orderRepository.save(order);
+
+        notificationService.push(order.getFactory().getUser().getId(),
+                "Khách cập nhật địa chỉ giao hàng", 
+                "Đơn hàng #" + orderId + " đã được cập nhật thông tin nhận hàng.",
+                "ORDER", orderId);
+
+        return convertToResponse(saved);
+    }
+
     @Transactional(readOnly = true)
     public OrderResponse getById(Long orderId) {
         Order order = orderRepository.findByIdWithItems(orderId)
