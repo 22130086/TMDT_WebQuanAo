@@ -215,15 +215,26 @@ export default function PostQuotesDetail() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                   {statusBadge(q.status)}
-                  {q.status === "PENDING" && post?.status === "OPEN" && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className="save-btn" style={{ width: "auto", padding: "8px 16px", fontSize: 13 }}
-                        onClick={() => handleAccept(q)}
-                        disabled={actionLoading === q.id}>
-                        {actionLoading === q.id ? "..." : "✅ Chọn xưởng này"}
-                      </button>
-                    </div>
-                  )}
+                    {q.status === "PENDING" && post?.status === "OPEN" && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <a
+                            href={`/factory-profile/${q.factoryId}`}
+                            style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            padding: "8px 16px", fontSize: 13, fontWeight: 600,
+                            background: "#eff6ff", color: "#2563eb",
+                            border: "1px solid #bfdbfe", borderRadius: 8,
+                            textDecoration: "none", whiteSpace: "nowrap"
+                        }}>
+                            📋 Xem hồ sơ xưởng
+                        </a>
+                        <button className="save-btn" style={{ width: "auto", padding: "8px 16px", fontSize: 13 }}
+                    onClick={() => handleAccept(q)}
+                    disabled={actionLoading === q.id}>
+                    {actionLoading === q.id ? "..." : "✅ Chọn xưởng này"}
+                </button>
+              </div>
+                )}
                   {q.status === "ACCEPTED" && (
                     <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 700 }}>✓ Đã chọn & thanh toán</span>
                   )}
