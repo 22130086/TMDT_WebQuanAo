@@ -11,4 +11,5 @@ import lombok.*;
 public class CartRequest {
     @NotNull private Long productId;
     @NotNull @Min(1) private Integer quantity;
+    private String attributes;
 }

@@ -53,6 +53,7 @@ public class OrderService {
                         .productImage(firstImage)
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
+                        .attributes(item.getAttributes())
                         .build();
                 })
                 .collect(Collectors.toList());
@@ -215,6 +216,7 @@ public class OrderService {
             item.setOrder(order);
             item.setQuantity(i.getQuantity());
             item.setUnitPrice(i.getUnitPrice());
+            item.setAttributes(i.getAttributes());
             
             Product product = productRepository.findById(i.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại với ID: " + i.getProductId()));

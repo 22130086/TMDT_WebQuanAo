@@ -39,6 +39,12 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.ok(categoryRepository.findByParentId(id)));
     }
 
+    @GetMapping("/api/admin/categories")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<Category>>> all() {
+        return ResponseEntity.ok(ApiResponse.ok(categoryRepository.findAllByOrderByCreatedAtDesc()));
+    }
+
     @PostMapping("/api/admin/categories")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Category>> create(@RequestBody CategoryRequest req) {

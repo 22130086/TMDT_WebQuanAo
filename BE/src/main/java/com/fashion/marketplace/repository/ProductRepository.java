@@ -15,13 +15,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND " +
            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:keyword,'%'))) AND " +
-           "(:categoryId IS NULL OR p.category.id = :categoryId)")
+           "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+           "(:factoryId IS NULL OR p.factory.id = :factoryId)")
     Page<Product> searchActive(@Param("keyword") String keyword,
                                @Param("categoryId") Long categoryId,
+                               @Param("factoryId") Long factoryId,
                                Pageable pageable);
 
     @Query("SELECT p FROM Product p WHERE " +
            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%',:keyword,'%'))) " +
            "ORDER BY p.createdAt DESC")
     Page<Product> searchAdmin(@Param("keyword") String keyword, Pageable pageable);
+
+    int countByFactoryId(Long factoryId);
 }

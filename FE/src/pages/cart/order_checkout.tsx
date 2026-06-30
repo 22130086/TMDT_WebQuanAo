@@ -67,7 +67,8 @@ const OrderCheckout = () => {
         items: checkoutItems.map((item: any) => ({
           productId: item.productId || item.id,
           quantity: item.quantity,
-          unitPrice: item.price
+          unitPrice: item.price,
+          attributes: item.attributes // 🌟 Lấy attributes từ cart sang
         }))
       };
 
@@ -215,7 +216,12 @@ const OrderCheckout = () => {
                   <div className="ordercheckout-product-item" key={item.id}>
                     <img src={item.productImage || item.image} alt={item.productName} />
                     <div>
-                      <p>{item.productName}</p>
+                      <p style={{ margin: "0 0 4px 0" }}>{item.productName}</p>
+                      {item.attributes && (
+                        <span style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>
+                          {item.attributes}
+                        </span>
+                      )}
                       <span>SL: {item.quantity} x {formatVND(item.price)}</span>
                       <h4>{formatVND(item.price * item.quantity)}</h4>
                     </div>

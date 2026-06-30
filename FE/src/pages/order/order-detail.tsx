@@ -31,6 +31,7 @@ interface OrderItem {
   productImage?: string;
   quantity: number;
   unitPrice: number;
+  attributes?: string;
 }
 
 interface OrderDetailData {
@@ -556,6 +557,11 @@ export default function OrderDetail() {
                       <p className="product-spec" style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#6b7280" }}>
                         Mã định danh sản phẩm: #{item.productId || item.id}
                       </p>
+                      {item.attributes && (
+                        <span style={{ display: "block", fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
+                          {item.attributes}
+                        </span>
+                      )}
                     </div>
                   </div>
 

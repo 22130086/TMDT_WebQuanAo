@@ -32,4 +32,6 @@ public class CartItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
     
+    @Column(name = "attributes", columnDefinition = "TEXT")
+    private String attributes;
 }

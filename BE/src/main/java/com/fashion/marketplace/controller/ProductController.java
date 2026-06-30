@@ -45,6 +45,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Page<ProductResponse>>> search(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long factoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
@@ -55,7 +56,7 @@ public class ProductController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(dir, sortParts[0]));
 
         return ResponseEntity.ok(ApiResponse.ok(
-                productService.searchActive(keyword, categoryId, pageable)));
+                productService.searchActive(keyword, categoryId, factoryId, pageable)));
     }
 
     @GetMapping("/api/products/{id}")

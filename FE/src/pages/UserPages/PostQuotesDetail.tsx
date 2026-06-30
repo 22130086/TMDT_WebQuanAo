@@ -39,8 +39,18 @@ export default function PostQuotesDetail() {
   const [shippingAddress, setShippingAddress] = useState("");
   const [orderNote, setOrderNote] = useState("");
 
-  useEffect(() => {
+  // Edit post state
+  const [showEditPost, setShowEditPost] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editQty, setEditQty] = useState(1);
+  const [editBudgetMin, setEditBudgetMin] = useState("");
+  const [editBudgetMax, setEditBudgetMax] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
+
+  const fetchData = () => {
     if (!id) return;
+    setLoading(true);
     Promise.all([
       http.get(`/posts/${id}`),
       http.get(`/quotations/post/${id}`),
@@ -49,7 +59,9 @@ export default function PostQuotesDetail() {
       setQuotations(quoteRes.data?.data?.content ?? []);
     }).catch(console.error)
       .finally(() => setLoading(false));
-  }, [id]);
+  };
+
+  useEffect(() => { fetchData(); }, [id]);
 
   const handleAccept = (quote: QuotationItem) => {
     setSelectedQuote(quote);
@@ -83,6 +95,46 @@ export default function PostQuotesDetail() {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!window.confirm("Bạn có chắc muốn xóa bài đăng này?")) return;
+    try {
+      await http.delete(`/posts/${id}`);
+      navigate("/my-posts");
+    } catch (err: any) {
+      setMsg("❌ " + (err?.response?.data?.message || "Không thể xóa"));
+    }
+  };
+
+  const openEditPost = () => {
+    if (!post) return;
+    setEditTitle(post.title || "");
+    setEditDesc(post.description || "");
+    setEditQty(post.quantity || 1);
+    setEditBudgetMin(post.budgetMin?.toString() || "");
+    setEditBudgetMax(post.budgetMax?.toString() || "");
+    setEditDeadline(post.deadline || "");
+    setShowEditPost(true);
+  };
+
+  const handleUpdatePost = async () => {
+    try {
+      await http.put(`/posts/${id}`, {
+        title: editTitle,
+        description: editDesc,
+        quantity: editQty,
+        budgetMin: editBudgetMin ? Number(editBudgetMin) : null,
+        budgetMax: editBudgetMax ? Number(editBudgetMax) : null,
+        deadline: editDeadline || null,
+      });
+      setShowEditPost(false);
+      fetchData();
+    } catch (err: any) {
+      setMsg("❌ " + (err?.response?.data?.message || "Không thể cập nhật"));
+    }
+  };
+
+  const canEdit = post?.status === "PENDING";
+
   const statusBadge = (s: string) => {
     const map: Record<string, { text: string; cls: string }> = {
       PENDING: { text: "Chờ", cls: "warning" },
@@ -108,7 +160,17 @@ export default function PostQuotesDetail() {
         {/* Post Info */}
         {post && (
           <div className="custom-card" style={{ marginBottom: 24 }}>
-            <h2 style={{ margin: "0 0 8px" }}>{post.title}</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+              <h2 style={{ margin: "0 0 8px" }}>{post.title}</h2>
+              {canEdit && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="save-btn" style={{ width: "auto", padding: "6px 14px", fontSize: 12, background: "#3b82f6" }}
+                    onClick={openEditPost}>✏️ Sửa</button>
+                  <button className="save-btn" style={{ width: "auto", padding: "6px 14px", fontSize: 12, background: "#ef4444" }}
+                    onClick={handleDeletePost}>🗑️ Xóa</button>
+                </div>
+              )}
+            </div>
             <p style={{ color: "#6b7280", whiteSpace: "pre-wrap", margin: "0 0 12px" }}>{post.description}</p>
             <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: 14 }}>
               <span>🔢 SL: <strong>{post.quantity}</strong></span>
@@ -153,15 +215,26 @@ export default function PostQuotesDetail() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                   {statusBadge(q.status)}
-                  {q.status === "PENDING" && post?.status === "OPEN" && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className="save-btn" style={{ width: "auto", padding: "8px 16px", fontSize: 13 }}
-                        onClick={() => handleAccept(q)}
-                        disabled={actionLoading === q.id}>
-                        {actionLoading === q.id ? "..." : "✅ Chọn xưởng này"}
-                      </button>
-                    </div>
-                  )}
+                    {q.status === "PENDING" && post?.status === "OPEN" && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <a
+                            href={`/factory-profile/${q.factoryId}`}
+                            style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            padding: "8px 16px", fontSize: 13, fontWeight: 600,
+                            background: "#eff6ff", color: "#2563eb",
+                            border: "1px solid #bfdbfe", borderRadius: 8,
+                            textDecoration: "none", whiteSpace: "nowrap"
+                        }}>
+                            📋 Xem hồ sơ xưởng
+                        </a>
+                        <button className="save-btn" style={{ width: "auto", padding: "8px 16px", fontSize: 13 }}
+                    onClick={() => handleAccept(q)}
+                    disabled={actionLoading === q.id}>
+                    {actionLoading === q.id ? "..." : "✅ Chọn xưởng này"}
+                </button>
+              </div>
+                )}
                   {q.status === "ACCEPTED" && (
                     <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 700 }}>✓ Đã chọn & thanh toán</span>
                   )}
@@ -211,6 +284,39 @@ export default function PostQuotesDetail() {
               <button className="save-btn" onClick={handleSubmitForm} disabled={actionLoading === selectedQuote.id} style={{ flex: 1 }}>
                 {actionLoading === selectedQuote.id ? "..." : "🚀 Thanh toán cọc " + Math.round(selectedQuote.totalPrice * 0.3).toLocaleString() + "đ"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {showEditPost && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}
+          onClick={() => setShowEditPost(false)}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 28, maxWidth: 500, width: "90%", maxHeight: "90vh", overflow: "auto" }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 20px" }}>✏️ Sửa bài đăng</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div><label style={{ fontWeight: 700, fontSize: 13 }}>Tiêu đề *</label>
+                <input className="text-input" value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
+              <div><label style={{ fontWeight: 700, fontSize: 13 }}>Mô tả</label>
+                <textarea className="text-input" rows={3} value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
+              <div><label style={{ fontWeight: 700, fontSize: 13 }}>Số lượng *</label>
+                <input className="text-input" type="number" min={1} value={editQty} onChange={e => setEditQty(Number(e.target.value))} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div><label style={{ fontWeight: 700, fontSize: 13 }}>NS tối thiểu</label>
+                  <input className="text-input" type="number" value={editBudgetMin} onChange={e => setEditBudgetMin(e.target.value)} /></div>
+                <div><label style={{ fontWeight: 700, fontSize: 13 }}>NS tối đa</label>
+                  <input className="text-input" type="number" value={editBudgetMax} onChange={e => setEditBudgetMax(e.target.value)} /></div>
+              </div>
+              <div><label style={{ fontWeight: 700, fontSize: 13 }}>Hạn chót</label>
+                <input className="text-input" type="date" value={editDeadline} onChange={e => setEditDeadline(e.target.value)} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+              <button className="save-btn" style={{ width: "auto", padding: "10px 24px", background: "#9ca3af" }}
+                onClick={() => setShowEditPost(false)}>Hủy</button>
+              <button className="save-btn" style={{ width: "auto", padding: "10px 24px" }}
+                onClick={handleUpdatePost}>Cập nhật</button>
             </div>
           </div>
         </div>
