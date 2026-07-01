@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ComplaintService from '../../services/complaintService';
 import type { Complaint } from '../../services/complaintService';
 import '../../styles/admin-table.css';
@@ -27,15 +27,27 @@ const CustomerComplaints = () => {
   useEffect(() => { fetchComplaints(page); }, [page, fetchComplaints]);
 
   return (
-    <div className="at-container">
-      {loading && <div className="at-loading">Đang tải...</div>}
-
-      <div className="at-header">
-        <h3>Khiếu nại của tôi</h3>
-        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Tạo khiếu nại từ trang chi tiết đơn hàng</span>
+    <div className="at-container user-profile-activity-page">
+      <div className="user-profile-activity-topbar">
+        <Link to="/customer-profile" className="user-profile-activity-backbtn">
+          <span className="material-symbols-outlined">arrow_back</span>
+          Quay lại hồ sơ cá nhân
+        </Link>
+        <div className="user-profile-activity-hero">
+          <h3>Khiếu nại của tôi</h3>
+          <p>Quản lý các khiếu nại và theo dõi tiến trình xử lý đơn hàng.</p>
+        </div>
       </div>
 
+      {loading && <div className="at-loading">Đang tải...</div>}
+
       <div className="at-section">
+        <div className="at-header">
+          <div>
+            <h3>Danh sách khiếu nại</h3>
+            <div className="subtitle">Tạo khiếu nại từ trang chi tiết đơn hàng</div>
+          </div>
+        </div>
         <div className="wallet-table-wrap">
           <table className="wallet-table">
             <thead>

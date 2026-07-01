@@ -11,5 +11,8 @@ public class UpdateProfileRequest {
     @Size(max = 20, message = "Số điện thoại không quá 20 ký tự")
     private String phone;
 
+    @Size(max = 255, message = "Địa chỉ không quá 255 ký tự")
+    private String address;
+
     private String avatarUrl;
 }
