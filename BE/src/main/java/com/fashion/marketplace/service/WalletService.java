@@ -44,6 +44,10 @@ public class WalletService {
         wallet.setBalance(wallet.getBalance().subtract(req.getAmount()));
         wallet.setFrozen(wallet.getFrozen().add(req.getAmount()));
         walletRepository.save(wallet);
+        
+        saveTransaction(wallet, WalletTransaction.TransactionType.FREEZE, 
+                req.getAmount().negate(), wallet.getBalance(), 
+                "Đóng băng số dư cho yêu cầu rút tiền", null);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
