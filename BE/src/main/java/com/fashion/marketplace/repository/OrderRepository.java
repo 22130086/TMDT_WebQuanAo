@@ -36,4 +36,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findByIdWithItems(@Param("id") Long id);
     int countByFactoryId(Long factoryId);
+    List<Order> findByFactoryIdAndStatus(Long factoryId, Order.OrderStatus status);
 }
