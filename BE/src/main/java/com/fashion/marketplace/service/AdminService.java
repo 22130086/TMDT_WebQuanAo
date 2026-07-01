@@ -187,6 +187,15 @@ public class AdminService {
             wallet.setBalance(wallet.getBalance().add(wr.getAmount()));
             wallet.setFrozen(wallet.getFrozen().subtract(wr.getAmount()));
             walletRepository.save(wallet);
+
+            WalletTransaction tx = WalletTransaction.builder()
+                    .wallet(wallet)
+                    .type(WalletTransaction.TransactionType.UNFREEZE)
+                    .amount(wr.getAmount())
+                    .balanceAfter(wallet.getBalance())
+                    .note("Hoàn trả số dư do yêu cầu rút tiền bị từ chối. Lý do: " + note)
+                    .build();
+            walletTransactionRepository.save(tx);
         }
 
         WithdrawalRequest saved = withdrawalRepository.save(wr);
