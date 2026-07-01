@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import '../styles/product-edit.css';
 import { productService } from '../services/productService';
+import { getImageUrl } from '../services/http';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 interface ProductEditProps {
@@ -73,13 +74,36 @@ export default function ProductEdit({ onNavigate }: ProductEditProps) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleAddImageUrl = () => {
-        if (inputUrl.trim()) {
-            setFormData(prev => ({
-                ...prev,
-                imageUrls: [...prev.imageUrls, inputUrl.trim()]
-            }));
-            setInputUrl('');
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setLoading(true);
+            const fd = new FormData();
+            fd.append("file", file);
+            
+            const token = localStorage.getItem("token");
+            const res = await fetch("/api/upload?type=products", {
+                method: "POST",
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success && data.data?.url) {
+                setFormData(prev => ({
+                    ...prev,
+                    imageUrls: [...prev.imageUrls, data.data.url]
+                }));
+            } else {
+                setToast({ show: true, success: false, message: "Lỗi tải ảnh lên: " + data.message });
+            }
+        } catch (err) {
+            console.error(err);
+            setToast({ show: true, success: false, message: "Lỗi kết nối khi tải ảnh lên" });
+        } finally {
+            setLoading(false);
+            e.target.value = '';
         }
     };
 
@@ -234,16 +258,15 @@ export default function ProductEdit({ onNavigate }: ProductEditProps) {
                 {/* Khối quản lý hình ảnh bên phải */}
                 <div className="upload-sidebar-flow">
                     <div className="table-card form-flex-wrapper">
-                        <label className="custom-label">Bộ sưu tập hình ảnh sản phẩm</label>
+                        <label className="custom-label">Hình ảnh sản phẩm</label>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <input
-                                type="text"
-                                value={inputUrl}
-                                onChange={(e) => setInputUrl(e.target.value)}
-                                placeholder="Dán URL link ảnh mới vào đây..."
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileUpload}
                                 className="custom-field"
+                                style={{ padding: '6px' }}
                             />
-                            <button type="button" onClick={handleAddImageUrl} className="new-request-btn auto-width" style={{ padding: '0 16px' }}>Thêm</button>
                         </div>
 
                         <div style={{ marginTop: '10px' }}>
@@ -253,7 +276,7 @@ export default function ProductEdit({ onNavigate }: ProductEditProps) {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                                 {formData.imageUrls.map((url, index) => (
                                     <div key={index} style={{ position: 'relative', aspectRatio: '1/1', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        <img src={getImageUrl(url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                         <button type="button" onClick={() => handleRemoveImage(index)} style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(239, 68, 68, 0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px' }}>
                                             <X size={10} />
                                         </button>

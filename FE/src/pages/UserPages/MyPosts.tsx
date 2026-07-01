@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import http from "../../services/http";
+import { getImageUrl } from "../../services/http";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import "../../styles/custom-order.css";
@@ -19,7 +20,7 @@ interface PostItem {
   createdAt: string;
 }
 
-const BASE_IMG = "http://localhost:8080";
+
 
 export default function MyPosts() {
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -48,8 +49,11 @@ export default function MyPosts() {
 
   const statusLabel = (s: string) => {
     const map: Record<string, string> = {
-      PENDING: "⏳ Chờ duyệt", OPEN: "✅ Đã duyệt",
-      IN_PROGRESS: "🔧 Đang làm", CLOSED: "🔒 Đã đóng", CANCELLED: "❌ Đã hủy"
+      PENDING:     "⏳ Chờ duyệt",
+      OPEN:        "✅ Đã duyệt",
+      IN_PROGRESS: "🔧 Đang làm",
+      CLOSED:      "🔒 Đã đóng",
+      CANCELLED:   "❌ Đã hủy",
     };
     return map[s] || s;
   };
@@ -120,9 +124,9 @@ export default function MyPosts() {
               onClick={() => navigate(`/my-posts/${p.id}`)}>
               {(p.designFileUrl || p.designFileUrlBack) && (
                 <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  {p.designFileUrl && <img src={BASE_IMG + p.designFileUrl} alt="front"
+                  {p.designFileUrl && <img src={getImageUrl(p.designFileUrl)} alt="front"
                     style={{ width: 80, height: 80, borderRadius: 12, objectFit: "cover", border: "1px solid #e5e7eb" }} />}
-                  {p.designFileUrlBack && <img src={BASE_IMG + p.designFileUrlBack} alt="back"
+                  {p.designFileUrlBack && <img src={getImageUrl(p.designFileUrlBack)} alt="back"
                     style={{ width: 80, height: 80, borderRadius: 12, objectFit: "cover", border: "1px solid #e5e7eb" }} />}
                 </div>
               )}
@@ -142,8 +146,21 @@ export default function MyPosts() {
                       onClick={(e) => handleDelete(p.id, e)}>🗑️ Xóa</button>
                   </>
                 )}
-                <span className={`at-badge ${p.status === "PENDING" ? "warning" : p.status === "OPEN" ? "success" : "secondary"}`}
-                  style={{ padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
+                <span style={{
+                    padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 700,
+                    background:
+                      p.status === "PENDING"     ? "#fef9c3" :
+                      p.status === "OPEN"        ? "#dcfce7" :
+                      p.status === "IN_PROGRESS" ? "#dbeafe" :
+                      p.status === "CLOSED"      ? "#f3f4f6" :
+                      p.status === "CANCELLED"   ? "#fee2e2" : "#f3f4f6",
+                    color:
+                      p.status === "PENDING"     ? "#92400e" :
+                      p.status === "OPEN"        ? "#166534" :
+                      p.status === "IN_PROGRESS" ? "#1d4ed8" :
+                      p.status === "CLOSED"      ? "#374151" :
+                      p.status === "CANCELLED"   ? "#991b1b" : "#374151",
+                  }}>
                   {statusLabel(p.status)}
                 </span>
               </div>

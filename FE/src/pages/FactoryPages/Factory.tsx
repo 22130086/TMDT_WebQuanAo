@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import "../../styles/admin.css";
 
@@ -7,6 +7,7 @@ import ProductList from "../../components/ProductList";
 import ProductAdd from "../../components/ProductAdd";
 import ProductEdit from "../../components/ProductEdit";
 import ProductHide from "../../components/ProductHide";
+import FactoryProductDetail from "../../components/FactoryProductDetail";
 import DeleteModal from "../../components/DeleteModal";
 import ProductionPostList from "../../components/ProductionPostList";
 import ProductionPostDetail from "../../components/ProductionPostDetail";
@@ -77,6 +78,7 @@ const Factory = () => {
                         <Route path="products/add" element={<ProductAdd onNavigate={handleNavigation} />} />
                         <Route path="products/edit" element={<ProductEdit onNavigate={handleNavigation} />} />
                         <Route path="products/hide" element={<ProductHide onNavigate={handleNavigation} />} />
+                        <Route path="products/detail" element={<FactoryProductDetail onNavigate={handleNavigation} />} />
                         <Route path="outsourcing" element={<ProductionPostList onNavigate={handleNavigation} refreshSignal={refreshSignal} />} />
                         <Route path="outsourcing/detail" element={<ProductionPostDetail onNavigate={handleNavigation} />} />
                         <Route path="outsourcing/send-quote" element={<SendQuote onNavigate={handleNavigation} />} />

@@ -612,6 +612,7 @@ export default function CustomOrder() {
           description: fullDesc,
           quantity: postQuantity,
           customProductId: cpId,
+          categoryId: 2, // Áo Thun
         };
         if (postBudgetMin) postPayload.budgetMin = parseFloat(postBudgetMin);
         if (postBudgetMax) postPayload.budgetMax = parseFloat(postBudgetMax);
@@ -659,6 +660,7 @@ export default function CustomOrder() {
           description: fullDesc,
           quantity: postQuantity,
           customProductId: cpId,
+          categoryId: 2, // Áo Thun
         };
         if (postBudgetMin) postPayload.budgetMin = parseFloat(postBudgetMin);
         if (postBudgetMax) postPayload.budgetMax = parseFloat(postBudgetMax);
@@ -666,13 +668,15 @@ export default function CustomOrder() {
         await http.post("/posts", postPayload);
       }
 
-      localStorage.setItem("customProductDraftId", String(cpId));
+      localStorage.removeItem("customProductDraftId");
+      setCustomProductId(null);
       setMessage("🎉 Đăng bài thành công! Bài đăng đang chờ Admin duyệt. Sau khi duyệt, xưởng sẽ gửi báo giá cho bạn.");
 
       // Reset form
       setPostTitle(""); setPostDescription(""); setPostQuantity(50);
       setPostBudgetMin(""); setPostBudgetMax(""); setPostDeadline("");
       setPostSize("M"); setPostMaterial("Cotton 100%"); setPostNotes("");
+      setFrontDesign(defaultDesign); setBackDesign(defaultDesign);
     } catch (error) {
       setMessage(`Lỗi: ${(error as Error)?.message || "Vui lòng thử lại."}`);
     } finally {
@@ -871,193 +875,193 @@ export default function CustomOrder() {
               <div className="sidebar-content">
                 {mode === "design" ? (
                   <>
-                {/* ---- CHỌN MÀU ÁO ---- */}
-                <div className="sidebar-section">
-                  <h4>Chọn màu áo</h4>
-                  <div className="color-grid">
-                    {colors.map((color) => (
-                      <button
-                        key={color}
-                        className={`color-swatch ${activeDesign.color === color ? "active-swatch" : ""}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setColor(color)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* ---- THƯ VIỆN LOGO ---- */}
-                <div className="sidebar-section">
-                  <div className="section-header">
-                    <h4>Thư viện Logo</h4>
-                    <button className="add-btn" onClick={addLogoItem} disabled={loading}>
-                      + Thêm icon
-                    </button>
-                  </div>
-                  <div className="logo-grid">
-                    {logos.map((logo) => (
-                      <button
-                        key={logo}
-                        className={`logo-item ${selectedItem?.type === "logo" && selectedItem.content === logo ? "active-logo" : ""}`}
-                        onClick={() => setLogo(logo)}
-                      >
-                        {logo}
-                      </button>
-                    ))}
-                    <button
-                      className="logo-item clear-logo"
-                      onClick={() => setLogo(null)}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                  {logoItems.length > 0 ? (
-                    <div className="item-list">
-                      {logoItems.map((item, index) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
-                          onClick={() => setSelectedItemId(item.id)}
-                        >
-                          Icon {index + 1}: {item.content}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="item-empty">Chưa có icon. Nhấn + để thêm icon mới.</div>
-                  )}
-                  <h4>Chọn màu logo</h4>
-                  <div className="logo-color-grid">
-                    {logoColors.map((color) => (
-                      <button
-                        key={color}
-                        className={`logo-color-swatch ${logoColor === color ? "active-swatch" : ""}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => updateLogoColor(color)}
-                        aria-label={`Chọn màu logo ${color}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="logo-color-picker-row">
-                    <input
-                      type="color"
-                      value={logoColor}
-                      onChange={(e) => updateLogoColor(e.target.value)}
-                      className="color-input"
-                    />
-                    <input
-                      type="text"
-                      value={logoColor}
-                      onChange={(e) => updateLogoColor(e.target.value)}
-                      className="hex-input"
-                      placeholder="#000000"
-                    />
-                  </div>
-                </div>
-
-                {/* ---- NỘI DUNG TÙY CHỈNH (TEXT) ---- */}
-                <div className="sidebar-section">
-                  <div className="section-header">
-                    <h4>Nội dung tùy chỉnh</h4>
-                    <button className="add-btn" onClick={addTextItem} disabled={loading}>
-                      + Thêm text
-                    </button>
-                  </div>
-                  {textItems.length > 0 ? (
-                    <div className="item-list">
-                      {textItems.map((item, index) => (
-                        <div key={item.id} className="item-chip-row">
+                    {/* ---- CHỌN MÀU ÁO ---- */}
+                    <div className="sidebar-section">
+                      <h4>Chọn màu áo</h4>
+                      <div className="color-grid">
+                        {colors.map((color) => (
                           <button
-                            type="button"
-                            className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
-                            onClick={() => setSelectedItemId(item.id)}
-                          >
-                            Text {index + 1}: {item.content || "Mục văn bản mới"}
-                          </button>
-                          <button
-                            type="button"
-                            className="item-remove-btn"
-                            onClick={() => removeDesignItemById(item.id)}
-                            aria-label={`Xóa Text ${index + 1}`}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="item-empty">Chưa có văn bản. Nhấn + để thêm văn bản mới.</div>
-                  )}
-
-                  {selectedItem ? (
-                    <>
-                      {selectedItem.type === "text" ? (
-                        <>
-                          <input
-                            type="text"
-                            placeholder="Nhập nội dung"
-                            value={selectedItem.content}
-                            onChange={(e) => setText(e.target.value)}
-                            className="text-input"
+                            key={color}
+                            className={`color-swatch ${activeDesign.color === color ? "active-swatch" : ""}`}
+                            style={{ backgroundColor: color }}
+                            onClick={() => setColor(color)}
                           />
-                          <div className="field-row">
-                            <label>Màu văn bản</label>
-                            <div className="logo-color-grid">
-                              {logoColors.map((color) => (
-                                <button
-                                  key={color}
-                                  className={`logo-color-swatch ${colorPickerValue === color ? "active-swatch" : ""}`}
-                                  style={{ backgroundColor: color }}
-                                  onClick={() => updateSelectedItemColor(color)}
-                                  aria-label={`Chọn màu chữ ${color}`}
-                                />
-                              ))}
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ---- THƯ VIỆN LOGO ---- */}
+                    <div className="sidebar-section">
+                      <div className="section-header">
+                        <h4>Thư viện Logo</h4>
+                        <button className="add-btn" onClick={addLogoItem} disabled={loading}>
+                          + Thêm icon
+                        </button>
+                      </div>
+                      <div className="logo-grid">
+                        {logos.map((logo) => (
+                          <button
+                            key={logo}
+                            className={`logo-item ${selectedItem?.type === "logo" && selectedItem.content === logo ? "active-logo" : ""}`}
+                            onClick={() => setLogo(logo)}
+                          >
+                            {logo}
+                          </button>
+                        ))}
+                        <button
+                          className="logo-item clear-logo"
+                          onClick={() => setLogo(null)}
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                      {logoItems.length > 0 ? (
+                        <div className="item-list">
+                          {logoItems.map((item, index) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
+                              onClick={() => setSelectedItemId(item.id)}
+                            >
+                              Icon {index + 1}: {item.content}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="item-empty">Chưa có icon. Nhấn + để thêm icon mới.</div>
+                      )}
+                      <h4>Chọn màu logo</h4>
+                      <div className="logo-color-grid">
+                        {logoColors.map((color) => (
+                          <button
+                            key={color}
+                            className={`logo-color-swatch ${logoColor === color ? "active-swatch" : ""}`}
+                            style={{ backgroundColor: color }}
+                            onClick={() => updateLogoColor(color)}
+                            aria-label={`Chọn màu logo ${color}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="logo-color-picker-row">
+                        <input
+                          type="color"
+                          value={logoColor}
+                          onChange={(e) => updateLogoColor(e.target.value)}
+                          className="color-input"
+                        />
+                        <input
+                          type="text"
+                          value={logoColor}
+                          onChange={(e) => updateLogoColor(e.target.value)}
+                          className="hex-input"
+                          placeholder="#000000"
+                        />
+                      </div>
+                    </div>
+
+                    {/* ---- NỘI DUNG TÙY CHỈNH (TEXT) ---- */}
+                    <div className="sidebar-section">
+                      <div className="section-header">
+                        <h4>Nội dung tùy chỉnh</h4>
+                        <button className="add-btn" onClick={addTextItem} disabled={loading}>
+                          + Thêm text
+                        </button>
+                      </div>
+                      {textItems.length > 0 ? (
+                        <div className="item-list">
+                          {textItems.map((item, index) => (
+                            <div key={item.id} className="item-chip-row">
+                              <button
+                                type="button"
+                                className={`item-chip ${selectedItemId === item.id ? "active-chip" : ""}`}
+                                onClick={() => setSelectedItemId(item.id)}
+                              >
+                                Text {index + 1}: {item.content || "Mục văn bản mới"}
+                              </button>
+                              <button
+                                type="button"
+                                className="item-remove-btn"
+                                onClick={() => removeDesignItemById(item.id)}
+                                aria-label={`Xóa Text ${index + 1}`}
+                              >
+                                ×
+                              </button>
                             </div>
-                            <div className="logo-color-picker-row">
-                              <input
-                                type="color"
-                                value={colorPickerValue}
-                                onChange={(e) => updateSelectedItemColor(e.target.value)}
-                                className="color-input"
-                              />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="item-empty">Chưa có văn bản. Nhấn + để thêm văn bản mới.</div>
+                      )}
+
+                      {selectedItem ? (
+                        <>
+                          {selectedItem.type === "text" ? (
+                            <>
                               <input
                                 type="text"
-                                value={colorPickerValue}
-                                onChange={(e) => updateSelectedItemColor(e.target.value)}
-                                className="hex-input"
-                                placeholder="#000000"
+                                placeholder="Nhập nội dung"
+                                value={selectedItem.content}
+                                onChange={(e) => setText(e.target.value)}
+                                className="text-input"
                               />
+                              <div className="field-row">
+                                <label>Màu văn bản</label>
+                                <div className="logo-color-grid">
+                                  {logoColors.map((color) => (
+                                    <button
+                                      key={color}
+                                      className={`logo-color-swatch ${colorPickerValue === color ? "active-swatch" : ""}`}
+                                      style={{ backgroundColor: color }}
+                                      onClick={() => updateSelectedItemColor(color)}
+                                      aria-label={`Chọn màu chữ ${color}`}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="logo-color-picker-row">
+                                  <input
+                                    type="color"
+                                    value={colorPickerValue}
+                                    onChange={(e) => updateSelectedItemColor(e.target.value)}
+                                    className="color-input"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={colorPickerValue}
+                                    onChange={(e) => updateSelectedItemColor(e.target.value)}
+                                    className="hex-input"
+                                    placeholder="#000000"
+                                  />
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="info-box">
+                              Chọn icon để thay đổi nội dung và kích thước.
+                            </div>
+                          )}
+
+                          <div className="size-control">
+                            <div className="size-label">
+                              Kích thước: {selectedItem.size}px
+                            </div>
+                            <div className="size-actions">
+                              <button type="button" className="size-btn" onClick={() => updateSelectedItemSize(-1)}>-</button>
+                              <button type="button" className="size-btn" onClick={() => updateSelectedItemSize(+1)}>+</button>
                             </div>
                           </div>
                         </>
                       ) : (
                         <div className="info-box">
-                          Chọn icon để thay đổi nội dung và kích thước.
+                          Chọn một mục văn bản hoặc icon để chỉnh sửa nội dung, màu sắc và kích thước.
                         </div>
                       )}
 
-                      <div className="size-control">
-                        <div className="size-label">
-                          Kích thước: {selectedItem.size}px
-                        </div>
-                        <div className="size-actions">
-                          <button type="button" className="size-btn" onClick={() => updateSelectedItemSize(-1)}>-</button>
-                          <button type="button" className="size-btn" onClick={() => updateSelectedItemSize(+1)}>+</button>
-                        </div>
+                      <div className="info-box">
+                        Nội dung sẽ được in bằng công nghệ in lụa cao cấp,
+                        đảm bảo độ bền và sắc nét.
                       </div>
-                    </>
-                  ) : (
-                    <div className="info-box">
-                      Chọn một mục văn bản hoặc icon để chỉnh sửa nội dung, màu sắc và kích thước.
                     </div>
-                  )}
-
-                  <div className="info-box">
-                    Nội dung sẽ được in bằng công nghệ in lụa cao cấp,
-                    đảm bảo độ bền và sắc nét.
-                  </div>
-                </div>
                   </>
                 ) : (
                   <>
@@ -1079,10 +1083,10 @@ export default function CustomOrder() {
                 <div className="sidebar-section"><h4>🔢 Số lượng *</h4><input type="number" min={1} value={postQuantity} onChange={e => setPostQuantity(Number(e.target.value))} className="text-input" /></div>
 
                 {mode === "design" && (
-                <div className="sidebar-row-2">
-                  <div className="sidebar-section"><h4>📐 Size</h4><select value={postSize} onChange={e => setPostSize(e.target.value)} className="text-input">{["XS","S","M","L","XL","XXL","3XL"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
-                  <div className="sidebar-section"><h4>🧵 Chất liệu</h4><select value={postMaterial} onChange={e => setPostMaterial(e.target.value)} className="text-input">{["Cotton 100%","Cotton 65/35","Polyester","Vải thun lạnh","Vải cá sấu","Khác"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
-                </div>
+                  <div className="sidebar-row-2">
+                    <div className="sidebar-section"><h4>📐 Size</h4><select value={postSize} onChange={e => setPostSize(e.target.value)} className="text-input">{["XS", "S", "M", "L", "XL", "XXL", "3XL"].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                    <div className="sidebar-section"><h4>🧵 Chất liệu</h4><select value={postMaterial} onChange={e => setPostMaterial(e.target.value)} className="text-input">{["Cotton 100%", "Cotton 65/35", "Polyester", "Vải thun lạnh", "Vải cá sấu", "Khác"].map(m => <option key={m} value={m}>{m}</option>)}</select></div>
+                  </div>
                 )}
 
                 <div className="sidebar-row-2">

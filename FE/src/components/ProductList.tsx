@@ -1,6 +1,7 @@
-import { Plus, Eye, Edit2, EyeOff, Trash2, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
+import { Plus, Eye, Edit2, EyeOff, Trash2, ChevronLeft, ChevronRight, Undo2, ExternalLink } from 'lucide-react';
 import '../styles/product-list.css';
 import { productService } from '../services/productService';
+import { getImageUrl } from '../services/http';
 import { useEffect, useState } from 'react';
 
 interface ProductListProps {
@@ -94,7 +95,7 @@ export default function ProductList({ onNavigate }: ProductListProps) {
                             <td>
                                 <div className="product-img-box">
                                     <img
-                                        src={p.imageUrls && p.imageUrls.length > 0 ? p.imageUrls[0] : 'https://placehold.co/100x100?text=No+Image'}
+                                        src={p.imageUrls && p.imageUrls.length > 0 ? getImageUrl(p.imageUrls[0]) : 'https://placehold.co/100x100?text=No+Image'}
                                         alt={p.name}
                                     />
                                 </div>
@@ -117,6 +118,7 @@ export default function ProductList({ onNavigate }: ProductListProps) {
                             </td>
                             <td>
                                 <div className="action-buttons-group">
+                                    <ExternalLink size={18} style={{ cursor: "pointer", color: "#3b82f6" }} title="Xem trang chi tiết" onClick={() => onNavigate(`detail?id=${p.id}`)} />
                                     {p.status === 'HIDDEN' ? (
                                         <Eye size={18} style={{ color: "#16a34a", cursor: "pointer" }}
                                             onClick={() => {
