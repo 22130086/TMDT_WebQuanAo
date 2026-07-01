@@ -1,8 +1,8 @@
-﻿import type { FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { register } from "../services/authService";
+import { register, sendOtp } from "../services/authService";
 
 const API_BASE = "http://localhost:8080/api";
 
@@ -17,6 +17,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOtpStep, setShowOtpStep] = useState(false);
 
   // Factory fields
   const [factoryName, setFactoryName] = useState("");
@@ -26,7 +28,7 @@ export default function Register() {
 
   const navigate = useNavigate();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleRequestOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setSuccess("");
@@ -45,10 +47,29 @@ export default function Register() {
     }
 
     setLoading(true);
+    try {
+      await sendOtp(email);
+      setSuccess("Mã xác nhận đã được gửi đến email của bạn!");
+      setShowOtpStep(true);
+    } catch (err: any) {
+      console.error('Send OTP error:', err);
+      setError(err?.message || 'Đã xảy ra lỗi khi gửi mã OTP');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleFinalRegister(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!otp) {
+      setError("Vui lòng nhập mã OTP");
+      return;
+    }
+
+    setLoading(true);
     let certImageUrl = "";
 
     try {
-      // Nếu là xưởng và có file giấy phép → upload trước
       if (role === "factory" && certFile) {
         setUploading(true);
         const formData = new FormData();
@@ -67,7 +88,7 @@ export default function Register() {
         factoryName: role === "factory" ? factoryName : undefined,
         factoryAddress: role === "factory" ? factoryAddress : undefined,
         certImageUrl: certImageUrl || undefined,
-      });
+      }, otp);
 
       setSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
       setTimeout(() => navigate("/"), 1500);
@@ -125,7 +146,8 @@ export default function Register() {
               <p>Khởi đầu hành trình sản xuất của bạn</p>
             </div>
 
-            <form className="register-form" onSubmit={handleSubmit}>
+            {!showOtpStep ? (
+            <form className="register-form" onSubmit={handleRequestOtp}>
               {error && <div className="form-error">{error}</div>}
               {success && <div className="form-success">{success}</div>}
 
@@ -266,6 +288,37 @@ export default function Register() {
                 </p>
               </div>
             </form>
+            ) : (
+            <form className="register-form otp-form" onSubmit={handleFinalRegister}>
+              {error && <div className="form-error">{error}</div>}
+              {success && <div className="form-success">{success}</div>}
+              
+              <h3 style={{ marginBottom: "1rem" }}>Xác thực Email</h3>
+              <p style={{ marginBottom: "1.5rem" }}>
+                Vui lòng nhập mã OTP gồm 6 chữ số vừa được gửi đến email <strong>{email}</strong>
+              </p>
+              
+              <div className="form-group">
+                <input 
+                  type="text" 
+                  maxLength={6}
+                  placeholder="Nhập mã OTP..." 
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)} 
+                  style={{ textAlign: "center", fontSize: "1.5rem", letterSpacing: "0.5rem" }}
+                />
+              </div>
+
+              <button type="submit" className="register-btn" disabled={loading || uploading}>
+                {uploading ? "Đang tải ảnh..." : loading ? "Đang xác thực..." : "Xác nhận & Đăng ký"}
+                <span className="material-symbols-outlined">check_circle</span>
+              </button>
+              
+              <button type="button" onClick={() => setShowOtpStep(false)} className="register-btn" style={{ background: "transparent", color: "var(--text)", border: "1px solid var(--border)", marginTop: "1rem" }}>
+                Quay lại
+              </button>
+            </form>
+            )}
             
           </div>
           

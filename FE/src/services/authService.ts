@@ -59,12 +59,24 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 }
 
 export async function register(
-  payload: RegisterPayload
+  payload: RegisterPayload,
+  otp: string
 ): Promise<AuthResponse> {
   try {
     const response = await http.post<ApiResponse<AuthResponse>>(
-      "/auth/register",
+      `/auth/register?otp=${otp}`,
       payload
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getAxiosErrorMessage(error));
+  }
+}
+
+export async function sendOtp(email: string): Promise<string> {
+  try {
+    const response = await http.post<ApiResponse<string>>(
+      `/auth/send-otp?email=${email}`
     );
     return response.data.data;
   } catch (error) {

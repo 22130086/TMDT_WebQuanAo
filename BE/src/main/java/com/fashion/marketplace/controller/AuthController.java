@@ -23,9 +23,22 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse<String>> sendOtp(@RequestParam String email) {
+        authService.generateAndSendOtp(email);
+        return ResponseEntity.ok(ApiResponse.ok("Mã OTP đã được gửi", null));
+    }
+
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
-            @Valid @RequestBody RegisterRequest req) {
+            @Valid @RequestBody RegisterRequest req,
+            @RequestParam String otp) {
+        
+        boolean isOtpValid = authService.verifyOtp(req.getEmail(), otp);
+        if (!isOtpValid) {
+            throw new IllegalArgumentException("Mã OTP không hợp lệ hoặc đã hết hạn");
+        }
+        
         return ResponseEntity.ok(ApiResponse.ok("Đăng ký thành công", authService.register(req)));
     }
 
