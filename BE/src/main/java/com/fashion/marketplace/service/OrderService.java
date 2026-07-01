@@ -430,4 +430,114 @@ public class OrderService {
         }
         return code.getDiscountValue().min(total);
     }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> getFactoryRevenueReport(Long userId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        FactoryProfile factory = factoryProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Xưởng chưa có hồ sơ"));
+
+        List<Order> completedOrders = orderRepository.findByFactoryIdAndStatus(factory.getId(), Order.OrderStatus.COMPLETED);
+
+        java.time.LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : null;
+        java.time.LocalDateTime end = (endDate != null) ? endDate.atTime(java.time.LocalTime.MAX) : null;
+
+        List<Order> filteredOrders = completedOrders.stream()
+                .filter(o -> start == null || (o.getUpdatedAt() != null && !o.getUpdatedAt().isBefore(start)))
+                .filter(o -> end == null || (o.getUpdatedAt() != null && !o.getUpdatedAt().isAfter(end)))
+                .collect(Collectors.toList());
+
+        BigDecimal totalRevenue = filteredOrders.stream()
+                .map(Order::getFinalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long orderCount = filteredOrders.size();
+
+        java.util.Map<String, BigDecimal> dailyRevenue = new java.util.LinkedHashMap<>();
+        
+        if (startDate != null && endDate != null) {
+            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+            if (daysBetween <= 60) {
+                // Group by day
+                for (java.time.LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+                    String key = d.toString();
+                    java.time.LocalDate currentDate = d;
+                    BigDecimal dayTotal = filteredOrders.stream()
+                            .filter(o -> o.getUpdatedAt() != null && o.getUpdatedAt().toLocalDate().equals(currentDate))
+                            .map(Order::getFinalAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    dailyRevenue.put(key, dayTotal);
+                }
+            } else {
+                // Group by month
+                for (java.time.LocalDate m = startDate.withDayOfMonth(1); !m.isAfter(endDate); m = m.plusMonths(1)) {
+                    java.time.LocalDate monthStart = m;
+                    java.time.LocalDate monthEnd = m.plusMonths(1).minusDays(1);
+                    String key = monthStart.getYear() + "-" + String.format("%02d", monthStart.getMonthValue());
+                    BigDecimal monthTotal = filteredOrders.stream()
+                            .filter(o -> o.getUpdatedAt() != null 
+                                && !o.getUpdatedAt().toLocalDate().isBefore(monthStart) 
+                                && !o.getUpdatedAt().toLocalDate().isAfter(monthEnd))
+                            .map(Order::getFinalAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    dailyRevenue.put(key, monthTotal);
+                }
+            }
+        } else {
+            java.time.LocalDate now = java.time.LocalDate.now();
+            java.time.LocalDate rangeStart = now.minusMonths(5).withDayOfMonth(1);
+            java.time.LocalDate rangeEnd = now;
+            for (java.time.LocalDate m = rangeStart.withDayOfMonth(1); !m.isAfter(rangeEnd); m = m.plusMonths(1)) {
+                java.time.LocalDate monthStart = m;
+                java.time.LocalDate monthEnd = m.plusMonths(1).minusDays(1);
+                String key = monthStart.getYear() + "-" + String.format("%02d", monthStart.getMonthValue());
+                BigDecimal monthTotal = filteredOrders.stream()
+                        .filter(o -> o.getUpdatedAt() != null 
+                            && !o.getUpdatedAt().toLocalDate().isBefore(monthStart) 
+                            && !o.getUpdatedAt().toLocalDate().isAfter(monthEnd))
+                        .map(Order::getFinalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                dailyRevenue.put(key, monthTotal);
+            }
+        }
+
+        java.util.List<java.util.Map<String, Object>> chartData = new java.util.ArrayList<>();
+        dailyRevenue.forEach((date, rev) -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("date", date);
+            map.put("revenue", rev);
+            chartData.add(map);
+        });
+
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("totalRevenue", totalRevenue);
+        result.put("orderCount", orderCount);
+        result.put("chartData", chartData);
+        
+        BigDecimal readyMadeRevenue = filteredOrders.stream()
+                .filter(o -> o.getOrderType() == Order.OrderType.READY_MADE)
+                .map(Order::getFinalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal outsourcingRevenue = filteredOrders.stream()
+                .filter(o -> o.getOrderType() == Order.OrderType.OUTSOURCING)
+                .map(Order::getFinalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        java.util.List<java.util.Map<String, Object>> typeData = new java.util.ArrayList<>();
+        if (readyMadeRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("name", "Sản phẩm mẫu sẵn");
+            map.put("value", readyMadeRevenue);
+            typeData.add(map);
+        }
+        if (outsourcingRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("name", "Sản phẩm gia công");
+            map.put("value", outsourcingRevenue);
+            typeData.add(map);
+        }
+        result.put("typeData", typeData);
+        
+        return result;
+    }
 }
