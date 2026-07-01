@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "../styles/production-post-list.css";
+import { getImageUrl } from "../services/http";
 
 interface Post {
     id: number;
@@ -11,7 +12,7 @@ interface Post {
     createdAt: string;
     deadline: string;
     status: "PENDING" | "OPEN" | "IN_PROGRESS" | "CLOSED" | "CANCELLED";
-    imageUrl?: string;
+    designFileUrl?: string;
 }
 
 interface PageMeta {
@@ -86,7 +87,8 @@ export default function ProductionPostList({ onNavigate, refreshSignal }: Props)
 
     useEffect(() => {
         const token = localStorage.getItem("token");
-        fetch("/api/categories", {
+        // Lấy danh mục con của "Áo" (id=1) để lọc theo loại áo cụ thể
+        fetch("/api/categories/1/children", {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
             .then((r) => r.json())
@@ -317,7 +319,7 @@ export default function ProductionPostList({ onNavigate, refreshSignal }: Props)
                                 <td>
                                     <div className="pp-product-cell">
                                         <img
-                                            src={post.imageUrl || FALLBACK_IMAGE}
+                                            src={post.designFileUrl ? getImageUrl(post.designFileUrl) : FALLBACK_IMAGE}
                                             alt={post.title}
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
