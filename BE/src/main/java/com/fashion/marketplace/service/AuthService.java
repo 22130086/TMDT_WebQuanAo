@@ -9,6 +9,8 @@ import com.fashion.marketplace.repository.*;
 import com.fashion.marketplace.security.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.*;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
@@ -16,7 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,35 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final JavaMailSender mailSender;
+
+    private final Map<String, String> otpStorage = new ConcurrentHashMap<>();
+
+    public void generateAndSendOtp(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email đã được sử dụng");
+        }
+
+        Random random = new Random();
+        int otp = 100000 + random.nextInt(900000);
+        String otpCode = String.valueOf(otp);
+        otpStorage.put(email, otpCode);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Mã OTP xác thực đăng ký tài khoản");
+        message.setText("Mã OTP của bạn là: " + otpCode + "\nMã này có hiệu lực trong 5 phút. Vui lòng không chia sẻ với bất kỳ ai.");
+        mailSender.send(message);
+    }
+
+    public boolean verifyOtp(String email, String userProvidedOtp) {
+        String savedOtp = otpStorage.get(email);
+        if (savedOtp != null && savedOtp.equals(userProvidedOtp)) {
+            otpStorage.remove(email);
+            return true;
+        }
+        return false;
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
