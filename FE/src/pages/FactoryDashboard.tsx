@@ -1,8 +1,20 @@
 import { useEffect, useState } from "react";
 import http from "../services/http";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
 export default function FactoryDashboard() {
   const [stats, setStats] = useState({ products: 0, quotes: 0, orders: 0 });
+  const [revenueData, setRevenueData] = useState<{ date: string, revenue: number }[]>([]);
+  const [revenueByType, setRevenueByType] = useState<{ name: string, value: number }[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  
+  // Default to last 30 days
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0],
+    endDate: new Date().toISOString().split("T")[0]
+  });
 
   useEffect(() => {
     Promise.all([
@@ -18,26 +30,145 @@ export default function FactoryDashboard() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetchRevenueData();
+  }, [dateRange]);
+
+  const fetchRevenueData = () => {
+    http.get(`/factory/reports/revenue?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`)
+      .then((res) => {
+        const data = res.data?.data;
+        if (data) {
+          setRevenueData(data.chartData || []);
+          setTotalRevenue(data.totalRevenue || 0);
+          setRevenueByType(data.typeData || []);
+        }
+      })
+      .catch(() => {});
+  };
+
   const cards = [
+    { icon: "account_balance_wallet", label: "Tổng doanh thu", val: totalRevenue.toLocaleString() + " ₫" },
     { icon: "checkroom", label: "Sản phẩm mẫu", val: stats.products },
     { icon: "request_quote", label: "Báo giá đã gửi", val: stats.quotes },
     { icon: "inventory_2", label: "Đơn hàng", val: stats.orders },
-    { icon: "star", label: "Đánh giá", val: "—" },
   ];
 
   return (
-    <div style={{ paddingTop: 8 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ margin: "0 0 4px" }}>Trang tổng quan</h2>
-        <p style={{ color: "#6b7280", margin: 0 }}>Chào mừng trở lại! Tóm tắt hoạt động sản xuất.</p>
+    <div style={{ paddingTop: 8, paddingBottom: 40 }}>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2 style={{ margin: "0 0 4px" }}>Trang tổng quan</h2>
+          <p style={{ color: "#6b7280", margin: 0 }}>Chào mừng trở lại! Tóm tắt hoạt động sản xuất.</p>
+        </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 32 }}>
         {cards.map((c, i) => (
           <div key={i} style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 14 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 32, color: "#2563eb", background: "#eff6ff", borderRadius: 14, padding: 10 }}>{c.icon}</span>
-            <div><h3 style={{ margin: 0, fontSize: 24 }}>{c.val}</h3><p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>{c.label}</p></div>
+            <div><h3 style={{ margin: 0, fontSize: 22 }}>{c.val}</h3><p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>{c.label}</p></div>
           </div>
         ))}
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h3 style={{ margin: 0 }}>Doanh thu</h3>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <span style={{ fontSize: 14, color: "#6b7280" }}>Từ ngày:</span>
+            <input 
+              type="date" 
+              value={dateRange.startDate}
+              onChange={(e) => setDateRange({...dateRange, startDate: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e7eb", outline: "none", fontFamily: "inherit" }}
+            />
+            <span style={{ fontSize: 14, color: "#6b7280" }}>Đến ngày:</span>
+            <input 
+              type="date" 
+              value={dateRange.endDate}
+              onChange={(e) => setDateRange({...dateRange, endDate: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e7eb", outline: "none", fontFamily: "inherit" }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, alignItems: "start" }}>
+          {/* Bar Chart Container */}
+          <div style={{ height: 350, width: "100%", borderRight: "1px solid #f3f4f6", paddingRight: 24 }}>
+            <h4 style={{ margin: "0 0 16px", color: "#4b5563" }}>Biểu đồ tăng trưởng</h4>
+            {revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData} margin={{ top: 10, right: 10, left: 30, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: "#6b7280", fontSize: 12 }} 
+                    dy={10} 
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: "#f3f4f6" }}
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontFamily: "inherit" }}
+                    formatter={(value: number) => [value.toLocaleString() + " ₫", "Doanh thu"]}
+                  />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="#3b82f6" 
+                    radius={[4, 4, 0, 0]} 
+                    barSize={40}
+                    animationDuration={1500}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
+                Không có dữ liệu
+              </div>
+            )}
+          </div>
+
+          {/* Pie Chart Container */}
+          <div style={{ height: 350, width: "100%", display: "flex", flexDirection: "column" }}>
+            <h4 style={{ margin: "0 0 16px", color: "#4b5563" }}>Cơ cấu doanh thu</h4>
+            <div style={{ flex: 1 }}>
+              {revenueByType && revenueByType.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={revenueByType}
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {revenueByType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontFamily: "inherit" }}
+                      formatter={(value: number) => [value.toLocaleString() + " ₫", "Doanh thu"]}
+                    />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
+                  Không có dữ liệu
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

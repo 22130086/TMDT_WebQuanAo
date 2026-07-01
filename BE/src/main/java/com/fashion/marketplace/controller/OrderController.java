@@ -116,4 +116,13 @@ public class OrderController {
         orderService.deleteOrderFactory(authUtil.currentUserId(), id);
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa đơn hàng thành công", null));
     }
+
+    @GetMapping("/api/factory/reports/revenue")
+    @PreAuthorize("hasRole('FACTORY')")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getRevenueReport(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.ok("Báo cáo doanh thu xưởng",
+                orderService.getFactoryRevenueReport(authUtil.currentUserId(), startDate, endDate)));
+    }
 }
