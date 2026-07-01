@@ -55,6 +55,15 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết đơn hàng thành công", orderService.getById(id)));
     }
 
+    @PatchMapping("/api/orders/{id}")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrderAddress(
+            @PathVariable Long id,
+            @Valid @RequestBody com.fashion.marketplace.dto.request.UpdateOrderAddressRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin nhận hàng thành công",
+                orderService.updateOrderShippingInfo(authUtil.currentUserId(), id, req)));
+    }
+
     @PatchMapping("/api/orders/{id}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<OrderResponse>> cancel(@PathVariable Long id) {
@@ -99,5 +108,12 @@ public class OrderController {
             @PathVariable Long id, @RequestParam Order.OrderStatus status) {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái thành công",
                 orderService.updateStatus(authUtil.currentUserId(), id, status, true)));
+    }
+
+    @DeleteMapping("/api/factory/orders/{id}")
+    @PreAuthorize("hasRole('FACTORY')")
+    public ResponseEntity<ApiResponse<Void>> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrderFactory(authUtil.currentUserId(), id);
+        return ResponseEntity.ok(ApiResponse.ok("Đã xóa đơn hàng thành công", null));
     }
 }

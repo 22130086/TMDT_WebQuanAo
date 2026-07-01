@@ -55,12 +55,8 @@ public class ComplaintService {
             throw new IllegalStateException("Bạn chỉ có thể tạo khiếu nại cho đơn hàng của chính mình");
         }
         // Validate: order must be in a complainable status
-        if (order.getStatus() != Order.OrderStatus.DELIVERED
-                && order.getStatus() != Order.OrderStatus.COMPLETED
-                && order.getStatus() != Order.OrderStatus.SHIPPING
-                && order.getStatus() != Order.OrderStatus.IN_PRODUCTION
-                && order.getStatus() != Order.OrderStatus.READY_TO_SHIP) {
-            throw new IllegalStateException("Chỉ có thể tạo khiếu nại khi đơn hàng đang sản xuất, chuẩn bị giao, đang giao, đã giao hoặc hoàn thành");
+        if ( order.getStatus() != Order.OrderStatus.COMPLETED) {
+            throw new IllegalStateException("Chỉ có thể khiếu nại khi đơn hàng đã hoàn thành");
         }
 
         Complaint complaint = Complaint.builder()

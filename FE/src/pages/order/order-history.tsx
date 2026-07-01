@@ -30,6 +30,8 @@ interface Order {
   receiverPhone: string;
   shippingAddress: string;
   note: string;
+  issueType?: "COMPLAINT" | "DISPUTE";
+  issueReason?: string;
   status: "PENDING" | "CONFIRMED" | "IN_PRODUCTION" | "READY_TO_SHIP" | "SHIPPING" | "DELIVERED" | "COMPLETED" | "CANCELLED" | "DISPUTED";
   createdAt?: string;
   items: OrderItem[];
@@ -42,6 +44,12 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("ALL"); // ALL, PROCESSING, COMPLETED, CANCELLED
+  const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showActionMsg = (type: 'success' | 'error', text: string) => {
+    setActionMsg({ type, text });
+    setTimeout(() => setActionMsg(null), 4000);
+  };
 
   // 1. Hàm gọi API lấy danh sách đơn hàng từ Backend
   const loadOrders = async () => {
@@ -64,18 +72,48 @@ export default function OrderHistory() {
     loadOrders();
   }, []);
 
-  // 2. Hàm hỗ trợ hủy đơn hàng (Call API PATCH /api/orders/{id}/cancel)
   const handleCancelOrder = async (orderId: number) => {
     if (!window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${orderId} không?`)) return;
 
     try {
       const response = await http.patch(`/orders/${orderId}/cancel`);
       if (response.status === 200) {
-        alert("Hủy đơn hàng thành công!");
+        showActionMsg('success', "Hủy đơn hàng thành công!");
         loadOrders(); 
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || "Không thể hủy đơn hàng này.");
+      showActionMsg('error', err.response?.data?.message || "Không thể hủy đơn hàng này.");
+    }
+  };
+
+  const handleConfirmReceivedForHistory = async (order: Order) => {
+    const needsOnlinePayment = order.paymentStatus !== 'FULLY_PAID' && 
+      (order.paymentMethod === 'VNPAY' || order.orderType === 'OUTSOURCING' || order.depositAmount > 0);
+
+    if (needsOnlinePayment) {
+      try {
+        const remainingAmount = (order.finalAmount || order.totalAmount) - (order.depositAmount || 0);
+        const res = await http.post('/payment/create-remaining', {
+          orderId: order.id,
+          amount: remainingAmount,
+          orderInfo: `Thanh toán phần còn lại đơn hàng #${order.id}`
+        });
+        if (res.data && res.data.paymentUrl) {
+          window.location.href = res.data.paymentUrl;
+        } else {
+          showActionMsg('error', 'Không lấy được link thanh toán VNPAY');
+        }
+      } catch (e: any) {
+        showActionMsg('error', e?.response?.data?.message || 'Lỗi tạo giao dịch thanh toán');
+      }
+    } else {
+      try {
+        await http.patch(`/orders/${order.id}/received`);
+        showActionMsg('success', 'Xác nhận đã nhận hàng thành công!');
+        loadOrders();
+      } catch (e: any) {
+        showActionMsg('error', e?.response?.data?.message || 'Xác nhận thất bại');
+      }
     }
   };
 
@@ -86,8 +124,8 @@ export default function OrderHistory() {
       // Đang xử lý bao gồm các bước sản xuất luân chuyển và đang vận chuyển
       return ["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY_TO_SHIP", "SHIPPING", "DELIVERED"].includes(order.status);
     }
-    if (activeTab === "COMPLETED") return order.status === "COMPLETED"; // 🌟 Sửa thành COMPLETED khớp backend
-    if (activeTab === "CANCELLED") return ["CANCELLED", "DISPUTED"].includes(order.status); // Gom nhóm hủy/khiếu nại vào tab này
+    if (activeTab === "COMPLETED") return order.status === "COMPLETED" && !order.issueType;
+    if (activeTab === "CANCELLED") return order.issueType != null || ["CANCELLED", "DISPUTED"].includes(order.status); // Đưa cả đơn hoàn thành nhưng có khiếu nại/tranh chấp vào tab này
     return true;
   });
 
@@ -158,6 +196,26 @@ export default function OrderHistory() {
 
       <div className="order-history-container">
         
+        {/* NÚT QUAY LẠI NẰM NGOÀI HEADER */}
+        <div style={{ marginBottom: '16px' }}>
+          <Link to="/customer-profile" style={{ textDecoration: 'none' }}>
+            <button 
+              style={{ 
+                display: 'inline-flex', alignItems: 'center', gap: '8px', 
+                marginTop: '15px',
+                marginBottom: '-50px',
+                padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', 
+                background: '#4a80d2', border: '1px solid #141d2c', 
+                color: 'white', fontWeight: 500, fontSize: '14px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+              Quay lại hồ sơ cá nhân
+            </button>
+          </Link>
+        </div>
+
         {/* HEADER TRANG */}
         <div className="order-history-header">
           <div>
@@ -198,7 +256,7 @@ export default function OrderHistory() {
           const payMeta = getPaymentStatusMeta(order.paymentStatus); // 🌟 Lấy data payment status
           
           return (
-            <div key={order.id} className={`order-card ${statusMeta.className}`}>
+            <div key={order.id} className={`order-card ${order.issueType ? 'disputed' : statusMeta.className}`}>
               
               {/* KHỐI TRÁI: THÔNG TIN CHUNG */}
               <div className="order-left">
@@ -280,7 +338,13 @@ export default function OrderHistory() {
                       </div>
                     </div>
                   ))}
+                  
                 </div>
+                {order.issueReason && (
+                  <p style={{ margin: "10px 0 0 0", color: "#b91c1c", fontSize: "15px", fontWeight: 700, textAlign: "right", lineHeight: 1.4, wordBreak: "break-word" }}>
+                    <strong>Lý do:</strong> {order.issueReason}
+                  </p>
+                )}
                 </>
               )}
               </div>
@@ -291,6 +355,31 @@ export default function OrderHistory() {
                   <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>Tổng tiền thanh toán</p>
                   <h3 style={{ margin: "4px 0 0 0", color: "#111827", fontSize: "20px", fontWeight: "700" }}>{formatVND(order.finalAmount)}</h3>
                 </div>
+
+                {order.issueType && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px", marginTop: 12 }}>
+                    <div style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      backgroundColor: order.issueType === "COMPLAINT" ? "#fee2e2" : "#f3f4ff",
+                      color: order.issueType === "COMPLAINT" ? "#b91c1c" : "#4338ca",
+                      border: `1px solid ${order.issueType === "COMPLAINT" ? "#fecaca" : "#c7d2fe"}`,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap"
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                        {order.issueType === "COMPLAINT" ? "report" : "gavel"}
+                      </span>
+                      <span>{order.issueType === "COMPLAINT" ? "Khiếu nại" : "Tranh chấp"}</span>
+                    </div>
+                  </div>
+                )}
+
+                
 
                 {/* 🌟 Khối bọc chung đảm bảo 2 badge luôn luôn xếp hàng ngang, căn sát lề phải */}
                 <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "8px", width: "100%" }}>
@@ -340,6 +429,21 @@ export default function OrderHistory() {
                       Hủy đơn hàng
                     </button>
                   )}
+
+                  {(order.status === "SHIPPING" || order.status === "DELIVERED") && (() => {
+                    const needsOnlinePayment = order.paymentStatus !== 'FULLY_PAID' && 
+                      (order.paymentMethod === 'VNPAY' || order.orderType === 'OUTSOURCING' || order.depositAmount > 0);
+                    return (
+                      <button 
+                        className="btn-primary" 
+                        style={{ background: needsOnlinePayment ? "#3b82f6" : "#10b981", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }} 
+                        onClick={() => handleConfirmReceivedForHistory(order)}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>check</span>
+                        {needsOnlinePayment ? "Thanh toán & Nhận hàng" : "Đã nhận hàng"}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -348,6 +452,19 @@ export default function OrderHistory() {
         })}
 
       </div>
+
+      {/* Action Message Toast */}
+      {actionMsg && (
+        <div style={{
+          position: "fixed", top: 16, right: 16, zIndex: 9999, padding: "12px 20px", borderRadius: 10,
+          fontWeight: 500, fontSize: "0.9rem", boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          background: actionMsg.type === 'success' ? '#ecfdf5' : '#fef2f2',
+          color: actionMsg.type === 'success' ? '#065f46' : '#991b1b',
+          border: actionMsg.type === 'success' ? '1px solid #a7f3d0' : '1px solid #fecaca'
+        }}>
+          {actionMsg.text}
+        </div>
+      )}
 
       <Footer />
     </main>

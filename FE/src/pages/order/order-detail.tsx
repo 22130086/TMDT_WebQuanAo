@@ -84,6 +84,15 @@ export default function OrderDetail() {
   const [submittingComplaint, setSubmittingComplaint] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Update Address state
+  const [showUpdateAddressModal, setShowUpdateAddressModal] = useState(false);
+  const [updateAddressData, setUpdateAddressData] = useState({
+    receiverName: '',
+    receiverPhone: '',
+    shippingAddress: ''
+  });
+  const [submittingUpdateAddress, setSubmittingUpdateAddress] = useState(false);
+
   const showActionMsg = (type: 'success' | 'error', text: string) => {
     setActionMsg({ type, text });
     setTimeout(() => setActionMsg(null), 4000);
@@ -153,6 +162,72 @@ export default function OrderDetail() {
     } catch (e: any) {
       showActionMsg('error', e?.response?.data?.message || 'Tạo khiếu nại thất bại');
     } finally { setSubmittingComplaint(false); }
+  };
+
+  const handleOpenUpdateAddress = () => {
+    if (order) {
+      setUpdateAddressData({
+        receiverName: order.receiverName,
+        receiverPhone: order.receiverPhone,
+        shippingAddress: order.shippingAddress
+      });
+      setShowUpdateAddressModal(true);
+    }
+  };
+
+  const handleSubmitUpdateAddress = async () => {
+    if (!updateAddressData.receiverName.trim() || !updateAddressData.receiverPhone.trim() || !updateAddressData.shippingAddress.trim()) {
+      showActionMsg('error', 'Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+    setSubmittingUpdateAddress(true);
+    try {
+      const res = await http.patch(`/orders/${id}`, updateAddressData);
+      showActionMsg('success', 'Cập nhật địa chỉ thành công!');
+      setShowUpdateAddressModal(false);
+      if (res.data && res.data.data) {
+        setOrder(res.data.data);
+      }
+    } catch (e: any) {
+      showActionMsg('error', e?.response?.data?.message || 'Cập nhật thất bại');
+    } finally { 
+      setSubmittingUpdateAddress(false); 
+    }
+  };
+
+  const handleConfirmReceived = async () => {
+    if (!order) return;
+    
+    const needsOnlinePayment = order.paymentStatus !== 'FULLY_PAID' && 
+      (order.paymentMethod === 'VNPAY' || order.orderType === 'OUTSOURCING' || order.depositAmount > 0);
+
+    if (needsOnlinePayment) {
+      try {
+        const remainingAmount = (order.finalAmount || order.totalAmount) - (order.depositAmount || 0);
+        const res = await http.post('/payment/create-remaining', {
+          orderId: order.id,
+          amount: remainingAmount,
+          orderInfo: `Thanh toán phần còn lại đơn hàng #${order.id}`
+        });
+        if (res.data && res.data.paymentUrl) {
+          window.location.href = res.data.paymentUrl;
+        } else {
+          showActionMsg('error', 'Không lấy được link thanh toán VNPAY');
+        }
+      } catch (e: any) {
+        showActionMsg('error', e?.response?.data?.message || 'Lỗi tạo giao dịch thanh toán');
+      }
+    } else {
+      try {
+        const res = await http.patch(`/orders/${order.id}/received`);
+        showActionMsg('success', 'Xác nhận đã nhận hàng thành công!');
+        if (res.data && res.data.data) {
+          setOrder(res.data.data);
+        }
+      } catch (e: any) {
+        showActionMsg('error', e?.response?.data?.message || 'Xác nhận thất bại');
+      }
+    }
   };
 
   // 2. Gọi API lấy chi tiết một đơn hàng
@@ -318,6 +393,7 @@ export default function OrderDetail() {
 
         {/* TIMELINE THEO DÕI TRẠNG THÁI (Ẩn đi nếu đơn bị hủy/khiếu nại để giao diện chuẩn chỉnh) */}
         {order.status !== "CANCELLED" && order.status !== "DISPUTED" ? (
+          <>
           <section className="tracking-section">
             <div className="tracking-timeline">
               
@@ -378,6 +454,8 @@ export default function OrderDetail() {
 
             </div>
           </section>
+
+          </>
         ) : (
           /* Khối thông báo đặc biệt nếu đơn hàng bị HỦY hoặc KHIẾU NẠI */
           <div style={{
@@ -571,7 +649,20 @@ export default function OrderDetail() {
             
             {/* Thẻ thông tin người nhận hàng */}
             <div className="client-card">
-              <h3>Thông tin nhận hàng</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>Thông tin nhận hàng</h3>
+                {order.status === "PENDING" && (
+                  <button 
+                    onClick={handleOpenUpdateAddress}
+                    style={{ 
+                      padding: "4px 12px", background: "#f3f4f6", color: "#374151", 
+                      border: "1px solid #d1d5db", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 500
+                    }}
+                  >
+                    ✏️ Sửa
+                  </button>
+                )}
+              </div>
               
               <div className="info-group">
                 <User size={18} />
@@ -683,6 +774,38 @@ export default function OrderDetail() {
               </div>
             </div>
 
+            {/* NÚT XÁC NHẬN ĐÃ NHẬN HÀNG - DI CHUYỂN RA ĐÂY */}
+            {(order.status === "SHIPPING" || order.status === "DELIVERED") && (() => {
+              const needsOnlinePayment = order.paymentStatus !== 'FULLY_PAID' && 
+                (order.paymentMethod === 'VNPAY' || order.orderType === 'OUTSOURCING' || order.depositAmount > 0);
+              return (
+                <div style={{ marginTop: "16px" }}>
+                  <button 
+                    onClick={handleConfirmReceived}
+                    style={{
+                      width: "100%",
+                      padding: "14px",
+                      background: needsOnlinePayment ? "#3b82f6" : "#10b981",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                    }}
+                  >
+                    <Check size={20} />
+                    {needsOnlinePayment ? "Thanh toán & Nhận hàng" : "Đã nhận hàng"}
+                  </button>
+                </div>
+              );
+            })()}
+
             <div style={{ marginTop: "16px" }}>
               <Link to="/order-history" style={{ textDecoration: "none" }}>
                 <button className="btn-outline" style={{ width: "100%", padding: "12px", cursor: "pointer" }}>
@@ -758,6 +881,58 @@ export default function OrderDetail() {
               </button>
               <button onClick={() => setShowDisputeModal(false)}
                 style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer" }}>
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Address Modal */}
+      {showUpdateAddressModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowUpdateAddressModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 32, width: "100%", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+              ✏️ Cập nhật thông tin nhận hàng
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tên người nhận</label>
+                <input 
+                  type="text" 
+                  value={updateAddressData.receiverName} 
+                  onChange={(e) => setUpdateAddressData({...updateAddressData, receiverName: e.target.value})}
+                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit" }} 
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Số điện thoại</label>
+                <input 
+                  type="text" 
+                  value={updateAddressData.receiverPhone} 
+                  onChange={(e) => setUpdateAddressData({...updateAddressData, receiverPhone: e.target.value})}
+                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit" }} 
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Địa chỉ giao hàng</label>
+                <textarea 
+                  value={updateAddressData.shippingAddress} 
+                  onChange={(e) => setUpdateAddressData({...updateAddressData, shippingAddress: e.target.value})}
+                  rows={3}
+                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: 'vertical' }} 
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+              <button onClick={handleSubmitUpdateAddress} disabled={submittingUpdateAddress}
+                style={{ padding: "10px 24px", background: "#3b82f6", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500 }}>
+                {submittingUpdateAddress ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+              <button onClick={() => setShowUpdateAddressModal(false)}
+                style={{ padding: "10px 24px", background: "white", color: "#666", border: "1px solid #ccc", borderRadius: 8, cursor: "pointer", fontWeight: 500 }}>
                 Hủy
               </button>
             </div>

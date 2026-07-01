@@ -26,6 +26,8 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     // Find by factory (complaints related to factory's orders)
     @Query("SELECT c FROM Complaint c WHERE c.order.factory.id = :factoryId")
     Page<Complaint> findByFactoryId(@Param("factoryId") Long factoryId, Pageable pageable);
+
+    List<Complaint> findByOrderIdAndStatus(Long orderId, Complaint.ComplaintStatus status);
     
     // Count by status
     Long countByStatus(Complaint.ComplaintStatus status);

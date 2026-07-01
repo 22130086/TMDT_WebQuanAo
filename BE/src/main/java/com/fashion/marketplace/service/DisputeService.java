@@ -65,10 +65,8 @@ public class DisputeService {
             throw new IllegalStateException("Bạn chỉ có thể tạo tranh chấp cho đơn hàng của chính mình");
         }
         // Validate: order must be in a disputable status
-        if (order.getStatus() != Order.OrderStatus.DELIVERED
-                && order.getStatus() != Order.OrderStatus.COMPLETED
-                && order.getStatus() != Order.OrderStatus.SHIPPING) {
-            throw new IllegalStateException("Chỉ có thể tạo tranh chấp khi đơn hàng đang giao, đã giao hoặc hoàn thành");
+        if (order.getStatus() != Order.OrderStatus.COMPLETED) {
+            throw new IllegalStateException("Chỉ có thể tạo tranh chấp khi đơn hàng đã hoàn thành");
         }
 
         Dispute dispute = Dispute.builder()
