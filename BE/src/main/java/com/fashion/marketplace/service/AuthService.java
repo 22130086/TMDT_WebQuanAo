@@ -62,6 +62,37 @@ public class AuthService {
         return false;
     }
 
+    public void generateAndSendOtpForForgotPassword(String email) {
+        if (!userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Không tìm thấy tài khoản với email này");
+        }
+
+        Random random = new Random();
+        int otp = 100000 + random.nextInt(900000);
+        String otpCode = String.valueOf(otp);
+        otpStorage.put(email, otpCode);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Mã OTP Khôi phục mật khẩu");
+        message.setText("Mã OTP để khôi phục mật khẩu của bạn là: " + otpCode + "\nMã này có hiệu lực trong 5 phút. Vui lòng không chia sẻ với bất kỳ ai.");
+        mailSender.send(message);
+    }
+
+    @Transactional
+    public void resetPassword(String email, String otp, String newPassword) {
+        boolean isOtpValid = verifyOtp(email, otp);
+        if (!isOtpValid) {
+            throw new IllegalArgumentException("Mã OTP không hợp lệ hoặc đã hết hạn");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     @Transactional
     public AuthResponse register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.getEmail())) {
