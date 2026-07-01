@@ -42,6 +42,21 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Đăng ký thành công", authService.register(req)));
     }
 
+    @PostMapping("/forgot-password/send-otp")
+    public ResponseEntity<ApiResponse<String>> sendOtpForgotPassword(@RequestParam String email) {
+        authService.generateAndSendOtpForForgotPassword(email);
+        return ResponseEntity.ok(ApiResponse.ok("Mã OTP khôi phục mật khẩu đã được gửi", null));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<ApiResponse<String>> resetPassword(
+            @RequestParam String email,
+            @RequestParam String otp,
+            @RequestParam String newPassword) {
+        authService.resetPassword(email, otp, newPassword);
+        return ResponseEntity.ok(ApiResponse.ok("Mật khẩu đã được đặt lại thành công", null));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest req) {

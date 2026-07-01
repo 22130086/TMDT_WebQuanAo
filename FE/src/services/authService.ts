@@ -78,6 +78,28 @@ export async function sendOtp(email: string): Promise<string> {
     const response = await http.post<ApiResponse<string>>(
       `/auth/send-otp?email=${email}`
     );
+    return response.data?.data || "Success";
+  } catch (error) {
+    throw new Error(getAxiosErrorMessage(error));
+  }
+}
+
+export async function sendOtpForgotPassword(email: string): Promise<string> {
+  try {
+    const response = await http.post<ApiResponse<string>>(
+      `/auth/forgot-password/send-otp?email=${email}`
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getAxiosErrorMessage(error));
+  }
+}
+
+export async function resetPassword(email: string, otp: string, newPassword: string): Promise<string> {
+  try {
+    const response = await http.post<ApiResponse<string>>(
+      `/auth/forgot-password/reset?email=${email}&otp=${otp}&newPassword=${newPassword}`
+    );
     return response.data.data;
   } catch (error) {
     throw new Error(getAxiosErrorMessage(error));

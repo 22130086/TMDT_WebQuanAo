@@ -58,6 +58,7 @@ public class CustomerController {
 
         if (req.getFullName() != null) user.setFullName(req.getFullName());
         if (req.getPhone() != null) user.setPhone(req.getPhone());
+        if (req.getAddress() != null) user.setAddress(req.getAddress());
         if (req.getAvatarUrl() != null) user.setAvatarUrl(req.getAvatarUrl());
 
         userRepository.save(user);

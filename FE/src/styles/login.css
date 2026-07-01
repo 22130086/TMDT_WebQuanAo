@@ -239,6 +239,198 @@ body {
   font-weight: 600;
 }
 
+/* Nút Quên mật khẩu */
+.forgot-btn {
+  background: none;
+  border: none;
+  color: #0058be;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-family: "Inter", sans-serif;
+}
+
+.forgot-btn:hover {
+  color: #0037b0;
+  text-decoration: underline;
+}
+
+/* Modal Quên mật khẩu */
+.forgot-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+  animation: fadeInOverlay 0.2s ease;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.forgot-modal-box {
+  background: white;
+  border-radius: 16px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 16px 40px rgba(0, 55, 176, 0.14);
+  position: relative;
+  animation: slideUpModal 0.25s ease;
+}
+
+@keyframes slideUpModal {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.forgot-modal-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  width: 1.75rem;
+  height: 1.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: background 0.2s;
+}
+
+.forgot-modal-close:hover {
+  background: #e5e7eb;
+}
+
+.forgot-modal-icon {
+  font-size: 2rem;
+  margin-bottom: 0.4rem;
+}
+
+.forgot-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: "Manrope", sans-serif;
+  color: #111827;
+}
+
+.forgot-modal-desc {
+  margin: 0.35rem 0 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.forgot-modal-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #6b7280;
+  margin-bottom: 0.4rem;
+}
+
+.forgot-modal-input {
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  font-family: "Inter", sans-serif;
+}
+
+.forgot-modal-input:focus {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.08);
+}
+
+.forgot-modal-input-otp {
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.5rem;
+  font-weight: 700;
+}
+
+.forgot-modal-btn {
+  width: 100%;
+  border: none;
+  padding: 0.7rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0037b0 0%, #1d4ed8 100%);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  font-family: "Inter", sans-serif;
+}
+
+.forgot-modal-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 55, 176, 0.25);
+}
+
+.forgot-modal-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.forgot-modal-btn-back {
+  width: 100%;
+  background: transparent;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.65rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-family: "Inter", sans-serif;
+  transition: background 0.2s;
+}
+
+.forgot-modal-btn-back:hover {
+  background: #f9fafb;
+}
+
+.forgot-modal-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border: 1px solid #fecaca;
+}
+
+.forgot-modal-success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border: 1px solid #bbf7d0;
+}
+
 .login-btn {
   width: 100%;
   border: none;
