@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import http from "../services/http";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
 export default function FactoryDashboard() {
   const [stats, setStats] = useState({ products: 0, quotes: 0, orders: 0 });
   const [revenueData, setRevenueData] = useState<{ date: string, revenue: number }[]>([]);
+  const [revenueByType, setRevenueByType] = useState<{ name: string, value: number }[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   
   // Default to last 30 days
@@ -38,6 +41,7 @@ export default function FactoryDashboard() {
         if (data) {
           setRevenueData(data.chartData || []);
           setTotalRevenue(data.totalRevenue || 0);
+          setRevenueByType(data.typeData || []);
         }
       })
       .catch(() => {});
@@ -89,43 +93,81 @@ export default function FactoryDashboard() {
           </div>
         </div>
 
-        <div style={{ height: 350, width: "100%" }}>
-          {revenueData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueData} margin={{ top: 10, right: 10, left: 30, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: "#6b7280", fontSize: 12 }} 
-                  dy={10} 
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: "#6b7280", fontSize: 12 }}
-                  tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
-                />
-                <Tooltip 
-                  cursor={{ fill: "#f3f4f6" }}
-                  contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontFamily: "inherit" }}
-                  formatter={(value: number) => [value.toLocaleString() + " ₫", "Doanh thu"]}
-                />
-                <Bar 
-                  dataKey="revenue" 
-                  fill="#3b82f6" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={40}
-                  animationDuration={1500}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
-              Không có dữ liệu trong khoảng thời gian này
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, alignItems: "start" }}>
+          {/* Bar Chart Container */}
+          <div style={{ height: 350, width: "100%", borderRight: "1px solid #f3f4f6", paddingRight: 24 }}>
+            <h4 style={{ margin: "0 0 16px", color: "#4b5563" }}>Biểu đồ tăng trưởng</h4>
+            {revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData} margin={{ top: 10, right: 10, left: 30, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: "#6b7280", fontSize: 12 }} 
+                    dy={10} 
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: "#f3f4f6" }}
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontFamily: "inherit" }}
+                    formatter={(value: number) => [value.toLocaleString() + " ₫", "Doanh thu"]}
+                  />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="#3b82f6" 
+                    radius={[4, 4, 0, 0]} 
+                    barSize={40}
+                    animationDuration={1500}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
+                Không có dữ liệu
+              </div>
+            )}
+          </div>
+
+          {/* Pie Chart Container */}
+          <div style={{ height: 350, width: "100%", display: "flex", flexDirection: "column" }}>
+            <h4 style={{ margin: "0 0 16px", color: "#4b5563" }}>Cơ cấu doanh thu</h4>
+            <div style={{ flex: 1 }}>
+              {revenueByType && revenueByType.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={revenueByType}
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {revenueByType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontFamily: "inherit" }}
+                      formatter={(value: number) => [value.toLocaleString() + " ₫", "Doanh thu"]}
+                    />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
+                  Không có dữ liệu
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

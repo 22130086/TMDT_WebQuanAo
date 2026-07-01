@@ -513,6 +513,31 @@ public class OrderService {
         result.put("orderCount", orderCount);
         result.put("chartData", chartData);
         
+        BigDecimal readyMadeRevenue = filteredOrders.stream()
+                .filter(o -> o.getOrderType() == Order.OrderType.READY_MADE)
+                .map(Order::getFinalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal outsourcingRevenue = filteredOrders.stream()
+                .filter(o -> o.getOrderType() == Order.OrderType.OUTSOURCING)
+                .map(Order::getFinalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        java.util.List<java.util.Map<String, Object>> typeData = new java.util.ArrayList<>();
+        if (readyMadeRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("name", "Sản phẩm mẫu sẵn");
+            map.put("value", readyMadeRevenue);
+            typeData.add(map);
+        }
+        if (outsourcingRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("name", "Sản phẩm gia công");
+            map.put("value", outsourcingRevenue);
+            typeData.add(map);
+        }
+        result.put("typeData", typeData);
+        
         return result;
     }
 }
