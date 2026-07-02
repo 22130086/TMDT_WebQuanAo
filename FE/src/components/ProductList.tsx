@@ -15,6 +15,7 @@ interface ProductItem {
     categoryName?: string;
     description?: string;
     price: number;
+    stock?: number;
     status: string;
     imageUrls?: string[];
 }
@@ -85,6 +86,7 @@ export default function ProductList({ onNavigate }: ProductListProps) {
                         <th>Danh mục</th>
                         <th>Mô tả</th>
                         <th>Giá tham khảo</th>
+                        <th>Tồn kho</th>
                         <th>Trạng thái</th>
                         <th className="text-center">Hành động</th>
                     </tr>
@@ -110,6 +112,14 @@ export default function ProductList({ onNavigate }: ProductListProps) {
                             </td>
                             <td className="product-price-highlight">
                                 {p.price ? `${Number(p.price).toLocaleString('vi-VN')}đ` : '0đ'}
+                            </td>
+                            <td>
+                                <span style={{
+                                    fontWeight: 600,
+                                    color: (p.stock ?? 0) > 0 ? '#16a34a' : '#ef4444'
+                                }}>
+                                    {(p.stock ?? 0).toLocaleString('vi-VN')}
+                                </span>
                             </td>
                             <td>
                                 <span className={p.status === 'ACTIVE' ? 'success' : 'danger'}>
