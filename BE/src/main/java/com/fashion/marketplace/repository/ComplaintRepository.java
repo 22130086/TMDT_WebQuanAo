@@ -16,6 +16,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     
     // Find by order
     Page<Complaint> findByOrderId(Long orderId, Pageable pageable);
+    List<Complaint> findByOrderId(Long orderId);
     
     // Find by user who raised complaint
     Page<Complaint> findByRaisedById(Long userId, Pageable pageable);

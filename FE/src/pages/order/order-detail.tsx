@@ -50,6 +50,10 @@ interface OrderDetailData {
   receiverPhone: string;
   shippingAddress: string;
   note: string;
+  issueType?: "COMPLAINT" | "DISPUTE";
+  issueReason?: string;
+  complaints?: Array<{ reason?: string | null }>;
+  disputes?: Array<{ description?: string | null }>;
   createdAt: string;
   items: OrderItem[];
   designFileUrl?: string;
@@ -78,10 +82,16 @@ export default function OrderDetail() {
   // Dispute & Complaint state
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeDesc, setDisputeDesc] = useState('');
+  const [disputeFile, setDisputeFile] = useState<File | null>(null);
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [complaintReason, setComplaintReason] = useState('');
+  const [complaintFile, setComplaintFile] = useState<File | null>(null);
   const [submittingComplaint, setSubmittingComplaint] = useState(false);
+  const [issueDetail, setIssueDetail] = useState('');
+  const [issueStatus, setIssueStatus] = useState('');
+  const [issueResolution, setIssueResolution] = useState('');
+  const [issueEvidenceUrl, setIssueEvidenceUrl] = useState('');
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Update Address state
@@ -142,10 +152,15 @@ export default function OrderDetail() {
     if (!disputeDesc.trim()) return;
     setSubmittingDispute(true);
     try {
-      await http.post('/disputes', { orderId: Number(id), description: disputeDesc.trim() });
+      let evidenceUrl: string | undefined;
+      if (disputeFile) {
+        evidenceUrl = await uploadEvidence(disputeFile, 'disputes');
+      }
+      await http.post('/disputes', { orderId: Number(id), description: disputeDesc.trim(), evidenceUrl });
       showActionMsg('success', 'Tạo tranh chấp thành công! Admin sẽ xem xét.');
       setShowDisputeModal(false);
       setDisputeDesc('');
+      setDisputeFile(null);
     } catch (e: any) {
       showActionMsg('error', e?.response?.data?.message || 'Tạo tranh chấp thất bại');
     } finally { setSubmittingDispute(false); }
@@ -155,10 +170,15 @@ export default function OrderDetail() {
     if (!complaintReason.trim()) return;
     setSubmittingComplaint(true);
     try {
-      await http.post('/complaints', { orderId: Number(id), reason: complaintReason.trim() });
+      let evidenceUrl: string | undefined;
+      if (complaintFile) {
+        evidenceUrl = await uploadEvidence(complaintFile, 'complaints');
+      }
+      await http.post('/complaints', { orderId: Number(id), reason: complaintReason.trim(), evidenceUrl });
       showActionMsg('success', 'Tạo khiếu nại thành công! Xưởng sẽ xem xét.');
       setShowComplaintModal(false);
       setComplaintReason('');
+      setComplaintFile(null);
     } catch (e: any) {
       showActionMsg('error', e?.response?.data?.message || 'Tạo khiếu nại thất bại');
     } finally { setSubmittingComplaint(false); }
@@ -193,6 +213,20 @@ export default function OrderDetail() {
     } finally { 
       setSubmittingUpdateAddress(false); 
     }
+  };
+
+  const uploadEvidence = async (file: File, type: string): Promise<string | undefined> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    const res = await http.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return res.data?.data?.url;
   };
 
   const handleConfirmReceived = async () => {
@@ -230,6 +264,52 @@ export default function OrderDetail() {
     }
   };
 
+  const loadIssueDetail = async (currentOrder: OrderDetailData) => {
+    if (!currentOrder || (!currentOrder.issueType && currentOrder.status !== "DISPUTED")) {
+      setIssueDetail(currentOrder.issueReason?.trim() || "");
+      setIssueStatus("");
+      setIssueEvidenceUrl("");
+      setIssueResolution("");
+      return;
+    }
+
+    try {
+      const complaintRequest = (currentOrder.issueType === "COMPLAINT" || currentOrder.status === "DISPUTED")
+        ? http.get(`/orders/${currentOrder.id}/complaints?page=0&size=10`)
+        : Promise.resolve(null);
+      const disputeRequest = (currentOrder.issueType === "DISPUTE" || currentOrder.status === "DISPUTED")
+        ? http.get(`/orders/${currentOrder.id}/disputes?page=0&size=10`)
+        : Promise.resolve(null);
+
+      const [complaintResult, disputeResult] = await Promise.allSettled([complaintRequest, disputeRequest]);
+      const complaint = complaintResult.status === "fulfilled" && complaintResult.value
+        ? complaintResult.value.data?.data?.content?.[0]
+        : null;
+      const dispute = disputeResult.status === "fulfilled" && disputeResult.value
+        ? disputeResult.value.data?.data?.content?.[0]
+        : null;
+
+      const complaintReason = complaint?.reason?.trim();
+      const disputeDescription = dispute?.description?.trim();
+      const complaintStatus = complaint?.status?.trim();
+      const disputeStatus = dispute?.status?.trim();
+      const complaintResolution = complaint?.resolution?.trim();
+      const disputeVerdict = dispute?.verdict?.trim();
+      const complaintEvidence = complaint?.evidenceUrl?.trim();
+      const disputeEvidence = dispute?.evidenceUrl?.trim();
+
+      setIssueDetail(complaintReason || disputeDescription || currentOrder.issueReason?.trim() || "");
+      setIssueStatus(complaintStatus || disputeStatus || currentOrder.issueType || "");
+      setIssueEvidenceUrl(complaintEvidence || disputeEvidence || "");
+      setIssueResolution(complaintResolution || disputeVerdict || "");
+    } catch {
+      setIssueDetail(currentOrder.issueReason?.trim() || "");
+      setIssueStatus(currentOrder.issueType || "");
+      setIssueEvidenceUrl("");
+      setIssueResolution("");
+    }
+  };
+
   // 2. Gọi API lấy chi tiết một đơn hàng
   useEffect(() => {
     const fetchOrderDetail = async () => {
@@ -239,9 +319,13 @@ export default function OrderDetail() {
         const response = await http.get(`/orders/${id}`);
         // Thường API bọc qua lớp ApiResponse chung (response.data.data)
         if (response.data && response.data.data) {
-          setOrder(response.data.data);
+          const orderData = response.data.data as OrderDetailData;
+          setOrder(orderData);
+          await loadIssueDetail(orderData);
         } else {
-          setOrder(response.data);
+          const orderData = response.data as OrderDetailData;
+          setOrder(orderData);
+          await loadIssueDetail(orderData);
         }
       } catch (err: any) {
         console.error("Lỗi lấy chi tiết đơn hàng:", err);
@@ -355,6 +439,31 @@ export default function OrderDetail() {
 
   const currentStep = getTimelineStep(order.status);
   const badgeInfo = getStatusBadge(order.status);
+  const issueAlert = (() => {
+    if (order.status === "CANCELLED") {
+      return {
+        title: "Đơn hàng này đã bị hủy",
+        detail: "Đơn hàng đã bị hủy do bên khách hàng.",
+        isCancelled: true as const,
+      };
+    }
+
+    if (order.status === "DISPUTED" || (order.status === "COMPLETED" && order.issueType)) {
+      const detail = issueDetail.trim() || order.issueReason?.trim() || "Không có thông tin chi tiết được cung cấp.";
+      const statusText = issueStatus.trim() || (order.issueType ? `Loại: ${order.issueType}` : "");
+      const resolutionText = issueResolution.trim();
+
+      return {
+        title: "Đơn hàng đang trong trạng thái khiếu nại / tranh chấp",
+        detail,
+        statusText,
+        resolutionText,
+        isCancelled: false as const,
+      };
+    }
+
+    return null;
+  })();
 
   return (
     <div className="order-detail-page">
@@ -392,7 +501,7 @@ export default function OrderDetail() {
         </div>
 
         {/* TIMELINE THEO DÕI TRẠNG THÁI (Ẩn đi nếu đơn bị hủy/khiếu nại để giao diện chuẩn chỉnh) */}
-        {order.status !== "CANCELLED" && order.status !== "DISPUTED" ? (
+        {order.status !== "CANCELLED" && order.status !== "DISPUTED" && !(order.status === "COMPLETED" && order.issueType) ? (
           <>
           <section className="tracking-section">
             <div className="tracking-timeline">
@@ -456,33 +565,68 @@ export default function OrderDetail() {
           </section>
 
           </>
-        ) : (
+        ) : issueAlert ? (
           /* Khối thông báo đặc biệt nếu đơn hàng bị HỦY hoặc KHIẾU NẠI */
           <div style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: "12px",
             padding: "20px",
-            backgroundColor: order.status === "CANCELLED" ? "#fef2f2" : "#fffbeb",
+            backgroundColor: issueAlert.isCancelled ? "#fef2f2" : "#fffbeb",
             borderRadius: "8px",
             marginBottom: "30px",
-            border: `1px solid ${order.status === "CANCELLED" ? "#fca5a5" : "#fcd34d"}`
+            border: `1px solid ${issueAlert.isCancelled ? "#fca5a5" : "#fcd34d"}`,
+            width: '100%',
+            boxSizing: 'border-box'
           }}>
-            {order.status === "CANCELLED" ? (
+            {issueAlert.isCancelled ? (
               <XCircle size={32} style={{ color: "#ef4444" }} />
             ) : (
               <AlertTriangle size={32} style={{ color: "#d97706" }} />
             )}
-            <div>
-              <h4 style={{ margin: 0, color: order.status === "CANCELLED" ? "#991b1b" : "#92400e" }}>
-                {order.status === "CANCELLED" ? "Đơn hàng này đã bị hủy" : "Đơn hàng đang trong trạng thái khiếu nại / tranh chấp"}
-              </h4>
-              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#4b5563" }}>
-                Ghi chú hệ thống: {order.note || "Không có lý do chi tiết được cung cấp."}
-              </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, width: '100%', alignItems: 'stretch' }}>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: 0, color: issueAlert.isCancelled ? "#991b1b" : "#92400e" }}>
+                  {issueAlert.title}
+                </h4>
+                <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#4b5563" }}>
+                  <strong>Lời khai của người mua:</strong> {issueAlert.detail}
+                </p>
+                {issueAlert.statusText && (
+                  <p style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#4b5563" }}>
+                    <strong>Trạng thái xử lý:</strong> {issueAlert.statusText}
+                  </p>
+                )}
+                {issueAlert.resolutionText && (
+                  <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#4b5563" }}>
+                    <strong>Hướng giải quyết / Kết quả:</strong> {issueAlert.resolutionText}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ width: 1, background: '#e5e7eb', margin: '0 12px', alignSelf: 'stretch' }} />
+
+              <div style={{ flex: '0 0 380px', textAlign: 'right' }}>
+                <span style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                  Ảnh chứng cứ
+                </span>
+                {issueEvidenceUrl ? (
+                  <a href={getImageUrl(issueEvidenceUrl)} target="_blank" rel="noreferrer" style={{ display: 'inline-block' }}>
+                    <img
+                      src={getImageUrl(issueEvidenceUrl)}
+                      alt="Evidence"
+                      style={{ width: '100%', maxWidth: 360, maxHeight: 240, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain', boxShadow: '0 4px 12px rgba(0,0,0,0.06)', cursor: 'zoom-in' }}
+                    />
+                  </a>
+                ) : (
+                  <div style={{ fontSize: 13, color: '#6b7280', padding: '10px 12px', background: '#f8fafc', borderRadius: 8, border: '1px dashed #e2e8f0' }}>
+                    Người mua không cung cấp bằng chứng
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}  
+        ) : null}  
         </div> 
         {/* KẾT THÚC order-top-row */}
         
@@ -874,6 +1018,20 @@ export default function OrderDetail() {
             <textarea placeholder="Mô tả vấn đề tranh chấp..." value={disputeDesc}
               onChange={(e) => setDisputeDesc(e.target.value)} rows={4}
               style={{ width: "100%", padding: 12, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }} />
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 13, fontWeight: 600 }}>Ảnh chứng cứ (tùy chọn)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setDisputeFile(e.target.files?.[0] || null)}
+                style={{ width: '100%', padding: 6 }}
+              />
+              {disputeFile && (
+                <div style={{ fontSize: 13, color: '#4b5563' }}>
+                  Đã chọn: {disputeFile.name}
+                </div>
+              )}
+            </div>
             <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
               <button onClick={handleSubmitDispute} disabled={submittingDispute || !disputeDesc.trim()}
                 style={{ padding: "10px 24px", background: "#dc2626", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
@@ -953,6 +1111,20 @@ export default function OrderDetail() {
             <textarea placeholder="Mô tả lý do khiếu nại..." value={complaintReason}
               onChange={(e) => setComplaintReason(e.target.value)} rows={4}
               style={{ width: "100%", padding: 12, border: "1px solid #ddd", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }} />
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 13, fontWeight: 600 }}>Ảnh chứng cứ (tùy chọn)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setComplaintFile(e.target.files?.[0] || null)}
+                style={{ width: '100%', padding: 6 }}
+              />
+              {complaintFile && (
+                <div style={{ fontSize: 13, color: '#4b5563' }}>
+                  Đã chọn: {complaintFile.name}
+                </div>
+              )}
+            </div>
             <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
               <button onClick={handleSubmitComplaint} disabled={submittingComplaint || !complaintReason.trim()}
                 style={{ padding: "10px 24px", background: "#d97706", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>

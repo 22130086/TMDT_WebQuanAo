@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 public interface DisputeRepository extends JpaRepository<Dispute, Long> {
 
     Page<Dispute> findByOrderId(Long orderId, Pageable pageable);
+    List<Dispute> findByOrderId(Long orderId);
 
     Page<Dispute> findByInitiatedById(Long userId, Pageable pageable);
 
