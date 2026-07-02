@@ -28,13 +28,20 @@ public class OutsourcingPostController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        // Mặc định chỉ hiện bài đã duyệt (OPEN), admin dùng endpoint riêng /api/admin/outsourcing-posts
-        if (status == null || status.isBlank()) {
+        // Nếu có status cụ thể → lọc theo status
+        // Nếu có categoryId mà không có status → search tất cả status theo category
+        // Mặc định (không có gì) → chỉ hiện OPEN
+        if (status != null && !status.isBlank()) {
             return ResponseEntity.ok(ApiResponse.ok(
-                    postService.searchOpen(keyword, categoryId, pageable)));
+                    postService.search(keyword, categoryId, status, pageable)));
+        }
+        if (categoryId != null) {
+            // Lọc theo category, không giới hạn status (trả về tất cả để xưởng xem)
+            return ResponseEntity.ok(ApiResponse.ok(
+                    postService.search(keyword, categoryId, null, pageable)));
         }
         return ResponseEntity.ok(ApiResponse.ok(
-                postService.search(keyword, categoryId, status, pageable)));
+                postService.searchOpen(keyword, categoryId, pageable)));
     }
 
     @GetMapping("/{id}")
