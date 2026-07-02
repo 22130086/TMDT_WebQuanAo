@@ -27,4 +27,7 @@ public class ProductResponse {
     // Đánh giá
     private Double rating;
     private Long reviewCount;
+
+    // Số lượt bán
+    private Long soldCount;
 }

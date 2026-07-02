@@ -20,10 +20,11 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  stock?: number;
   imageUrls: string[];
   rating?: number;
   reviewCount?: number;
-  soldCount?: string;
+  soldCount?: number;
   factoryId?: number;
   factoryName?: string;
   onlineStatus?: string;
@@ -102,7 +103,6 @@ export default function ProductDetail() {
           const data = response.data;
           setProduct({
             ...data,
-            soldCount: "1.2k",
             factoryId: data.factoryId,
             factoryName: data.factoryName || "Chưa có thông tin",
             onlineStatus: "Online 2 giờ trước",
@@ -310,7 +310,20 @@ export default function ProductDetail() {
               <span className="rating-score">{product.rating ?? "Chưa có"}</span>
               <span className="stars">{product.rating ? renderStars(Math.round(product.rating)) : ""}</span>
               <span className="review-count">{product.reviewCount ?? 0} đánh giá</span>
-              <span className="sold-count">{product.soldCount} đã bán</span>
+              <span className="sold-count">
+                {product.soldCount && product.soldCount > 1000 
+                  ? `${(product.soldCount / 1000).toFixed(1)}k` 
+                  : (product.soldCount || 0)} đã bán
+              </span>
+            </div>
+
+            <div style={{ margin: "8px 0 4px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontWeight: 600, color: "#444" }}>Kho:</span>
+              {product.stock != null && product.stock > 0 ? (
+                <span style={{ color: "#16a34a", fontWeight: 600 }}>Còn {product.stock.toLocaleString("vi-VN")} sản phẩm</span>
+              ) : (
+                <span style={{ color: "#ef4444", fontWeight: 600 }}>Hết hàng</span>
+              )}
             </div>
 
             <div className="price-box">
@@ -325,7 +338,15 @@ export default function ProductDetail() {
               <span>Số lượng:</span>
               <button onClick={() => setQuantity(quantity > 1 ? quantity - 1 : 1)}>-</button>
               <span>{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)}>+</button>
+              <button onClick={() => {
+                const maxStock = product.stock ?? 0;
+                if (quantity < maxStock) setQuantity(quantity + 1);
+              }}>+</button>
+              {product.stock != null && (
+                <span style={{ marginLeft: "12px", fontSize: "14px", color: "#94a3b8" }}>
+                  {product.stock.toLocaleString("vi-VN")} sản phẩm có sẵn
+                </span>
+              )}
             </div>
 
             {/* Attributes (Size, Color, etc.) */}
@@ -364,11 +385,11 @@ export default function ProductDetail() {
             )}
 
             <div className="action-buttons">
-              <button className="add-cart-btn" onClick={handleAddToCart} disabled={addingToCart}>
-                {addingToCart ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+              <button className="add-cart-btn" onClick={handleAddToCart} disabled={addingToCart || (product.stock != null && product.stock <= 0)}>
+                {addingToCart ? "Đang thêm..." : product.stock != null && product.stock <= 0 ? "Hết hàng" : "Thêm vào giỏ hàng"}
               </button>
-              <button className="buy-btn" onClick={handleBuyNow} disabled={addingToCart}>
-                Mua ngay
+              <button className="buy-btn" onClick={handleBuyNow} disabled={addingToCart || (product.stock != null && product.stock <= 0)}>
+                {product.stock != null && product.stock <= 0 ? "Hết hàng" : "Mua ngay"}
               </button>
             </div>
           </div>
