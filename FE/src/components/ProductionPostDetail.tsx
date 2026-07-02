@@ -96,6 +96,18 @@ export default function ProductionPostDetail({ onNavigate }: Props) {
     const getInitials = (name: string) =>
         name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase();
 
+    // Trích xuất ghi chú từ description (format: "📝 Ghi chú: <nội dung>")
+    const parseNoteFromDescription = (description: string): string | null => {
+        if (!description) return null;
+        const lines = description.split("\n");
+        const noteLine = lines.find((line) => line.startsWith("📝 Ghi chú:"));
+        if (!noteLine) return null;
+        const note = noteLine.replace("📝 Ghi chú:", "").trim();
+        return note || null;
+    };
+
+    const customerNote = post ? parseNoteFromDescription(post.description) : null;
+
     if (loading) {
         return (
             <div className="ppd-state">
@@ -225,8 +237,23 @@ export default function ProductionPostDetail({ onNavigate }: Props) {
                             </div>
                             Mô tả chi tiết
                         </div>
-                        <p className="ppd-desc">{post.description || "Không có mô tả."}</p>
+                        <p className="ppd-desc" style={{ whiteSpace: "pre-line" }}>{post.description || "Không có mô tả."}</p>
                     </div>
+
+                    {customerNote && (
+                        <div className="ppd-card ppd-note-card">
+                            <div className="ppd-card-title">
+                                <div className="ppd-card-icon ppd-card-icon--note">
+                                    <span className="material-symbols-outlined">sticky_note_2</span>
+                                </div>
+                                Ghi chú của khách
+                            </div>
+                            <div className="ppd-note-content">
+                                <span className="material-symbols-outlined ppd-note-icon">info</span>
+                                <p>{customerNote}</p>
+                            </div>
+                        </div>
+                    )}
 
                     {(post.designFileUrl || post.designFileUrlBack) && (
                         <div className="ppd-card">

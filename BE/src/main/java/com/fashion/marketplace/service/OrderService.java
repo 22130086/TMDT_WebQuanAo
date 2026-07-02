@@ -33,6 +33,8 @@ public class OrderService {
     private final WalletService walletService;
     private final ComplaintRepository complaintRepository;
     private final DisputeRepository disputeRepository;
+    private final OutsourcingPostRepository outsourcingPostRepository;
+    private final CustomProductRepository customProductRepository;
 
     private final PaymentService paymentService;
     private final HttpServletRequest httpServletRequest;
@@ -307,6 +309,20 @@ public class OrderService {
         order.setStatus(newStatus);
         Order saved = orderRepository.save(order);
 
+        if (newStatus == Order.OrderStatus.COMPLETED && order.getQuotation() != null) {
+            try {
+                OutsourcingPost post = order.getQuotation().getPost();
+                if (post != null) {
+                    post.setStatus(OutsourcingPost.PostStatus.CLOSED);
+                    outsourcingPostRepository.save(post);
+                    if (post.getCustomProduct() != null) {
+                        post.getCustomProduct().setStatus(CustomProduct.Status.CLOSED);
+                        customProductRepository.save(post.getCustomProduct());
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
         notificationService.push(order.getCustomer().getId(),
                 "Cập nhật đơn hàng", "Đơn hàng #" + orderId + " → " + newStatus,
                 "ORDER", orderId);
@@ -366,6 +382,20 @@ public class OrderService {
         order.setPaymentStatus(Order.PaymentStatus.FULLY_PAID); 
 
         Order saved = orderRepository.save(order);
+
+        if (order.getQuotation() != null) {
+            try {
+                OutsourcingPost post = order.getQuotation().getPost();
+                if (post != null) {
+                    post.setStatus(OutsourcingPost.PostStatus.CLOSED);
+                    outsourcingPostRepository.save(post);
+                    if (post.getCustomProduct() != null) {
+                        post.getCustomProduct().setStatus(CustomProduct.Status.CLOSED);
+                        customProductRepository.save(post.getCustomProduct());
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
 
         // 5. CỘNG TIỀN VÀO VÍ XƯỞNG khi đơn hàng hoàn tất
         try {
