@@ -377,7 +377,8 @@ public class OrderService {
 
         // 4. Cập nhật trạng thái
         order.setStatus(Order.OrderStatus.COMPLETED);
-        
+        order.setCompletedAt(java.time.LocalDateTime.now()); // Ghi nhận thời điểm hoàn tất
+
         // Luôn chuyển sang PAID khi hoàn tất (đặc biệt quan trọng cho luồng COD)
         order.setPaymentStatus(Order.PaymentStatus.FULLY_PAID); 
 
@@ -397,24 +398,25 @@ public class OrderService {
             } catch (Exception ignored) {}
         }
 
-        // 5. CỘNG TIỀN VÀO VÍ XƯỞNG khi đơn hàng hoàn tất
+        // 5. CỘNG TIỀN VÀO FROZEN (phong tỏa) — chờ 3 ngày không có khiếu nại/tranh chấp
+        //    mới chuyển sang balance khả dụng (qua FrozenReleaseScheduler)
         try {
-            walletService.credit(
+            walletService.creditFrozen(
                 saved.getFactory().getUser().getId(),
                 saved.getFinalAmount(),
-                "Thanh toán đơn hàng #" + saved.getId(),
-                WalletTransaction.TransactionType.COMMISSION,
+                "Phong tỏa thanh toán đơn hàng #" + saved.getId() + " (giải phóng sau 3 ngày)",
                 saved.getId()
             );
         } catch (Exception e) {
-            // Không để lỗi ví làm hỏng luồng hoàn tất đơn
-            System.err.println("Lỗi cộng tiền ví xưởng: " + e.getMessage());
+            System.err.println("Lỗi cộng frozen ví xưởng: " + e.getMessage());
         }
 
         // 6. Gửi thông báo cho xưởng biết khách đã nhận hàng
         notificationService.push(order.getFactory().getUser().getId(),
                 "Khách đã nhận hàng", 
-                "Đơn hàng #" + orderId + " đã được khách hàng xác nhận nhận hàng và thanh toán.",
+                "Đơn hàng #" + orderId + " đã hoàn tất. " +
+                String.format("%,.0f", saved.getFinalAmount()) +
+                " VNĐ đang phong tỏa, sẽ khả dụng sau 3 ngày nếu không có khiếu nại.",
                 "ORDER", orderId);
 
         return convertToResponse(saved);
@@ -472,6 +474,7 @@ public class OrderService {
         java.time.LocalDateTime end = (endDate != null) ? endDate.atTime(java.time.LocalTime.MAX) : null;
 
         List<Order> filteredOrders = completedOrders.stream()
+                .filter(o -> o.isFrozenReleased() || o.getCompletedAt() == null) // Các đơn cũ (trước khi có tính năng frozen) vẫn được tính
                 .filter(o -> start == null || (o.getUpdatedAt() != null && !o.getUpdatedAt().isBefore(start)))
                 .filter(o -> end == null || (o.getUpdatedAt() != null && !o.getUpdatedAt().isAfter(end)))
                 .collect(Collectors.toList());
