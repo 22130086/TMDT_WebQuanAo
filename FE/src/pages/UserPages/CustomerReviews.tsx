@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { reviewService } from '../../services/reviewService';
 import type { ReviewData } from '../../services/reviewService';
 import '../../styles/admin-table.css';
@@ -79,28 +78,13 @@ const CustomerReviews = () => {
   };
 
   return (
-    <div className="at-container user-profile-activity-page">
-      <div className="user-profile-activity-topbar">
-        <Link to="/customer-profile" className="user-profile-activity-backbtn">
-          <span className="material-symbols-outlined">arrow_back</span>
-          Quay lại hồ sơ cá nhân
-        </Link>
-        <div className="user-profile-activity-hero">
-          <h3>Đánh giá của tôi</h3>
-          <p>Chỉnh sửa hoặc xóa những đánh giá bạn đã gửi cho sản phẩm.</p>
-        </div>
-      </div>
-
+    <div className="at-container">
       {message && <div className={`wallet-toast ${message.type}`}>{message.text}</div>}
       {loading && <div className="at-loading">Đang tải...</div>}
 
+      <div className="at-header"><h3>Đánh giá của tôi</h3></div>
+
       <div className="at-section">
-        <div className="at-header">
-          <div>
-            <h3>Danh sách đánh giá</h3>
-            <div className="subtitle">Quản lý các đánh giá đã gửi cho sản phẩm</div>
-          </div>
-        </div>
         <div className="wallet-table-wrap">
           <table className="wallet-table">
             <thead>

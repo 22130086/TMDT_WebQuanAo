@@ -64,12 +64,12 @@ public class OrderService {
         String issueReason = null;
 
         if (order.getId() != null) {
-            var complaints = complaintRepository.findByOrderIdAndStatus(order.getId(), Complaint.ComplaintStatus.OPEN);
+            var complaints = complaintRepository.findByOrderId(order.getId());
             if (!complaints.isEmpty()) {
                 issueType = "COMPLAINT";
                 issueReason = complaints.get(0).getReason();
             } else {
-                var disputes = disputeRepository.findByOrderIdAndStatus(order.getId(), Dispute.DisputeStatus.OPEN);
+                var disputes = disputeRepository.findByOrderId(order.getId());
                 if (!disputes.isEmpty()) {
                     issueType = "DISPUTE";
                     issueReason = disputes.get(0).getDescription();

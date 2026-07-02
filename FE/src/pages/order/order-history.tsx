@@ -119,13 +119,15 @@ export default function OrderHistory() {
 
   // 3. Logic lọc đơn hàng theo các Tab trên giao diện
   const filteredOrders = orders.filter((order) => {
+    const hasIssue = Boolean(order.issueType) || order.status === "DISPUTED" || order.status === "CANCELLED";
+
     if (activeTab === "ALL") return true;
     if (activeTab === "PROCESSING") {
       // Đang xử lý bao gồm các bước sản xuất luân chuyển và đang vận chuyển
       return ["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY_TO_SHIP", "SHIPPING", "DELIVERED"].includes(order.status);
     }
-    if (activeTab === "COMPLETED") return order.status === "COMPLETED" && !order.issueType;
-    if (activeTab === "CANCELLED") return order.issueType != null || ["CANCELLED", "DISPUTED"].includes(order.status); // Đưa cả đơn hoàn thành nhưng có khiếu nại/tranh chấp vào tab này
+    if (activeTab === "COMPLETED") return order.status === "COMPLETED" && !hasIssue;
+    if (activeTab === "CANCELLED") return hasIssue;
     return true;
   });
 
@@ -254,9 +256,10 @@ export default function OrderHistory() {
         {!loading && filteredOrders.map((order) => {
           const statusMeta = getStatusMeta(order.status);
           const payMeta = getPaymentStatusMeta(order.paymentStatus); // 🌟 Lấy data payment status
+          const hasIssue = Boolean(order.issueType) || order.status === "DISPUTED" || order.status === "CANCELLED";
           
           return (
-            <div key={order.id} className={`order-card ${order.issueType ? 'disputed' : statusMeta.className}`}>
+            <div key={order.id} className={`order-card ${hasIssue ? 'disputed' : statusMeta.className}`}>
               
               {/* KHỐI TRÁI: THÔNG TIN CHUNG */}
               <div className="order-left">
