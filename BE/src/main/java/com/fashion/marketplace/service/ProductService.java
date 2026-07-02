@@ -22,6 +22,7 @@ public class ProductService {
     private final FactoryProfileRepository factoryProfileRepository;
     private final CategoryRepository categoryRepository;
     private final ProductReviewRepository productReviewRepository;
+    private final OrderItemRepository orderItemRepository;
 
     // ---- Factory: quản lý sản phẩm mẫu sẵn ----
 
@@ -106,6 +107,7 @@ public class ProductService {
     private ProductResponse toResponse(Product p) {
         Double avgRating = productReviewRepository.avgRatingByProductId(p.getId());
         long reviewCount = productReviewRepository.countByProductId(p.getId());
+        Long soldCount = orderItemRepository.sumQuantityByProductIdAndOrderNotCancelled(p.getId());
 
         return ProductResponse.builder()
                 .id(p.getId())
@@ -124,6 +126,7 @@ public class ProductService {
                 .createdAt(p.getCreatedAt())
                 .rating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : null)
                 .reviewCount(reviewCount)
+                .soldCount(soldCount != null ? soldCount : 0L)
                 .build();
     }
 
