@@ -76,6 +76,54 @@ public class WalletService {
         saveTransaction(wallet, type, amount, wallet.getBalance(), note, orderId);
     }
 
+    /**
+     * Cộng tiền vào frozen (phong tỏa) khi đơn hàng hoàn tất.
+     * Tiền chưa rút được cho đến khi giải phóng qua releaseFrozen().
+     */
+    @Transactional
+    public void creditFrozen(Long userId, BigDecimal amount, String note, Long orderId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ví không tồn tại"));
+        wallet.setFrozen(wallet.getFrozen().add(amount));
+        walletRepository.save(wallet);
+        saveTransaction(wallet, WalletTransaction.TransactionType.FREEZE,
+                amount, wallet.getBalance(), note, orderId);
+    }
+
+    /**
+     * Giải phóng tiền từ frozen → balance sau khi qua thời gian giữ 3 ngày
+     * và không có khiếu nại/tranh chấp.
+     */
+    @Transactional
+    public void releaseFrozen(Long userId, BigDecimal amount, String note, Long orderId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ví không tồn tại"));
+        // Đảm bảo frozen đủ để giải phóng
+        BigDecimal actualRelease = amount.min(wallet.getFrozen());
+        if (actualRelease.compareTo(BigDecimal.ZERO) <= 0) return;
+        wallet.setFrozen(wallet.getFrozen().subtract(actualRelease));
+        wallet.setBalance(wallet.getBalance().add(actualRelease));
+        walletRepository.save(wallet);
+        saveTransaction(wallet, WalletTransaction.TransactionType.UNFREEZE,
+                actualRelease, wallet.getBalance(), note, orderId);
+    }
+
+    /**
+     * Trừ tiền từ frozen (dùng khi xưởng thua tranh chấp phải hoàn tiền).
+     * Không ảnh hưởng balance hiện có.
+     */
+    @Transactional
+    public void debitFrozen(Long userId, BigDecimal amount, String note, Long orderId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ví không tồn tại"));
+        BigDecimal actualDebit = amount.min(wallet.getFrozen());
+        if (actualDebit.compareTo(BigDecimal.ZERO) <= 0) return;
+        wallet.setFrozen(wallet.getFrozen().subtract(actualDebit));
+        walletRepository.save(wallet);
+        saveTransaction(wallet, WalletTransaction.TransactionType.WITHDRAWAL,
+                actualDebit.negate(), wallet.getBalance(), note, orderId);
+    }
+
     @Transactional
     public void debit(Long userId, BigDecimal amount, String note,
                       WalletTransaction.TransactionType type, Long orderId) {
@@ -164,6 +212,7 @@ public class WalletService {
         walletTransactionRepository.save(WalletTransaction.builder()
                 .wallet(wallet).type(type).amount(amount)
                 .balanceAfter(balanceAfter).note(note)
+                .orderId(orderId)
                 .build());
     }
 

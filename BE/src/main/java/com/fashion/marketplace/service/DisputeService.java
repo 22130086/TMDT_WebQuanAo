@@ -6,6 +6,7 @@ import com.fashion.marketplace.dto.response.DisputeStatsResponse;
 import com.fashion.marketplace.entity.Dispute;
 import com.fashion.marketplace.entity.Order;
 import com.fashion.marketplace.entity.User;
+import com.fashion.marketplace.entity.WalletTransaction;
 import com.fashion.marketplace.exception.ResourceNotFoundException;
 import com.fashion.marketplace.repository.DisputeRepository;
 import com.fashion.marketplace.repository.OrderRepository;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +29,7 @@ public class DisputeService {
     private final DisputeRepository disputeRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final WalletService walletService;
 
     private DisputeResponse toResponse(Dispute d) {
         return DisputeResponse.builder()
@@ -130,7 +133,31 @@ public class DisputeService {
         d.setAdminNote(note);
         d.setHandledBy(admin);
         d.setHandledAt(LocalDateTime.now());
-        return toResponse(disputeRepository.save(d));
+        disputeRepository.save(d);
+
+        Order order = d.getOrder();
+        Long orderId = order != null ? order.getId() : null;
+
+        // Hoàn tiền cho khách: trừ từ frozen của xưởng → cộng vào balance khách
+        if (refund != null && refund.compareTo(BigDecimal.ZERO) > 0 && order != null) {
+            Long factoryUserId = order.getFactory().getUser().getId();
+            Long customerId    = order.getCustomer().getId();
+            try {
+                walletService.debitFrozen(
+                    factoryUserId, refund,
+                    "Hoàn tiền tranh chấp #" + disputeId + " → khách (trừ phong tỏa)",
+                    orderId);
+                walletService.credit(
+                    customerId, refund,
+                    "Hoàn tiền tranh chấp #" + disputeId + " từ xưởng",
+                    WalletTransaction.TransactionType.REFUND,
+                    orderId);
+            } catch (Exception e) {
+                System.err.println("Lỗi xử lý ví khi phán quyết tranh chấp #" + disputeId + ": " + e.getMessage());
+            }
+        }
+
+        return toResponse(d);
     }
 
     @Transactional

@@ -62,6 +62,10 @@ public class Order {
 
     private LocalDateTime depositPaidAt;
     private LocalDateTime finalPaidAt;
+    private LocalDateTime completedAt;   // Thời điểm đơn được xác nhận hoàn tất
+
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean frozenReleased = false; // Đánh dấu đã giải phóng frozen → balance
 
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
